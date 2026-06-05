@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>توقع أجرتك - تطبيق التوك توك الذكي</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+  </script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: linear-gradient(135deg, #1a237e, #0d47a1);
+      min-height: 100vh;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .container {
+      max-width: 800px;
+      width: 100%;
+      padding: 40px 20px;
+      text-align: center;
+    }
+    .logo {
+      font-size: 64px;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-size: 36px;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      font-size: 18px;
+      opacity: 0.9;
+      margin-bottom: 40px;
+    }
+    .stats {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 40px;
+    }
+    .stat-card {
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 24px 32px;
+      min-width: 200px;
+    }
+    .stat-card .number {
+      font-size: 42px;
+      font-weight: bold;
+    }
+    .stat-card .label {
+      font-size: 14px;
+      opacity: 0.8;
+      margin-top: 4px;
+    }
+    .download-btn {
+      display: inline-block;
+      background: #ff6f00;
+      color: #fff;
+      text-decoration: none;
+      padding: 18px 48px;
+      border-radius: 50px;
+      font-size: 22px;
+      font-weight: bold;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 15px rgba(255,111,0,0.4);
+    }
+    .download-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255,111,0,0.6);
+    }
+    .features {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin: 40px 0;
+    }
+    .feature {
+      background: rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 24px;
+      width: 200px;
+    }
+    .feature .icon { font-size: 32px; margin-bottom: 8px; }
+    .feature h3 { font-size: 16px; margin-bottom: 4px; }
+    .feature p { font-size: 13px; opacity: 0.7; }
+    footer {
+      margin-top: auto;
+      padding: 20px;
+      opacity: 0.5;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">🛺</div>
+    <h1>توقع أجرتك</h1>
+    <p class="subtitle">تطبيق التوك توك الذكي – احسب أجرتك بسهولة</p>
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="number" id="usersCount">-</div>
+        <div class="label">إجمالي المستخدمين</div>
+      </div>
+      <div class="stat-card">
+        <div class="number" id="tripsCount">-</div>
+        <div class="label">رحلات مكتملة</div>
+      </div>
+    </div>
+
+    <a class="download-btn" href="https://www.mediafire.com/file/ymxuuu8p7vwickn/app-release.apk/file" target="_blank">
+      📥 تحميل التطبيق
+    </a>
+
+    <div class="features">
+      <div class="feature">
+        <div class="icon">💰</div>
+        <h3>تقدير الأجرة</h3>
+        <p>احسب أجرتك قبل الرحلة</p>
+      </div>
+      <div class="feature">
+        <div class="icon">🗺️</div>
+        <h3>خرائط مفتوحة</h3>
+        <p>تتبع مباشر بدون إنترنت</p>
+      </div>
+      <div class="feature">
+        <div class="icon">⭐</div>
+        <h3>تقييم السائق</h3>
+        <p>قيم رحلتك بكل شفافية</p>
+      </div>
+    </div>
+  </div>
+  <footer>© 2026 توقع أجرتك – جميع الحقوق محفوظة</footer>
+
+  <script>
+    const supabaseUrl = 'https://vvupymghyemmezwhlwcs.supabase.co';
+    const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2dXB5bWdoeWVtbWV6d2hsd2NzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwMDgyNzEsImV4cCI6MjA5NTU4NDI3MX0.EOoBaNVsdjLj4-l5koOAFTg_-JmC3CUl5fAi6SUmtmw';
+    const supabase = supabase.createClient(supabaseUrl, supabaseAnonKey);
+
+    async function loadStats() {
+      try {
+        const { count: users } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true });
+
+        const { count: trips } = await supabase
+          .from('trips')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'completed');
+
+        document.getElementById('usersCount').textContent = users ?? 0;
+        document.getElementById('tripsCount').textContent = trips ?? 0;
+      } catch (e) {
+        console.error('Stats error:', e);
+      }
+    }
+
+    loadStats();
+    setInterval(loadStats, 30000);
+  </script>
+</body>
+</html>
