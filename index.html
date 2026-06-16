@@ -1,170 +1,266 @@
 <!DOCTYPE html>
-<html dir="rtl" lang="ar">
+<html>
 <head>
+  <base href="$FLUTTER_BASE_HREF">
+
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>توقع أجرتك - تطبيق التوك توك الذكي</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
-  </script>
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="تطبيق التوك توك - احسب أجرتك بسهولة">
+
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="توقع أجرتك">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>توقع أجرتك</title>
+  <link rel="manifest" href="manifest.json">
+
+  <script crossorigin src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Segoe UI', Tahoma, sans-serif;
-      background: linear-gradient(135deg, #1a237e, #0d47a1);
-      min-height: 100vh;
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .container {
-      max-width: 800px;
-      width: 100%;
-      padding: 40px 20px;
-      text-align: center;
-    }
-    .logo {
-      font-size: 64px;
-      margin-bottom: 16px;
-    }
-    h1 {
-      font-size: 36px;
-      margin-bottom: 8px;
-    }
-    .subtitle {
-      font-size: 18px;
-      opacity: 0.9;
-      margin-bottom: 40px;
-    }
-    .stats {
-      display: flex;
-      gap: 20px;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin-bottom: 40px;
-    }
-    .stat-card {
-      background: rgba(255,255,255,0.1);
-      backdrop-filter: blur(10px);
-      border-radius: 16px;
-      padding: 24px 32px;
-      min-width: 200px;
-    }
-    .stat-card .number {
-      font-size: 42px;
-      font-weight: bold;
-    }
-    .stat-card .label {
-      font-size: 14px;
-      opacity: 0.8;
-      margin-top: 4px;
-    }
-    .download-btn {
-      display: inline-block;
-      background: #ff6f00;
-      color: #fff;
-      text-decoration: none;
-      padding: 18px 48px;
-      border-radius: 50px;
-      font-size: 22px;
-      font-weight: bold;
-      transition: transform 0.2s, box-shadow 0.2s;
-      box-shadow: 0 4px 15px rgba(255,111,0,0.4);
-    }
-    .download-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(255,111,0,0.6);
-    }
-    .features {
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-      justify-content: center;
-      margin: 40px 0;
-    }
-    .feature {
-      background: rgba(255,255,255,0.08);
-      border-radius: 12px;
-      padding: 24px;
-      width: 200px;
-    }
-    .feature .icon { font-size: 32px; margin-bottom: 8px; }
-    .feature h3 { font-size: 16px; margin-bottom: 4px; }
-    .feature p { font-size: 13px; opacity: 0.7; }
-    footer {
-      margin-top: auto;
-      padding: 20px;
-      opacity: 0.5;
-      font-size: 13px;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; direction: rtl; }
+    body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    #auth-container { display: none; width: 100%; max-width: 420px; margin: 20px; }
+    #flutter-loader { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .card { background: white; border-radius: 16px; padding: 32px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center; }
+    .icon-success { font-size: 64px; margin-bottom: 16px; }
+    h1 { font-size: 22px; color: #333; margin-bottom: 8px; }
+    p { color: #666; font-size: 15px; line-height: 1.6; margin-bottom: 24px; }
+    .btn { display: inline-block; padding: 12px 32px; border-radius: 8px; font-size: 16px; cursor: pointer; border: none; text-decoration: none; transition: all 0.3s; }
+    .btn-primary { background: #667eea; color: white; }
+    .btn-primary:hover { background: #5a6fd6; transform: translateY(-1px); }
+    .btn-success { background: #22c55e; color: white; }
+    .btn-success:hover { background: #16a34a; }
+    .field { margin-bottom: 16px; text-align: right; }
+    .field label { display: block; font-size: 14px; color: #555; margin-bottom: 6px; font-weight: 600; }
+    .field input { width: 100%; padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 15px; transition: border-color 0.3s; outline: none; }
+    .field input:focus { border-color: #667eea; }
+    .error-msg { color: #ef4444; font-size: 13px; margin-top: 4px; display: none; }
+    .spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .subtitle { color: #999; font-size: 13px; margin-top: 16px; }
+    .hidden { display: none; }
+    .password-strength { height: 4px; border-radius: 2px; margin-top: 6px; transition: all 0.3s; }
+    .loader-dots { display: inline-flex; gap: 6px; margin: 16px 0; }
+    .loader-dots span { width: 10px; height: 10px; border-radius: 50%; background: #667eea; animation: dot-bounce 1.4s infinite ease-in-out both; }
+    .loader-dots span:nth-child(1) { animation-delay: -0.32s; }
+    .loader-dots span:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes dot-bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="logo">🛺</div>
-    <h1>توقع أجرتك</h1>
-    <p class="subtitle">تطبيق التوك توك الذكي – احسب أجرتك بسهولة</p>
-
-    <div class="stats">
-      <div class="stat-card">
-        <div class="number" id="usersCount">-</div>
-        <div class="label">إجمالي المستخدمين</div>
-      </div>
-      <div class="stat-card">
-        <div class="number" id="tripsCount">-</div>
-        <div class="label">رحلات مكتملة</div>
-      </div>
+  <div id="auth-container">
+    <div class="card" id="success-card" style="display:none">
+      <div class="icon-success">✅</div>
+      <h1 id="success-title">تم بنجاح!</h1>
+      <p id="success-message"></p>
+      <a href="taweqeogretk://open" class="btn btn-success">فتح التطبيق</a>
     </div>
 
-    <a class="download-btn" href="https://www.mediafire.com/file/ymxuuu8p7vwickn/app-release.apk/file" target="_blank">
-      📥 تحميل التطبيق
-    </a>
+    <div class="card" id="error-card" style="display:none">
+      <div class="icon-success">❌</div>
+      <h1>حدث خطأ</h1>
+      <p id="error-message"></p>
+      <a href="/" class="btn btn-primary">العودة للصفحة الرئيسية</a>
+    </div>
 
-    <div class="features">
-      <div class="feature">
-        <div class="icon">💰</div>
-        <h3>تقدير الأجرة</h3>
-        <p>احسب أجرتك قبل الرحلة</p>
+    <div class="card" id="reset-form" style="display:none">
+      <div class="icon-success">🔑</div>
+      <h1>إعادة تعيين كلمة السر</h1>
+      <p>أدخل كلمة السر الجديدة</p>
+      <div class="field">
+        <label for="new-password">كلمة السر الجديدة</label>
+        <input type="password" id="new-password" placeholder="على الأقل 6 أحرف" minlength="6">
+        <div class="password-strength" id="password-strength"></div>
       </div>
-      <div class="feature">
-        <div class="icon">🗺️</div>
-        <h3>خرائط مفتوحة</h3>
-        <p>تتبع مباشر بدون إنترنت</p>
+      <div class="field">
+        <label for="confirm-password">تأكيد كلمة السر</label>
+        <input type="password" id="confirm-password" placeholder="أعد إدخال كلمة السر">
+        <div class="error-msg" id="password-error">كلمة السر غير متطابقة</div>
       </div>
-      <div class="feature">
-        <div class="icon">⭐</div>
-        <h3>تقييم السائق</h3>
-        <p>قيم رحلتك بكل شفافية</p>
-      </div>
+      <button class="btn btn-primary" id="reset-btn" onclick="handlePasswordReset()" style="width:100%">حفظ كلمة السر الجديدة</button>
+      <div id="reset-loading" class="hidden"><div class="loader-dots"><span></span><span></span><span></span></div></div>
+    </div>
+
+    <div class="card" id="processing-card">
+      <div class="spinner"></div>
+      <h1>جاري المعالجة...</h1>
+      <p>يرجى الانتظار</p>
     </div>
   </div>
-  <footer>© 2026 توقع أجرتك – جميع الحقوق محفوظة</footer>
+
+  <div id="flutter-loader">
+    <div style="text-align:center">
+      <div class="spinner"></div>
+      <p style="color:white;font-size:18px;margin-top:12px">توقع أجرتك</p>
+    </div>
+    <script src="flutter_bootstrap.js" async></script>
+  </div>
 
   <script>
-    const supabaseUrl = 'https://hhuiseftzbqssswnuwrv.supabase.co';
-    const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhodWlzZWZ0emJxc3Nzd251d3J2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMDE5NjEsImV4cCI6MjA5NjY3Nzk2MX0.HSfq7SDEnuoK6ERAV_mINDN49ZJntiBRkVc8L7RsAYY';
-    const supabase = supabase.createClient(supabaseUrl, supabaseAnonKey);
+    const SUPABASE_URL = 'https://hhuiseftzbqssswnuwrv.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhodWlzZWZ0emJxc3Nzd251d3J2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMDE5NjEsImV4cCI6MjA5NjY3Nzk2MX0.HSfq7SDEnuoK6ERAV_mINDN49ZJntiBRkVc8L7RsAYY';
 
-    async function loadStats() {
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const authContainer = document.getElementById('auth-container');
+    const flutterLoader = document.getElementById('flutter-loader');
+    const processingCard = document.getElementById('processing-card');
+    const successCard = document.getElementById('success-card');
+    const errorCard = document.getElementById('error-card');
+    const resetForm = document.getElementById('reset-form');
+
+    function showOnly(element) {
+      [processingCard, successCard, errorCard, resetForm].forEach(el => el.style.display = 'none');
+      element.style.display = 'block';
+    }
+
+    function showError(msg) {
+      document.getElementById('error-message').textContent = msg;
+      showOnly(errorCard);
+    }
+
+    function showSuccess(title, msg) {
+      document.getElementById('success-title').textContent = title;
+      document.getElementById('success-message').textContent = msg;
+      showOnly(successCard);
+    }
+
+    function parseHash() {
+      const hash = window.location.hash.replace('#', '');
+      if (!hash) return null;
+      const params = {};
+      hash.split('&').forEach(pair => {
+        const [k, v] = pair.split('=');
+        if (k && v) params[decodeURIComponent(k)] = decodeURIComponent(v);
+      });
+      return params;
+    }
+
+    async function handleAuthRedirect() {
+      const params = parseHash();
+      if (!params || !params.access_token) {
+        // No auth params — show Flutter app
+        authContainer.style.display = 'none';
+        flutterLoader.style.display = 'flex';
+        return;
+      }
+
+      const type = params.type || '';
+      authContainer.style.display = 'block';
+      flutterLoader.style.display = 'none';
+
       try {
-        const { count: users } = await supabase
-          .from('profiles')
-          .select('*', { count: 'exact', head: true });
+        const { data, error } = await supabase.auth.setSession({
+          access_token: params.access_token,
+          refresh_token: params.refresh_token || '',
+        });
 
-        const { count: trips } = await supabase
-          .from('trips')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'completed');
+        if (error) {
+          console.error('Session error:', error);
+          showOnly(processingCard);
+          // Fallback: try verifyOtp
+          if (params.type === 'signup') {
+            const { error: verifyError } = await supabase.auth.verifyOtp({
+              type: 'signup',
+              token_hash: params.token_hash || '',
+            });
+            if (verifyError) {
+              showError(verifyError.message || 'فشل تأكيد الحساب');
+              return;
+            }
+          }
+        }
 
-        document.getElementById('usersCount').textContent = users ?? 0;
-        document.getElementById('tripsCount').textContent = trips ?? 0;
+        if (type === 'signup') {
+          showSuccess('✅ تم تأكيد حسابك بنجاح', 'يمكنك الآن فتح التطبيق وتسجيل الدخول');
+        } else if (type === 'recovery') {
+          showOnly(resetForm);
+        } else if (type === 'invite') {
+          showSuccess('✅ تم قبول الدعوة بنجاح', 'يمكنك الآن فتح التطبيق');
+        } else if (type === 'magiclink') {
+          showSuccess('✅ تم تسجيل الدخول بنجاح', 'يمكنك الآن فتح التطبيق');
+        } else {
+          showSuccess('✅ تم بنجاح', 'يمكنك الآن فتح التطبيق');
+        }
       } catch (e) {
-        console.error('Stats error:', e);
+        console.error('Auth error:', e);
+        showError(e.message || 'حدث خطأ غير متوقع');
       }
     }
 
-    loadStats();
-    setInterval(loadStats, 30000);
+    async function handlePasswordReset() {
+      const newPassword = document.getElementById('new-password').value;
+      const confirmPassword = document.getElementById('confirm-password').value;
+      const errorEl = document.getElementById('password-error');
+      const resetBtn = document.getElementById('reset-btn');
+      const resetLoading = document.getElementById('reset-loading');
+      const strengthBar = document.getElementById('password-strength');
+
+      errorEl.style.display = 'none';
+
+      if (newPassword.length < 6) {
+        errorEl.textContent = 'كلمة السر يجب أن تكون على الأقل 6 أحرف';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        errorEl.textContent = 'كلمة السر غير متطابقة';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      resetBtn.style.display = 'none';
+      resetLoading.classList.remove('hidden');
+
+      try {
+        const { error } = await supabase.auth.updateUser({ password: newPassword });
+        if (error) {
+          showError(error.message || 'فشل تغيير كلمة السر');
+          resetBtn.style.display = 'block';
+          resetLoading.classList.add('hidden');
+          return;
+        }
+        showSuccess('✅ تم تغيير كلمة السر بنجاح', 'يمكنك الآن فتح التطبيق وتسجيل الدخول بكلمة السر الجديدة');
+      } catch (e) {
+        showError(e.message || 'حدث خطأ غير متوقع');
+        resetBtn.style.display = 'block';
+        resetLoading.classList.add('hidden');
+      }
+    }
+
+    document.getElementById('new-password').addEventListener('input', function() {
+      const bar = document.getElementById('password-strength');
+      const len = this.value.length;
+      if (len === 0) { bar.style.width = '0'; bar.style.background = ''; return; }
+      bar.style.width = '100%';
+      if (len < 6) { bar.style.background = '#ef4444'; }
+      else if (len < 10) { bar.style.background = '#f59e0b'; }
+      else { bar.style.background = '#22c55e'; }
+    });
+
+    document.getElementById('confirm-password').addEventListener('input', function() {
+      const newPw = document.getElementById('new-password').value;
+      const errorEl = document.getElementById('password-error');
+      if (this.value.length > 0 && this.value !== newPw) {
+        errorEl.textContent = 'كلمة السر غير متطابقة';
+        errorEl.style.display = 'block';
+      } else {
+        errorEl.style.display = 'none';
+      }
+    });
+
+    document.getElementById('new-password').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') document.getElementById('confirm-password').focus();
+    });
+    document.getElementById('confirm-password').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') handlePasswordReset();
+    });
+
+    handleAuthRedirect();
   </script>
 </body>
 </html>
