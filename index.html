@@ -12,84 +12,418 @@
   <link rel="icon" type="image/png" href="favicon.png">
   <title>توقع أجرتك - تطبيق التوك توك الذكي</title>
   <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
       --primary: #667eea;
-      --primary-dark: #5a6fd6;
-      --accent: #ff6f00;
-      --bg-start: #0f0c29;
-      --bg-mid: #302b63;
-      --bg-end: #24243e;
-      --glass: rgba(255,255,255,0.08);
-      --glass-border: rgba(255,255,255,0.12);
-      --text: #fff;
-      --text-muted: rgba(255,255,255,0.7);
+      --primary-light: #8b9cf7;
+      --primary-dark: #4c5fc7;
+      --accent: #f59e0b;
       --success: #22c55e;
+      --gold: #f59e0b;
+      --pink: #ec4899;
+      --blue: #3b82f6;
+      --emerald: #10b981;
+      --orange: #f97316;
+      --bg-deep: #07071a;
+      --bg-card: rgba(255,255,255,0.04);
+      --glass: rgba(255,255,255,0.06);
+      --glass-border: rgba(255,255,255,0.08);
+      --glass-hover: rgba(255,255,255,0.1);
+      --text: #fff;
+      --text-muted: rgba(255,255,255,0.55);
       --error: #ef4444;
+      --shadow-glow: 0 0 40px rgba(102,126,234,0.15);
     }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { margin: 0; padding: 0; box-sizing: border-box; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent; }
+    html { scroll-behavior: smooth; }
     body {
-      font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-      background: linear-gradient(135deg, var(--bg-start), var(--bg-mid), var(--bg-end));
+      font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+      background: var(--bg-deep);
       color: var(--text);
       min-height: 100vh;
       overflow-x: hidden;
+      position: relative;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 0% 20%, rgba(102,126,234,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 100% 0%, rgba(167,139,250,0.08) 0%, transparent 50%),
+        radial-gradient(ellipse 50% 40% at 50% 100%, rgba(34,197,94,0.06) 0%, transparent 50%);
+      z-index: -1;
+      animation: ambientShift 20s ease-in-out infinite alternate;
+    }
+    @keyframes ambientShift {
+      0% { opacity: 0.6; }
+      50% { opacity: 1; }
+      100% { opacity: 0.6; }
     }
     a { color: inherit; text-decoration: none; }
 
     /* ========== LANDING PAGE ========== */
-    #landing-page { display: block; }  /* visible by default — works even if JS fails */
+    #landing-page { display: block; }
     #landing-page.hidden { display: none; }
 
     /* ========== AUTH CONTAINER ========== */
     #auth-container { display: none; width: 100%; max-width: 420px; margin: 40px auto; padding: 0 20px; }
-    #flutter-loader { display: none; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg, var(--bg-start), var(--bg-mid), var(--bg-end)); }
-    .card { background: rgba(255,255,255,0.06); backdrop-filter: blur(12px); border: 1px solid var(--glass-border); border-radius: 16px; padding: 32px; text-align: center; }
-    .icon-success { font-size: 64px; margin-bottom: 16px; }
-    h1 { font-size: 22px; margin-bottom: 8px; }
-    p { color: var(--text-muted); font-size: 15px; line-height: 1.6; margin-bottom: 24px; }
-    .field { margin-bottom: 16px; text-align: right; }
-    .field label { display: block; font-size: 14px; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; }
-    .field input { width: 100%; padding: 12px 16px; border: 2px solid var(--glass-border); border-radius: 8px; font-size: 15px; background: rgba(255,255,255,0.06); color: #fff; outline: none; transition: border-color 0.3s; }
-    .field input:focus { border-color: var(--primary); }
-    .field input::placeholder { color: rgba(255,255,255,0.3); }
-    .error-msg { color: var(--error); font-size: 13px; margin-top: 4px; display: none; }
-    .spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.15); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+    #flutter-loader { display: none; align-items: center; justify-content: center; min-height: 100vh; }
+    .auth-card {
+      background: var(--bg-card); backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border); border-radius: 20px;
+      padding: 40px 32px; text-align: center;
+      box-shadow: var(--shadow-glow);
+    }
+    .auth-card h1 { font-size: 22px; margin-bottom: 8px; font-weight: 700; }
+    .auth-card p { color: var(--text-muted); font-size: 14px; line-height: 1.6; margin-bottom: 24px; }
+    .auth-card .field { margin-bottom: 16px; text-align: right; }
+    .auth-card .field label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; }
+    .auth-card .field input {
+      width: 100%; padding: 12px 16px; border: 1px solid var(--glass-border);
+      border-radius: 12px; font-size: 14px;
+      background: rgba(255,255,255,0.04); color: #fff; outline: none;
+      transition: border-color 0.3s, box-shadow 0.3s;
+      font-family: inherit;
+    }
+    .auth-card .field input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(102,126,234,0.15); }
+    .auth-card .field input::placeholder { color: rgba(255,255,255,0.2); }
+
+    .spinner { width: 36px; height: 36px; border: 3px solid rgba(255,255,255,0.08); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .hidden { display: none; }
-    .password-strength { height: 4px; border-radius: 2px; margin-top: 6px; transition: all 0.3s; }
-    .loader-dots { display: inline-flex; gap: 6px; margin: 16px 0; }
-    .loader-dots span { width: 10px; height: 10px; border-radius: 50%; background: var(--primary); animation: dot-bounce 1.4s infinite ease-in-out both; }
+    .hidden-el { display: none; }
+    .password-strength { height: 3px; border-radius: 4px; margin-top: 6px; transition: all 0.3s; }
+    .loader-dots { display: inline-flex; gap: 6px; margin: 12px 0; }
+    .loader-dots span { width: 8px; height: 8px; border-radius: 50%; background: var(--primary); animation: dotBounce 1.4s infinite ease-in-out both; }
     .loader-dots span:nth-child(1) { animation-delay: -0.32s; }
     .loader-dots span:nth-child(2) { animation-delay: -0.16s; }
-    @keyframes dot-bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+    @keyframes dotBounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+    .error-msg { color: var(--error); font-size: 13px; margin-top: 4px; display: none; }
 
-    /* Loading skeleton for stats */
-    .skeleton {
-      background: linear-gradient(90deg, var(--glass) 25%, rgba(255,255,255,0.15) 50%, var(--glass) 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.5s infinite;
-      border-radius: 8px;
+    /* ========== NAVBAR ========== */
+    .navbar {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 16px 24px; max-width: 1200px; margin: 0 auto;
+      position: sticky; top: 0; z-index: 100;
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      background: rgba(7,7,26,0.7);
+      border-bottom: 1px solid var(--glass-border);
     }
-    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-    .skeleton-num { height: 36px; width: 80px; margin: 0 auto 8px; }
-    .skeleton-label { height: 14px; width: 120px; margin: 0 auto; }
+    .navbar .logo {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 20px; font-weight: 800;
+    }
+    .navbar .logo i { font-size: 22px; color: var(--primary); }
+    .navbar .logo span { background: linear-gradient(135deg, var(--primary), #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .nav-download {
+      background: linear-gradient(135deg, var(--accent), #fbbf24);
+      color: #000; padding: 10px 24px; border-radius: 50px;
+      font-size: 13px; font-weight: 700; font-family: inherit;
+      transition: all 0.3s; box-shadow: 0 4px 20px rgba(245,158,11,0.25);
+    }
+    .nav-download:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(245,158,11,0.35); }
+    .nav-download i { margin-left: 6px; }
 
-    /* Responsive */
-    @media (max-width: 768px) {
-      .hero h1 { font-size: 28px; }
-      .hero p { font-size: 16px; }
+    /* ========== HERO ========== */
+    .hero {
+      text-align: center; padding: 80px 24px 60px;
+      position: relative;
+    }
+    .hero-icon {
+      width: 100px; height: 100px; margin: 0 auto 24px;
+      background: linear-gradient(135deg, var(--primary), #a78bfa);
+      border-radius: 28px; display: flex; align-items: center; justify-content: center;
+      font-size: 42px; color: #fff;
+      box-shadow: 0 20px 60px rgba(102,126,234,0.3);
+      animation: float 3s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    .hero h1 { font-size: 48px; font-weight: 800; margin-bottom: 12px; letter-spacing: -1px; }
+    .hero h1 .gradient {
+      background: linear-gradient(135deg, var(--primary), #a78bfa, var(--accent));
+      background-size: 200% 200%;
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      animation: gradientShift 4s ease-in-out infinite;
+    }
+    @keyframes gradientShift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+    .hero p {
+      font-size: 17px; color: var(--text-muted);
+      max-width: 560px; margin: 0 auto 36px; line-height: 1.8;
+    }
+    .hero-buttons { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+
+    /* ========== BUTTONS ========== */
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 14px 32px; border-radius: 50px; font-size: 15px;
+      font-weight: 700; cursor: pointer; border: none;
+      transition: all 0.3s; font-family: inherit;
+    }
+    .btn-accent {
+      background: linear-gradient(135deg, var(--accent), #fbbf24);
+      color: #000;
+      box-shadow: 0 4px 20px rgba(245,158,11,0.25);
+    }
+    .btn-accent:hover { transform: translateY(-3px); box-shadow: 0 10px 35px rgba(245,158,11,0.35); }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(102,126,234,0.25);
+    }
+    .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 10px 35px rgba(102,126,234,0.35); }
+    .btn-outline {
+      background: transparent; border: 1.5px solid rgba(255,255,255,0.15);
+      color: #fff;
+    }
+    .btn-outline:hover { border-color: var(--primary); background: rgba(102,126,234,0.1); transform: translateY(-3px); }
+    .btn-success {
+      background: linear-gradient(135deg, var(--success), #4ade80);
+      color: #000;
+      box-shadow: 0 4px 20px rgba(34,197,94,0.25);
+    }
+    .btn-success:hover { transform: translateY(-3px); }
+    .btn-sm { padding: 10px 22px; font-size: 13px; }
+
+    /* ========== CONTAINER ========== */
+    .container { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+    /* ========== SECTION TITLES ========== */
+    .section-title {
+      text-align: center; font-size: 30px; font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .section-subtitle {
+      text-align: center; color: var(--text-muted); font-size: 15px;
+      margin-bottom: 44px; line-height: 1.6;
+    }
+
+    /* ========== STATS SECTION ========== */
+    .stats-section { padding: 40px 0 60px; }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+    }
+    .stat-card {
+      background: var(--bg-card); backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: 18px; padding: 24px;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative; overflow: hidden;
+      opacity: 0; transform: translateY(20px);
+    }
+    .stat-card.visible {
+      opacity: 1; transform: translateY(0);
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 3px;
+      opacity: 0; transition: opacity 0.4s;
+    }
+    .stat-card:hover::before { opacity: 1; }
+    .stat-card:hover {
+      transform: translateY(-4px);
+      background: var(--glass);
+      border-color: rgba(255,255,255,0.15);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .stat-card .stat-icon {
+      width: 40px; height: 40px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; margin-bottom: 14px;
+    }
+    .stat-card .stat-value {
+      font-size: 32px; font-weight: 800; line-height: 1.1;
+      margin-bottom: 4px;
+    }
+    .stat-card .stat-label { font-size: 13px; color: var(--text-muted); }
+    .stat-card .stat-sublabel { font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 2px; }
+
+    /* Stat color variants */
+    .stat-purple::before { background: linear-gradient(90deg, #667eea, #a78bfa); }
+    .stat-purple .stat-icon { background: rgba(102,126,234,0.15); color: #a78bfa; }
+    .stat-purple .stat-value { color: #a78bfa; }
+
+    .stat-green::before { background: linear-gradient(90deg, #22c55e, #4ade80); }
+    .stat-green .stat-icon { background: rgba(34,197,94,0.15); color: #4ade80; }
+    .stat-green .stat-value { color: #4ade80; }
+
+    .stat-gold::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    .stat-gold .stat-icon { background: rgba(245,158,11,0.15); color: #fbbf24; }
+    .stat-gold .stat-value { color: #fbbf24; }
+
+    .stat-blue::before { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+    .stat-blue .stat-icon { background: rgba(59,130,246,0.15); color: #60a5fa; }
+    .stat-blue .stat-value { color: #60a5fa; }
+
+    .stat-pink::before { background: linear-gradient(90deg, #ec4899, #f472b6); }
+    .stat-pink .stat-icon { background: rgba(236,72,153,0.15); color: #f472b6; }
+    .stat-pink .stat-value { color: #f472b6; }
+
+    .stat-orange::before { background: linear-gradient(90deg, #f97316, #fb923c); }
+    .stat-orange .stat-icon { background: rgba(249,115,22,0.15); color: #fb923c; }
+    .stat-orange .stat-value { color: #fb923c; }
+
+    .stat-emerald::before { background: linear-gradient(90deg, #10b981, #34d399); }
+    .stat-emerald .stat-icon { background: rgba(16,185,129,0.15); color: #34d399; }
+    .stat-emerald .stat-value { color: #34d399; }
+
+    .stat-wide {
+      grid-column: 1 / -1;
+    }
+
+    /* ========== FEATURES ========== */
+    .features-section { padding: 60px 0; }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    .feature-card {
+      background: var(--bg-card); backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: 18px; padding: 32px 28px;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      text-align: center;
+      opacity: 0; transform: translateY(20px);
+    }
+    .feature-card.visible {
+      opacity: 1; transform: translateY(0);
+    }
+    .feature-card:hover {
+      transform: translateY(-6px);
+      background: var(--glass);
+      border-color: rgba(255,255,255,0.15);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .feature-card .feat-icon {
+      width: 56px; height: 56px; border-radius: 16px;
+      background: linear-gradient(135deg, var(--primary), #a78bfa);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 18px; font-size: 24px; color: #fff;
+      box-shadow: 0 8px 30px rgba(102,126,234,0.25);
+    }
+    .feature-card:nth-child(2) .feat-icon { background: linear-gradient(135deg, var(--success), #4ade80); }
+    .feature-card:nth-child(3) .feat-icon { background: linear-gradient(135deg, var(--accent), #fbbf24); }
+    .feature-card:nth-child(4) .feat-icon { background: linear-gradient(135deg, var(--pink), #f472b6); }
+    .feature-card:nth-child(5) .feat-icon { background: linear-gradient(135deg, var(--blue), #60a5fa); }
+    .feature-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+    .feature-card p { font-size: 13px; color: var(--text-muted); line-height: 1.7; }
+
+    /* ========== NEWSLETTER ========== */
+    .email-section { padding: 40px 0 60px; }
+    .email-card {
+      background: linear-gradient(135deg, rgba(102,126,234,0.06), rgba(167,139,250,0.04));
+      backdrop-filter: blur(16px); border: 1px solid var(--glass-border);
+      border-radius: 24px; padding: 48px;
+      max-width: 600px; margin: 0 auto; text-align: center;
+      box-shadow: var(--shadow-glow);
+    }
+    .email-card h3 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+    .email-card h3 i { color: var(--primary); margin-left: 8px; }
+    .email-card > p { color: var(--text-muted); margin-bottom: 28px; font-size: 14px; }
+    .email-form { display: flex; flex-direction: column; gap: 12px; }
+    .email-form .field-row { display: flex; gap: 12px; }
+    .email-form .field-row > div { flex: 1; min-width: 0; }
+    .email-form input {
+      width: 100%; padding: 14px 18px; border-radius: 14px;
+      border: 1px solid var(--glass-border);
+      background: rgba(255,255,255,0.04); color: #fff; font-size: 14px;
+      outline: none; transition: all 0.3s; font-family: inherit;
+    }
+    .email-form input::placeholder { color: rgba(255,255,255,0.2); }
+    .email-form input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(102,126,234,0.12); }
+    .email-form button[type=submit] {
+      padding: 14px 32px; border-radius: 14px; border: none;
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      color: #fff; font-size: 15px; font-weight: 700; cursor: pointer;
+      transition: all 0.3s; font-family: inherit;
+    }
+    .email-form button[type=submit]:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(102,126,234,0.3); }
+    .email-form button[type=submit]:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    .email-success {
+      display: none; font-size: 14px; padding: 14px;
+      background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.2);
+      border-radius: 12px; margin-top: 12px; color: #4ade80;
+    }
+    .email-success.show { display: block; }
+    .email-error {
+      display: none; font-size: 13px; color: var(--error); margin-top: 8px;
+    }
+    .email-error.show { display: block; }
+
+    /* ========== FAQ ========== */
+    .faq-section { padding: 40px 0 60px; }
+    .faq-list { max-width: 680px; margin: 0 auto; }
+    .faq-item {
+      background: var(--bg-card); backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border);
+      border-radius: 14px; margin-bottom: 10px; overflow: hidden;
+      transition: border-color 0.3s;
+    }
+    .faq-item:hover { border-color: rgba(255,255,255,0.12); }
+    .faq-question {
+      padding: 18px 22px; font-size: 15px; font-weight: 600;
+      cursor: pointer; display: flex; justify-content: space-between;
+      align-items: center; user-select: none; gap: 12px;
+      transition: background 0.2s;
+    }
+    .faq-question:hover { background: rgba(255,255,255,0.03); }
+    .faq-question .faq-icon {
+      font-size: 12px; color: var(--primary);
+      transition: transform 0.3s; flex-shrink: 0;
+    }
+    .faq-question.open .faq-icon { transform: rotate(45deg); }
+    .faq-answer {
+      max-height: 0; overflow: hidden;
+      transition: max-height 0.35s ease, padding 0.35s ease;
+      padding: 0 22px; color: var(--text-muted);
+      font-size: 14px; line-height: 1.7;
+    }
+    .faq-answer.open { max-height: 300px; padding: 0 22px 18px; }
+
+    /* ========== FOOTER ========== */
+    footer {
+      text-align: center; padding: 32px 24px;
+      color: rgba(255,255,255,0.25); font-size: 13px;
+      border-top: 1px solid var(--glass-border);
+    }
+    footer a { color: var(--primary-light); }
+    footer a:hover { text-decoration: underline; }
+
+    /* ========== SCROLL REVEAL ========== */
+    .reveal { opacity: 0; transform: translateY(24px); transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    /* ========== RESPONSIVE ========== */
+    @media (max-width: 900px) {
+      .hero h1 { font-size: 34px; }
+      .hero { padding: 60px 20px 40px; }
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
-      .features-grid { grid-template-columns: 1fr; }
-      .navbar .logo-text span { font-size: 24px; }
-      .navbar .logo-text { font-size: 18px; }
-      .email-form .field-row { flex-direction: column; }
+      .stat-card .stat-value { font-size: 26px; }
+      .email-card { padding: 32px 24px; }
     }
-    @media (max-width: 480px) {
+    @media (max-width: 600px) {
+      .hero h1 { font-size: 28px; }
+      .hero p { font-size: 15px; }
       .stats-grid { grid-template-columns: 1fr; }
-      .hero { padding: 40px 16px 24px; }
-      .stat-card .number { font-size: 28px; }
+      .features-grid { grid-template-columns: 1fr; }
+      .stat-wide { grid-column: 1; }
+      .email-form .field-row { flex-direction: column; }
+      .navbar .logo { font-size: 17px; }
+      .nav-download { padding: 8px 18px; font-size: 12px; }
+      .hero-icon { width: 72px; height: 72px; font-size: 30px; }
     }
   </style>
 </head>
@@ -100,26 +434,35 @@
 
     <!-- Navbar -->
     <nav class="navbar">
-      <div class="logo-text"><span>🛺</span> توقع أجرتك</div>
-      <a class="nav-download" href="https://www.mediafire.com/file/ymxuuu8p7vwickn/app-release.apk/file" target="_blank">📥 تحميل التطبيق</a>
+      <div class="logo">
+        <i class="fas fa-motorcycle"></i>
+        <span>توقع أجرتك</span>
+      </div>
+      <a class="nav-download" href="https://www.mediafire.com/file/ymxuuu8p7vwickn/app-release.apk/file" target="_blank">
+        <i class="fas fa-download"></i> تحميل التطبيق
+      </a>
     </nav>
 
     <!-- Hero -->
-    <section class="hero">
-      <span class="icon-big">🛺</span>
-      <h1>توقع <span>أجرتك</span></h1>
+    <section class="hero reveal">
+      <div class="hero-icon"><i class="fas fa-calculator"></i></div>
+      <h1>توقع <span class="gradient">أجرتك</span></h1>
       <p>التطبيق الذكي لسائقي التوك توك — احسب أجرتك بدقة، تابع رحلاتك، وحافظ على أرباحك</p>
       <div class="hero-buttons">
-        <a class="btn btn-accent" href="https://www.mediafire.com/file/ymxuuu8p7vwickn/app-release.apk/file" target="_blank">📥 تحميل التطبيق</a>
-        <a class="btn btn-outline" href="#features">اكتشف المزيد</a>
+        <a class="btn btn-accent" href="https://www.mediafire.com/file/ymxuuu8p7vwickn/app-release.apk/file" target="_blank">
+          <i class="fas fa-download"></i> تحميل التطبيق
+        </a>
+        <a class="btn btn-outline" href="#features">
+          <i class="fas fa-arrow-down"></i> اكتشف المزيد
+        </a>
       </div>
     </section>
 
     <!-- Stats -->
     <section class="stats-section" id="stats">
       <div class="container">
-        <h2 class="section-title">📊 إحصائيات المنصة</h2>
-        <p class="section-subtitle">نمو مستمر وأرقام تتحدث عن نفسها</p>
+        <h2 class="section-title reveal">إحصائيات المنصة</h2>
+        <p class="section-subtitle reveal">نمو مستمر وأرقام تتحدث عن نفسها</p>
         <div class="stats-grid" id="statsGrid">
           <!-- Filled dynamically -->
         </div>
@@ -129,51 +472,51 @@
     <!-- Features -->
     <section class="features-section" id="features">
       <div class="container">
-        <h2 class="section-title">✨ مميزات التطبيق</h2>
-        <p class="section-subtitle">كل ما تحتاجه في تطبيق واحد</p>
+        <h2 class="section-title reveal">مميزات التطبيق</h2>
+        <p class="section-subtitle reveal">كل ما تحتاجه في تطبيق واحد</p>
         <div class="features-grid">
           <div class="feature-card">
-            <div class="icon">💰</div>
+            <div class="feat-icon"><i class="fas fa-calculator"></i></div>
             <h3>حساب الأجرة الذكي</h3>
-            <p>يحتسب الأجرة بناءً على المسافة، عدد الركاب، ووقت الانتظار — بدقة عالية</p>
+            <p>يحتسب الأجرة بناءً على المسافة، عدد الركاب، ووقت الانتظار — بدقة عالية في ثوانٍ</p>
           </div>
           <div class="feature-card">
-            <div class="icon">🗺️</div>
+            <div class="feat-icon"><i class="fas fa-map"></i></div>
             <h3>خرائط مفتوحة</h3>
-            <p>يعمل مع OpenStreetMap و OSRM بدون الحاجة لإنترنت قوي — تتبع دقيق لكل رحلة</p>
+            <p>يعمل مع OpenStreetMap و OSRM بدون إنترنت قوي — تتبع دقيق مع وضع التوفير</p>
           </div>
           <div class="feature-card">
-            <div class="icon">⭐</div>
+            <div class="feat-icon"><i class="fas fa-star"></i></div>
             <h3>نظام تقييم</h3>
-            <p>قيم رحلاتك وتابع تقييمك — شفافية كاملة بين السائق والراكب</p>
+            <p>قيم رحلاتك وتابع تقييمك — شفافية كاملة بين السائق والراكب لتحسين الخدمة</p>
           </div>
           <div class="feature-card">
-            <div class="icon">💳</div>
+            <div class="feat-icon"><i class="fas fa-wallet"></i></div>
             <h3>محفظة إلكترونية</h3>
-            <p>اشحن رصيدك، تابع أرباحك، واسحب أموالك بكل سهولة وأمان</p>
+            <p>اشحن رصيدك، تابع أرباحك، واسحب أموالك بكل سهولة وأمان تام</p>
           </div>
           <div class="feature-card">
-            <div class="icon">📊</div>
+            <div class="feat-icon"><i class="fas fa-chart-line"></i></div>
             <h3>تقارير وأرباح</h3>
-            <p>تقارير يومية وأسبوعية وشهرية عن رحلاتك وأرباحك وأدائك</p>
+            <p>تقارير يومية وأسبوعية وشهرية عن رحلاتك وأرباحك وأدائك في لمحة</p>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Email Form -->
+    <!-- Newsletter -->
     <section class="email-section" id="subscribe">
       <div class="container">
-        <div class="email-card">
-          <h3>📧 ابقَ على اطلاع</h3>
+        <div class="email-card reveal">
+          <h3><i class="fas fa-envelope"></i> ابقَ على اطلاع</h3>
           <p>اشترك في النشرة البريدية ليصلك كل جديد عن التطبيق والعروض الحصرية</p>
           <form class="email-form" id="emailForm" onsubmit="return handleEmailSubmit(event)">
             <div class="field-row">
-              <input type="text" id="visitorName" placeholder="الاسم (اختياري)" autocomplete="name">
-              <input type="email" id="visitorEmail" placeholder="البريد الإلكتروني *" required autocomplete="email">
+              <div><input type="text" id="visitorName" placeholder="الاسم (اختياري)" autocomplete="name"></div>
+              <div><input type="email" id="visitorEmail" placeholder="البريد الإلكتروني" required autocomplete="email"></div>
             </div>
-            <button type="submit" id="emailSubmitBtn">اشترك الآن</button>
-            <div class="email-success" id="emailSuccess">✅ تم الاشتراك بنجاح! شكراً لك.</div>
+            <button type="submit" id="emailSubmitBtn"><i class="fas fa-paper-plane"></i> اشترك الآن</button>
+            <div class="email-success" id="emailSuccess"><i class="fas fa-check-circle"></i> تم الاشتراك بنجاح! شكراً لك.</div>
             <div class="email-error" id="emailError"></div>
           </form>
         </div>
@@ -183,48 +526,48 @@
     <!-- FAQ -->
     <section class="faq-section" id="faq">
       <div class="container">
-        <h2 class="section-title">❓ الأسئلة الشائعة</h2>
-        <p class="section-subtitle">إجابات لأكثر الأسئلة تكراراً</p>
+        <h2 class="section-title reveal">الأسئلة الشائعة</h2>
+        <p class="section-subtitle reveal">إجابات لأكثر الأسئلة تكراراً</p>
         <div class="faq-list">
-          <div class="faq-item">
+          <div class="faq-item reveal">
             <div class="faq-question" onclick="toggleFaq(this)">
               <span>ما هو تطبيق توقع أجرتك؟</span>
-              <span class="arrow">▼</span>
+              <i class="fas fa-plus faq-icon"></i>
             </div>
             <div class="faq-answer">تطبيق توقع أجرتك هو تطبيق ذكي لسائقي التوك توك يساعدك في حساب الأجرة بدقة بناءً على المسافة وعدد الركاب ووقت الانتظار. كما يتيح للسائقين إدارة رحلاتهم، متابعة أرباحهم، والتواصل مع الركاب بسهولة.</div>
           </div>
-          <div class="faq-item">
+          <div class="faq-item reveal">
             <div class="faq-question" onclick="toggleFaq(this)">
               <span>كيف يمكنني تحميل التطبيق؟</span>
-              <span class="arrow">▼</span>
+              <i class="fas fa-plus faq-icon"></i>
             </div>
             <div class="faq-answer">يمكنك تحميل التطبيق مباشرة من الزر الموجود في أعلى الصفحة (تحميل التطبيق). التطبيق متاح لنظام Android بصيغة APK. بعد التحميل، قم بتثبيت الملف واتبع التعليمات.</div>
           </div>
-          <div class="faq-item">
+          <div class="faq-item reveal">
             <div class="faq-question" onclick="toggleFaq(this)">
               <span>كيف يعمل حساب الأجرة؟</span>
-              <span class="arrow">▼</span>
+              <i class="fas fa-plus faq-icon"></i>
             </div>
             <div class="faq-answer">التطبيق يحسب الأجرة تلقائياً من خلال: (مسافة الرحلة × سعر الكيلومتر) + (عدد الركاب × سعر الراكب الإضافي) + (دقائق الانتظار × سعر الدقيقة) + رسوم البدء. كل هذه الأسعار محددة حسب محافظتك.</div>
           </div>
-          <div class="faq-item">
+          <div class="faq-item reveal">
             <div class="faq-question" onclick="toggleFaq(this)">
               <span>ما هي طرق الدفع المتاحة للسائقين؟</span>
-              <span class="arrow">▼</span>
+              <i class="fas fa-plus faq-icon"></i>
             </div>
             <div class="faq-answer">يدعم التطبيق ثلاثة أنظمة دفع: 1) الكاش — تدفع عمولة بسيطة لكل رحلة. 2) الاشتراك — تشترك شهرياً بمبلغ ثابت بدون عمولات. 3) العمولة — نسبة مئوية من كل رحلة. يمكنك التبديل بينهم من الإعدادات.</div>
           </div>
-          <div class="faq-item">
+          <div class="faq-item reveal">
             <div class="faq-question" onclick="toggleFaq(this)">
               <span>كيف أسجل كسائق في التطبيق؟</span>
-              <span class="arrow">▼</span>
+              <i class="fas fa-plus faq-icon"></i>
             </div>
             <div class="faq-answer">بعد تحميل التطبيق، قم بإنشاء حساب جديد، ثم اختر "سائق". ستحتاج لرفع صورة بطاقتك ورخصة القيادة (أو تخطي هذه الخطوة). بعد مراجعة المستندات من الإدارة، سيتم تفعيل حسابك ويمكنك البدء فوراً.</div>
           </div>
-          <div class="faq-item">
+          <div class="faq-item reveal">
             <div class="faq-question" onclick="toggleFaq(this)">
               <span>هل التطبيق مجاني؟</span>
-              <span class="arrow">▼</span>
+              <i class="fas fa-plus faq-icon"></i>
             </div>
             <div class="faq-answer">التطبيق مجاني بالكامل للتحميل والاستخدام الأساسي. هناك نظام عمولة بسيط على الرحلات أو اشتراك شهري حسب ما تختار. الركاب يمكنهم استخدام التطبيق مجاناً لتتبع رحلاتهم.</div>
           </div>
@@ -233,10 +576,10 @@
     </section>
 
     <!-- Footer -->
-    <footer>
+    <footer class="reveal">
       <p>© 2026 توقع أجرتك — جميع الحقوق محفوظة</p>
-      <p style="margin-top:8px;font-size:12px;">
-        تطبيق ذكي لسائقي التوك توك | 
+      <p style="margin-top:6px;font-size:12px;">
+        تطبيق ذكي لسائقي التوك توك |
         <a href="#" onclick="document.getElementById('subscribe').scrollIntoView({behavior:'smooth'});return false;">اشترك في النشرة</a>
       </p>
     </footer>
@@ -244,22 +587,20 @@
 
   <!-- ============ AUTH CONTAINER ============ -->
   <div id="auth-container">
-    <div class="card" id="success-card" style="display:none">
-      <div class="icon-success">✅</div>
+    <div class="auth-card" id="success-card" style="display:none">
+      <div style="font-size:56px;margin-bottom:12px;">✅</div>
       <h1 id="success-title">تم بنجاح!</h1>
       <p id="success-message"></p>
       <a href="taweqeogretk://open" class="btn btn-success">فتح التطبيق</a>
     </div>
-
-    <div class="card" id="error-card" style="display:none">
-      <div class="icon-success">❌</div>
+    <div class="auth-card" id="error-card" style="display:none">
+      <div style="font-size:56px;margin-bottom:12px;">❌</div>
       <h1>حدث خطأ</h1>
       <p id="error-message"></p>
       <a href="/" class="btn btn-primary">العودة للصفحة الرئيسية</a>
     </div>
-
-    <div class="card" id="reset-form" style="display:none">
-      <div class="icon-success">🔑</div>
+    <div class="auth-card" id="reset-form" style="display:none">
+      <div style="font-size:56px;margin-bottom:12px;">🔑</div>
       <h1>إعادة تعيين كلمة السر</h1>
       <p>أدخل كلمة السر الجديدة</p>
       <div class="field">
@@ -272,11 +613,10 @@
         <input type="password" id="confirm-password" placeholder="أعد إدخال كلمة السر">
         <div class="error-msg" id="password-error">كلمة السر غير متطابقة</div>
       </div>
-      <button class="btn btn-primary" id="reset-btn" onclick="handlePasswordReset()" style="width:100%">حفظ كلمة السر الجديدة</button>
-      <div id="reset-loading" class="hidden"><div class="loader-dots"><span></span><span></span><span></span></div></div>
+      <button class="btn btn-primary" id="reset-btn" onclick="handlePasswordReset()" style="width:100%;justify-content:center;">حفظ كلمة السر الجديدة</button>
+      <div id="reset-loading" class="hidden-el"><div class="loader-dots"><span></span><span></span><span></span></div></div>
     </div>
-
-    <div class="card" id="processing-card">
+    <div class="auth-card" id="processing-card">
       <div class="spinner"></div>
       <h1>جاري المعالجة...</h1>
       <p>يرجى الانتظار</p>
@@ -287,41 +627,34 @@
   <div id="flutter-loader">
     <div style="text-align:center">
       <div class="spinner"></div>
-      <p style="color:white;font-size:18px;margin-top:12px">توقع أجرتك</p>
+      <p style="color:var(--text-muted);font-size:16px;margin-top:8px;">توقع أجرتك</p>
     </div>
   </div>
 
   <!-- ============ SCRIPTS ============ -->
   <script>
     try {
-      // ======== Everything wrapped in try-catch — page works even if JS fails ========
       const SUPABASE_URL = 'https://hhuiseftzbqssswnuwrv.supabase.co';
       const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhodWlzZWZ0emJxc3Nzd251d3J2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMDE5NjEsImV4cCI6MjA5NjY3Nzk2MX0.HSfq7SDEnuoK6ERAV_mINDN49ZJntiBRkVc8L7RsAYY';
       const STATS_FN_URL = SUPABASE_URL + '/functions/v1/get-public-stats';
 
       let supabase = null;
-      try {
-        if (window.supabase) {
-          supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        }
-      } catch (e) {
-        console.warn('Supabase unavailable, continuing without it:', e);
-      }
+      try { if (window.supabase) { supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); } }
+      catch (e) { console.warn('Supabase unavailable:', e); }
 
-      const landingPage = document.getElementById('landing-page');
-      const authContainer = document.getElementById('auth-container');
-      const flutterLoader = document.getElementById('flutter-loader');
-      const processingCard = document.getElementById('processing-card');
-      const successCard = document.getElementById('success-card');
-      const errorCard = document.getElementById('error-card');
-      const resetForm = document.getElementById('reset-form');
+      var landingPage = document.getElementById('landing-page');
+      var authContainer = document.getElementById('auth-container');
+      var flutterLoader = document.getElementById('flutter-loader');
+      var processingCard = document.getElementById('processing-card');
+      var successCard = document.getElementById('success-card');
+      var errorCard = document.getElementById('error-card');
+      var resetForm = document.getElementById('reset-form');
 
       function showLandingPage() {
         landingPage.classList.remove('hidden');
         authContainer.style.display = 'none';
         flutterLoader.style.display = 'none';
       }
-
       function showAuthContainer() {
         landingPage.classList.add('hidden');
         authContainer.style.display = 'block';
@@ -329,195 +662,187 @@
       }
 
       function parseHash() {
-        const hash = window.location.hash.replace('#', '');
+        var hash = window.location.hash.replace('#', '');
         if (!hash) return null;
-        const params = {};
-        hash.split('&').forEach(pair => {
-          const [k, v] = pair.split('=');
-          if (k && v) params[decodeURIComponent(k)] = decodeURIComponent(v);
+        var params = {};
+        hash.split('&').forEach(function(pair) {
+          var parts = pair.split('=');
+          if (parts[0] && parts[1]) params[decodeURIComponent(parts[0])] = decodeURIComponent(parts[1]);
         });
         return params;
       }
 
-      function showOnly(element) {
-        [processingCard, successCard, errorCard, resetForm].forEach(el => el.style.display = 'none');
-        element.style.display = 'block';
+      function showOnly(el) {
+        [processingCard, successCard, errorCard, resetForm].forEach(function(e) { e.style.display = 'none'; });
+        el.style.display = 'block';
       }
-
-      function showError(msg) {
-        document.getElementById('error-message').textContent = msg;
-        showOnly(errorCard);
-      }
-
-      function showSuccess(title, msg) {
-        document.getElementById('success-title').textContent = title;
-        document.getElementById('success-message').textContent = msg;
-        showOnly(successCard);
-      }
+      function showError(msg) { document.getElementById('error-message').textContent = msg; showOnly(errorCard); }
+      function showSuccess(title, msg) { document.getElementById('success-title').textContent = title; document.getElementById('success-message').textContent = msg; showOnly(successCard); }
 
       async function handleAuthRedirect() {
-        const params = parseHash();
-        if (!params || !params.access_token) {
-          showLandingPage();
-          initLandingPage();
-          return;
-        }
-
-        if (!supabase) {
-          showLandingPage();
-          return;
-        }
-
+        var params = parseHash();
+        if (!params || !params.access_token) { showLandingPage(); initLandingPage(); return; }
+        if (!supabase) { showLandingPage(); return; }
         showAuthContainer();
-        const type = params.type || '';
-
+        var type = params.type || '';
         try {
-          const { data, error } = await supabase.auth.setSession({
-            access_token: params.access_token,
-            refresh_token: params.refresh_token || '',
-          });
-
-          if (error) {
-            console.error('Session error:', error);
+          var result = await supabase.auth.setSession({ access_token: params.access_token, refresh_token: params.refresh_token || '' });
+          if (result.error) {
+            console.error('Session error:', result.error);
             showOnly(processingCard);
             if (params.type === 'signup') {
-              const { error: verifyError } = await supabase.auth.verifyOtp({
-                type: 'signup',
-                token_hash: params.token_hash || '',
-              });
-              if (verifyError) {
-                showError(verifyError.message || 'فشل تأكيد الحساب');
-                return;
-              }
+              var v = await supabase.auth.verifyOtp({ type: 'signup', token_hash: params.token_hash || '' });
+              if (v.error) { showError(v.error.message || 'فشل تأكيد الحساب'); return; }
             }
           }
-
-          if (type === 'signup') {
-            showSuccess('✅ تم تأكيد حسابك بنجاح', 'يمكنك الآن فتح التطبيق وتسجيل الدخول');
-          } else if (type === 'recovery') {
-            showOnly(resetForm);
-          } else if (type === 'invite') {
-            showSuccess('✅ تم قبول الدعوة بنجاح', 'يمكنك الآن فتح التطبيق');
-          } else if (type === 'magiclink') {
-            showSuccess('✅ تم تسجيل الدخول بنجاح', 'يمكنك الآن فتح التطبيق');
-          } else {
-            showSuccess('✅ تم بنجاح', 'يمكنك الآن فتح التطبيق');
-          }
-        } catch (e) {
-          console.error('Auth error:', e);
-          showLandingPage();
-        }
+          if (type === 'signup') showSuccess('تم تأكيد حسابك بنجاح', 'يمكنك الآن فتح التطبيق وتسجيل الدخول');
+          else if (type === 'recovery') showOnly(resetForm);
+          else if (type === 'invite') showSuccess('تم قبول الدعوة بنجاح', 'يمكنك الآن فتح التطبيق');
+          else if (type === 'magiclink') showSuccess('تم تسجيل الدخول بنجاح', 'يمكنك الآن فتح التطبيق');
+          else showSuccess('تم بنجاح', 'يمكنك الآن فتح التطبيق');
+        } catch (e) { console.error('Auth error:', e); showLandingPage(); }
       }
 
       async function handlePasswordReset() {
-        if (!supabase) {
-          showLandingPage();
-          return;
-        }
-
-        const newPassword = document.getElementById('new-password').value;
-        const confirmPassword = document.getElementById('confirm-password').value;
-        const errorEl = document.getElementById('password-error');
-        const resetBtn = document.getElementById('reset-btn');
-        const resetLoading = document.getElementById('reset-loading');
-
-        errorEl.style.display = 'none';
-
-        if (newPassword.length < 6) {
-          errorEl.textContent = 'كلمة السر يجب أن تكون على الأقل 6 أحرف';
-          errorEl.style.display = 'block';
-          return;
-        }
-
-        if (newPassword !== confirmPassword) {
-          errorEl.textContent = 'كلمة السر غير متطابقة';
-          errorEl.style.display = 'block';
-          return;
-        }
-
-        resetBtn.style.display = 'none';
-        resetLoading.classList.remove('hidden');
-
+        if (!supabase) { showLandingPage(); return; }
+        var np = document.getElementById('new-password');
+        var cp = document.getElementById('confirm-password');
+        var pe = document.getElementById('password-error');
+        var rb = document.getElementById('reset-btn');
+        var rl = document.getElementById('reset-loading');
+        pe.style.display = 'none';
+        if (np.value.length < 6) { pe.textContent = 'كلمة السر يجب أن تكون على الأقل 6 أحرف'; pe.style.display = 'block'; return; }
+        if (np.value !== cp.value) { pe.textContent = 'كلمة السر غير متطابقة'; pe.style.display = 'block'; return; }
+        rb.style.display = 'none'; rl.classList.remove('hidden-el');
         try {
-          const { error } = await supabase.auth.updateUser({ password: newPassword });
-          if (error) {
-            showError(error.message || 'فشل تغيير كلمة السر');
-            resetBtn.style.display = 'block';
-            resetLoading.classList.add('hidden');
-            return;
-          }
-          showSuccess('✅ تم تغيير كلمة السر بنجاح', 'يمكنك الآن فتح التطبيق وتسجيل الدخول بكلمة السر الجديدة');
-        } catch (e) {
-          showError(e.message || 'حدث خطأ غير متوقع');
-          resetBtn.style.display = 'block';
-          resetLoading.classList.add('hidden');
-        }
+          var result = await supabase.auth.updateUser({ password: np.value });
+          if (result.error) { showError(result.error.message || 'فشل تغيير كلمة السر'); rb.style.display = 'block'; rl.classList.add('hidden-el'); return; }
+          showSuccess('تم تغيير كلمة السر بنجاح', 'يمكنك الآن فتح التطبيق وتسجيل الدخول بكلمة السر الجديدة');
+        } catch (e) { showError(e.message || 'حدث خطأ غير متوقع'); rb.style.display = 'block'; rl.classList.add('hidden-el'); }
       }
 
       document.addEventListener('DOMContentLoaded', function() {
-        const np = document.getElementById('new-password');
-        const cp = document.getElementById('confirm-password');
-        const pe = document.getElementById('password-error');
-        const sb = document.getElementById('password-strength');
+        var np = document.getElementById('new-password');
+        var cp = document.getElementById('confirm-password');
+        var pe = document.getElementById('password-error');
+        var sb = document.getElementById('password-strength');
         if (np) {
           np.addEventListener('input', function() {
-            const len = this.value.length;
+            var len = this.value.length;
             if (len === 0) { sb.style.width = '0'; sb.style.background = ''; return; }
             sb.style.width = '100%';
             if (len < 6) sb.style.background = '#ef4444';
             else if (len < 10) sb.style.background = '#f59e0b';
             else sb.style.background = '#22c55e';
           });
-          np.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && cp) cp.focus();
-          });
+          np.addEventListener('keydown', function(e) { if (e.key === 'Enter' && cp) cp.focus(); });
         }
         if (cp) {
           cp.addEventListener('input', function() {
-            if (this.value.length > 0 && this.value !== np?.value) {
-              pe.textContent = 'كلمة السر غير متطابقة';
-              pe.style.display = 'block';
-            } else {
-              pe.style.display = 'none';
-            }
+            if (this.value.length > 0 && this.value !== np.value) { pe.textContent = 'كلمة السر غير متطابقة'; pe.style.display = 'block'; }
+            else { pe.style.display = 'none'; }
           });
-          cp.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') handlePasswordReset();
-          });
+          cp.addEventListener('keydown', function(e) { if (e.key === 'Enter') handlePasswordReset(); });
         }
       });
 
+      // ======== SCROLL REVEAL ========
+      function initReveal() {
+        var els = document.querySelectorAll('.reveal');
+        if (!els.length) return;
+        var obs = new IntersectionObserver(function(entries) {
+          entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('visible');
+              obs.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.1 });
+        els.forEach(function(el) { obs.observe(el); });
+      }
+
+      // ======== STATS ========
       function initLandingPage() {
+        initReveal();
         loadStats();
         setInterval(loadStats, 60000);
       }
 
+      function animateCounters() {
+        document.querySelectorAll('.stat-value').forEach(function(el) {
+          var target = parseFloat(el.getAttribute('data-target'));
+          if (isNaN(target)) return;
+          var suffix = el.getAttribute('data-suffix') || '';
+          var duration = 1200;
+          var start = performance.now();
+          function step(now) {
+            var p = Math.min((now - start) / duration, 1);
+            var eased = 1 - Math.pow(1 - p, 3);
+            var current = Math.round(eased * target);
+            el.textContent = current.toLocaleString('ar-EG') + suffix;
+            if (p < 1) requestAnimationFrame(step);
+            else el.textContent = target.toLocaleString('ar-EG') + suffix;
+          }
+          requestAnimationFrame(step);
+        });
+      }
+
       async function loadStats() {
-        const grid = document.getElementById('statsGrid');
+        var grid = document.getElementById('statsGrid');
         try {
-          const res = await fetch(STATS_FN_URL);
-          if (!res.ok) throw new Error('Failed to fetch stats');
-          const stats = await res.json();
+          var res = await fetch(STATS_FN_URL);
+          if (!res.ok) throw new Error('Failed');
+          var stats = await res.json();
 
-          const formatNumber = (n) => {
-            if (!n && n !== 0) return '0';
-            return n.toLocaleString('ar-EG');
-          };
+          var fn = function(n) { return (!n && n !== 0) ? '0' : Number(n).toLocaleString('ar-EG'); };
+          var cards = [
+            { val: stats.users.total, label: 'إجمالي المستخدمين', sub: fn(stats.users.drivers) + ' سائق  ' + fn(stats.users.passengers) + ' راكب', icon: 'fa-users', cls: 'stat-purple', suffix: '' },
+            { val: stats.trips.completed, label: 'رحلات مكتملة', sub: fn(stats.trips.total) + ' إجمالي  ' + fn(stats.trips.cancelled) + ' ملغية', icon: 'fa-check-circle', cls: 'stat-green', suffix: '' },
+            { val: stats.trips.today, label: 'رحلات اليوم', sub: fn(stats.trips.this_week) + ' هذا الأسبوع  ' + fn(stats.trips.this_month) + ' هذا الشهر', icon: 'fa-calendar-day', cls: 'stat-blue', suffix: '' },
+            { val: stats.trips.total_fare, label: 'إجمالي الإيرادات', sub: 'متوسط ' + fn(stats.trips.avg_fare) + ' ج.م للرحلة', icon: 'fa-money-bill-wave', cls: 'stat-gold', suffix: '' },
+            { val: Math.round(stats.trips.total_distance_km), label: 'إجمالي المسافة', sub: 'جميع الرحلات المكتملة', icon: 'fa-road', cls: 'stat-orange', suffix: ' كم' },
+            { val: stats.drivers.active, label: 'سائقين نشطين', sub: fn(stats.drivers.available_now) + ' متاح الآن', icon: 'fa-users-gear', cls: 'stat-emerald', suffix: '' },
+            { val: stats.ratings.avg_score, label: 'متوسط التقييم', sub: fn(stats.ratings.total) + ' تقييم', icon: 'fa-star', cls: 'stat-pink', suffix: '' },
+            { val: stats.referrals.total, label: 'إحالات السائقين', sub: fn(stats.referrals.successful) + ' إحالة ناجحة', icon: 'fa-link', cls: 'stat-blue', suffix: '' },
+            { val: stats.finance.total_deposits, label: 'إجمالي الودائع', sub: fn(stats.finance.pending_requests) + ' طلب معلق', icon: 'fa-credit-card', cls: 'stat-gold', suffix: '' },
+          ];
 
-          grid.innerHTML = [
-            '<div class="stat-card"><div class="number">' + formatNumber(stats.users.total) + '</div><div class="label">إجمالي المستخدمين</div><div class="sub-label">' + formatNumber(stats.users.drivers) + ' سائق · ' + formatNumber(stats.users.passengers) + ' راكب</div></div>',
-            '<div class="stat-card"><div class="number green">' + formatNumber(stats.trips.completed) + '</div><div class="label">رحلات مكتملة</div><div class="sub-label">' + formatNumber(stats.trips.total) + ' إجمالي · ' + formatNumber(stats.trips.cancelled) + ' ملغية</div></div>',
-            '<div class="stat-card"><div class="number">' + formatNumber(stats.trips.today) + '</div><div class="label">رحلات اليوم</div><div class="sub-label">' + formatNumber(stats.trips.this_week) + ' هذا الأسبوع · ' + formatNumber(stats.trips.this_month) + ' هذا الشهر</div></div>',
-            '<div class="stat-card"><div class="number gold">' + formatNumber(stats.trips.total_fare) + '</div><div class="label">إجمالي الإيرادات (ج.م)</div><div class="sub-label">متوسط ' + formatNumber(stats.trips.avg_fare) + ' ج.م للرحلة</div></div>',
-            '<div class="stat-card"><div class="number">' + formatNumber(Math.round(stats.trips.total_distance_km)) + '</div><div class="label">إجمالي المسافة (كم)</div><div class="sub-label">جميع الرحلات المكتملة</div></div>',
-            '<div class="stat-card"><div class="number green">' + formatNumber(stats.drivers.active) + '</div><div class="label">سائقين نشطين</div><div class="sub-label">' + formatNumber(stats.drivers.available_now) + ' متاح الآن</div></div>',
-            '<div class="stat-card"><div class="number gold">' + stats.ratings.avg_score + '</div><div class="label">متوسط التقييم</div><div class="sub-label">' + formatNumber(stats.ratings.total) + ' تقييم</div></div>',
-            '<div class="stat-card"><div class="number">' + formatNumber(stats.referrals.total) + '</div><div class="label">إحالات السائقين</div><div class="sub-label">' + formatNumber(stats.referrals.successful) + ' إحالة ناجحة</div></div>',
-            '<div class="stat-card"><div class="number green">' + formatNumber(stats.finance.total_deposits) + '</div><div class="label">إجمالي الودائع (ج.م)</div><div class="sub-label">' + formatNumber(stats.finance.pending_requests) + ' طلب معلق</div></div>',
-            '<div class="stat-card" style="grid-column: span 2;"><div class="label" style="margin-bottom:8px;font-size:15px;">نظام الدفع للسائقين</div><div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;">' + (stats.drivers.by_payment_system || []).map(function(p) { return '<div style="text-align:center"><div style="font-size:24px;font-weight:bold;">' + formatNumber(p.count) + '</div><div style="font-size:12px;color:var(--text-muted);">' + (p.payment_system === 'cash' ? 'كاش' : p.payment_system === 'subscription' ? 'اشتراك' : p.payment_system === 'commission' ? 'عمولة' : p.payment_system) + '</div></div>'; }).join('') || '<div style="font-size:14px;color:var(--text-muted);">لا توجد بيانات</div>' + '</div></div>'
-          ].join('');
+          var html = '';
+          cards.forEach(function(c, i) {
+            var delay = 0.05 * i;
+            html += '<div class="stat-card ' + c.cls + '" style="transition-delay:' + delay + 's">';
+            html += '<div class="stat-icon"><i class="fas ' + c.icon + '"></i></div>';
+            html += '<div class="stat-value" data-target="' + c.val + '" data-suffix="' + c.suffix + '">0</div>';
+            html += '<div class="stat-label">' + c.label + '</div>';
+            html += '<div class="stat-sublabel">' + c.sub + '</div>';
+            html += '</div>';
+          });
+
+          // Payment systems card
+          var paymentHtml = '<div class="stat-card stat-purple stat-wide" style="transition-delay:0.5s"><div class="stat-icon"><i class="fas fa-credit-card"></i></div><div class="stat-label" style="margin-bottom:14px;font-size:15px;">نظام الدفع للسائقين</div><div style="display:flex;gap:20px;justify-content:center;flex-wrap:wrap;">';
+          var systems = stats.drivers.by_payment_system || [];
+          if (systems.length) {
+            systems.forEach(function(p) {
+              var name = p.payment_system === 'cash' ? 'كاش' : p.payment_system === 'subscription' ? 'اشتراك' : p.payment_system === 'commission' ? 'عمولة' : p.payment_system;
+              paymentHtml += '<div style="text-align:center;min-width:80px;"><div style="font-size:28px;font-weight:800;color:#a78bfa;">' + p.count + '</div><div style="font-size:12px;color:var(--text-muted);">' + name + '</div></div>';
+            });
+          } else {
+            paymentHtml += '<div style="color:var(--text-muted);font-size:14px;">لا توجد بيانات</div>';
+          }
+          paymentHtml += '</div></div>';
+
+          grid.innerHTML = html + paymentHtml;
+
+          // Observe stat cards for scroll reveal
+          setTimeout(function() {
+            grid.querySelectorAll('.stat-card').forEach(function(el, i) {
+              setTimeout(function() { el.classList.add('visible'); }, i * 80);
+            });
+            animateCounters();
+          }, 200);
         } catch (e) {
           console.error('Stats error:', e);
+          grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--text-muted);padding:40px;">تعذر تحميل الإحصائيات</div>';
         }
       }
 
@@ -528,50 +853,37 @@
           document.getElementById('emailError').classList.add('show');
           return false;
         }
-        const name = document.getElementById('visitorName').value.trim();
-        const email = document.getElementById('visitorEmail').value.trim();
-        const btn = document.getElementById('emailSubmitBtn');
-        const success = document.getElementById('emailSuccess');
-        const error = document.getElementById('emailError');
-
+        var name = document.getElementById('visitorName').value.trim();
+        var email = document.getElementById('visitorEmail').value.trim();
+        var btn = document.getElementById('emailSubmitBtn');
+        var success = document.getElementById('emailSuccess');
+        var error = document.getElementById('emailError');
         success.classList.remove('show');
         error.classList.remove('show');
-
-        if (!email) {
-          error.textContent = 'يرجى إدخال البريد الإلكتروني';
-          error.classList.add('show');
-          return false;
-        }
-
-        btn.disabled = true;
-        btn.textContent = 'جاري الإرسال...';
-
+        if (!email) { error.textContent = 'يرجى إدخال البريد الإلكتروني'; error.classList.add('show'); return false; }
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
         try {
-          const source = new URLSearchParams(window.location.search).get('ref') || 'landing_page';
-          const { error: insertError } = await supabase
-            .from('visitors')
-            .insert({ email, name, source });
-
-          if (insertError) throw insertError;
-
+          var source = new URLSearchParams(window.location.search).get('ref') || 'landing_page';
+          var result = await supabase.from('visitors').insert({ email: email, name: name, source: source });
+          if (result.error) throw result.error;
           success.classList.add('show');
           document.getElementById('visitorEmail').value = '';
           document.getElementById('visitorName').value = '';
         } catch (e) {
-          console.error('Email submit error:', e);
+          console.error('Email error:', e);
           error.textContent = e.message === 'duplicate key value violates unique constraint' ? 'هذا البريد مسجل بالفعل' : 'حدث خطأ أثناء الإرسال. حاول مرة أخرى.';
           error.classList.add('show');
         } finally {
           btn.disabled = false;
-          btn.textContent = 'اشترك الآن';
+          btn.innerHTML = '<i class="fas fa-paper-plane"></i> اشترك الآن';
         }
         return false;
       }
 
       function toggleFaq(el) {
         el.classList.toggle('open');
-        var answer = el.nextElementSibling;
-        answer.classList.toggle('open');
+        var a = el.nextElementSibling;
+        a.classList.toggle('open');
       }
 
       handleAuthRedirect();
