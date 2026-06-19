@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
-  <base href="$FLUTTER_BASE_HREF">
+  <base href="/Taweqa-ogretk/">
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -477,7 +477,14 @@
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhodWlzZWZ0emJxc3Nzd251d3J2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMDE5NjEsImV4cCI6MjA5NjY3Nzk2MX0.HSfq7SDEnuoK6ERAV_mINDN49ZJntiBRkVc8L7RsAYY';
     const STATS_FN_URL = SUPABASE_URL + '/functions/v1/get-public-stats';
 
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    let supabase = null;
+    try {
+      if (window.supabase) {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
+    } catch (e) {
+      console.warn('Supabase unavailable, continuing without it:', e);
+    }
 
     const landingPage = document.getElementById('landing-page');
     const authContainer = document.getElementById('auth-container');
@@ -486,6 +493,13 @@
     const successCard = document.getElementById('success-card');
     const errorCard = document.getElementById('error-card');
     const resetForm = document.getElementById('reset-form');
+
+    // ======== Show landing page immediately (no auth) ========
+    function showLandingPage() {
+      authContainer.style.display = 'none';
+      flutterLoader.style.display = 'none';
+      landingPage.classList.add('active');
+    }
 
     // ======== Route logic ========
     function parseHash() {
@@ -518,10 +532,13 @@
     async function handleAuthRedirect() {
       const params = parseHash();
       if (!params || !params.access_token) {
-        authContainer.style.display = 'none';
-        flutterLoader.style.display = 'none';
-        landingPage.classList.add('active');
+        showLandingPage();
         initLandingPage();
+        return;
+      }
+
+      if (!supabase) {
+        showLandingPage();
         return;
       }
 
@@ -565,11 +582,16 @@
         }
       } catch (e) {
         console.error('Auth error:', e);
-        showError(e.message || 'حدث خطأ غير متوقع');
+        showLandingPage();
       }
     }
 
     async function handlePasswordReset() {
+      if (!supabase) {
+        showLandingPage();
+        return;
+      }
+
       const newPassword = document.getElementById('new-password').value;
       const confirmPassword = document.getElementById('confirm-password').value;
       const errorEl = document.getElementById('password-error');
@@ -734,6 +756,11 @@
     // ======== Email Form ========
     async function handleEmailSubmit(e) {
       e.preventDefault();
+      if (!supabase) {
+        document.getElementById('emailError').textContent = 'خدمة البريد غير متاحة حالياً';
+        document.getElementById('emailError').classList.add('show');
+        return false;
+      }
       const name = document.getElementById('visitorName').value.trim();
       const email = document.getElementById('visitorEmail').value.trim();
       const btn = document.getElementById('emailSubmitBtn');
@@ -746,7 +773,7 @@
       if (!email) {
         error.textContent = 'يرجى إدخال البريد الإلكتروني';
         error.classList.add('show');
-        return;
+        return false;
       }
 
       btn.disabled = true;
