@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>توقع أجرتك - العداد الذكي المتعدد المطور</title>
+    <title>توقع أجرتك - العداد الذكي المطور</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     
@@ -106,9 +106,10 @@
             </div>
         </div>
         
+        <!-- لوحة التحكم الكاملة بالأسعار - ظاهرة دائماً للسائق -->
         <div class="card" id="setupSection">
             <div class="form-row">
-                <label>نوع الرحلة الكلي:</label>
+                <label>نوع الرحلة المبدئي:</label>
                 <select id="tripType" onchange="onTripTypeChanged()">
                     <option value="makhsoos">مخصوص</option>
                     <option value="afrad">أفراد (خط/مشترك)</option>
@@ -145,7 +146,6 @@
                 <button class="btn btn-start" id="startBtn" onclick="startCurrentMeter()">بدء العداد</button>
                 <button class="btn btn-stop" id="stopBtn" onclick="stopCurrentMeter()" disabled>إنهاء وتصفية</button>
                 
-                <!-- زر التحكم الديناميكي الذكي المحدث -->
                 <button class="btn btn-dynamic" id="dynamicActionBtn" onclick="handleDynamicActionButton()" disabled>⚙️ إجراء على الركاب</button>
                 
                 <button class="btn btn-secondary" onclick="triggerManualDistance()">📡 GPS ضعيف (يدوي)</button>
@@ -215,7 +215,7 @@
             isWaitingMode: false,
             shareCode: '',
             finalFare: 0,
-            passengerCount: 1, // عدد الركاب الافتراضي هو 1 عند البداية
+            passengerCount: 1, 
             pathCoords: [] 
         };
     }
@@ -261,10 +261,8 @@
 
     function onTripTypeChanged() {
         const type = document.getElementById('tripType').value;
-        document.getElementById('kmPriceGroup').style.display = (type === 'makhsoos') ? 'flex' : 'none';
-        
-        // تحديث نص الزر الديناميكي وشكله بناءً على نوع الرحلة المختار
         const btnBtn = document.getElementById('dynamicActionBtn');
+        
         if (type === 'afrad') {
             btnBtn.innerText = "👤 تحديث عدد الركاب الحاليين";
             btnBtn.style.backgroundColor = "var(--warning)";
@@ -284,14 +282,12 @@
         document.getElementById('dot_2').className = 'meter-status-dot ' + (meters[2].isActive ? 'active' : '');
     }
 
-    // زر معالجة الإجراءات الديناميكي بناءً على وضع الرحلة الحالية
     function handleDynamicActionButton() {
         const m = meters[activeMeterId];
         if(!m.isActive) return;
 
         if (m.tripType === 'afrad') {
-            // منطق الأفراد: تعديل وتحديث معداد الأفراد والكراسي
-            const count = prompt(`المشوار الحالي أفراد (سعر الكرسي الثابت 5ج).\nأدخل إجمالي عدد الركاب المتواجدين بالمركبة حالياً:`, m.passengerCount);
+            const count = prompt(`المشوار الحالي أفراد.\nأدخل إجمالي عدد الركاب المتواجدين بالمركبة حالياً:`, m.passengerCount);
             if (count !== null) {
                 const parsedCount = parseInt(count);
                 if (parsedCount >= 1 && parsedCount <= 20) {
@@ -302,13 +298,12 @@
                 }
             }
         } else {
-            // منطق المخصوص: ركوب ركاب آخرين وتخفيض السعر الأساسي للمخصوص الأول
-            if (confirm("هل تريد تحويل هذا المشوار المخصوص إلى مشترك (أفراد) لركوب زبائن آخرين بالדרך؟")) {
+            if (confirm("هل تريد تحويل هذا المشوار المخصوص إلى مشترك (أفراد) لركوب زبائن آخرين بالطريق؟")) {
                 const newPrice = prompt("أدخل سعر الكيلومتر الجديد المخفض للزبون المخصوص الأول (جنيه/كم):", m.kmPrice);
                 if (newPrice !== null) {
                     m.kmPrice = parseFloat(newPrice) || m.kmPrice;
-                    m.tripType = 'afrad'; // تحويل النمط الكلي لأفراد لتمكين إضافة ركاب لاحقاً
-                    m.passengerCount = 1; // ضبط العداد المبدئي
+                    m.tripType = 'afrad'; 
+                    m.passengerCount = 1; 
                     document.getElementById('tripType').value = 'afrad';
                     onTripTypeChanged();
                     showToast(`🔄 تم تحويل المشوار وتعديل تسعيرة المخصوص إلى ${m.kmPrice} ج/كم`);
@@ -417,15 +412,11 @@
         if (m.pathCoords && m.pathCoords.length > 0) {
             const leafletLatLngs = m.pathCoords.map(coord => L.latLng(coord.lat, coord.lng));
             pathLine.setLatLngs(leafletLatLngs);
-            if(m.isActive && leafletLatLngs.length > 1) {
-                map.fitBounds(pathLine.getBounds(), { padding: [30, 30] });
-            }
         } else {
             pathLine.setLatLngs([]);
         }
     }
 
-    // الحسابات الرياضية المحدثة المبنية على نوع المدخلات الفعلي وركاب التشارك
     function calculateFare(m) {
         let baseFare = m.bandira;
         let distanceCost = 0;
@@ -433,8 +424,8 @@
         if (m.tripType === 'makhsoos') {
             distanceCost = m.totalDistance * m.kmPrice;
         } else {
-            // نمط الأفراد: حساب تراكمي مبني على المسافة المقطوعة مضروبة في (5 جنيه ثابتة لكل كرسي × عدد الركاب الفعليين بالسيارة)
-            distanceCost = m.totalDistance * 5 * m.passengerCount; 
+            // التعديل هنا: يضرب المسافة في (سعر الكيلومتر المدخل بالواجهة كتحكم كامل × عدد ركاب المقاعد)
+            distanceCost = m.totalDistance * m.kmPrice * m.passengerCount; 
         }
 
         let totalDurationCost = m.totalDurationMinutes * m.durationPrice;
@@ -465,13 +456,13 @@
         if (m.isActive) {
             document.getElementById('startBtn').disabled = true;
             document.getElementById('stopBtn').disabled = false;
-            document.getElementById('dynamicActionBtn').disabled = false; // تفعيل زر الإجراءات التفاعلي أثناء الرحلة
+            document.getElementById('dynamicActionBtn').disabled = false;
             document.getElementById('globalStatusText').innerText = `عداد رقم [${m.id}] شغال حالياً | كود: ${m.shareCode}`;
         } else {
             document.getElementById('startBtn').disabled = false;
             document.getElementById('stopBtn').disabled = true;
             document.getElementById('dynamicActionBtn').disabled = true;
-            document.getElementById('globalStatusText').innerText = `عداد رقم [${m.id}] جاهز وجاهز للبدء`;
+            document.getElementById('globalStatusText').innerText = `عداد رقم [${m.id}] جاهز ومستعد للبدء`;
         }
     }
 
@@ -479,9 +470,27 @@
         const m = meters[activeMeterId];
         if (m.isActive) return;
 
+        const selectedType = document.getElementById('tripType').value;
+        let initialPassengers = 1;
+
+        // التعديل المنطقي العبقري: السؤال فوراً عن عدد المقاعد الممتلئة إذا كانت رحلة أفراد
+        if (selectedType === 'afrad') {
+            const seats = prompt("المشوار أفراد، كم عدد المقاعد المحجوزة والممتلئة الآن عند البداية؟", "1");
+            if (seats === null) return; // إلغاء العملية لو السائق قفل النافذة
+            const parsedSeats = parseInt(seats);
+            if (parsedSeats >= 1 && parsedSeats <= 20) {
+                initialPassengers = parsedSeats;
+            } else {
+                alert("يرجى إدخال عدد مقاعد صحيح لبدء العداد.");
+                return;
+            }
+        }
+
         m.isActive = true;
         m.startTime = Date.now();
-        m.tripType = document.getElementById('tripType').value;
+        m.tripType = selectedType;
+        
+        // جلب الأسعار الحالية والتحكم الكامل بها مباشرة من المدخلات
         m.kmPrice = parseFloat(document.getElementById('kmPriceInput').value) || 5;
         m.waitPrice = parseFloat(document.getElementById('waitPriceInput').value) || 1;
         m.durationPrice = parseFloat(document.getElementById('durationPriceInput').value) || 0.50;
@@ -489,7 +498,7 @@
         
         m.totalDistance = 0;
         m.totalWaitSeconds = 0;
-        m.passengerCount = 1; // يرتد لـ 1 تلقائياً عند بدء كل رحلة جديدة
+        m.passengerCount = initialPassengers; 
         m.lastLat = null; m.lastLng = null; m.lastLocationTime = null;
         m.pathCoords = []; 
 
@@ -543,7 +552,7 @@
     function generateReceipt(m) {
         const body = document.getElementById('receiptBody');
         const waitingMinutes = m.totalWaitSeconds / 60;
-        const distCost = m.tripType === 'makhsoos' ? (m.totalDistance * m.kmPrice) : (m.totalDistance * 5 * m.passengerCount);
+        const distCost = m.tripType === 'makhsoos' ? (m.totalDistance * m.kmPrice) : (m.totalDistance * m.kmPrice * m.passengerCount);
         const totalDurationCost = m.totalDurationMinutes * m.durationPrice;
         const waitCost = waitingMinutes * m.waitPrice;
 
