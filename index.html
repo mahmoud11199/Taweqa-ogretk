@@ -3,156 +3,159 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>توقع أجرتك - العداد الذكي المتكامل</title>
-    
+    <title>توقع أجرتك Pro - العداد الذكي</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: #f0f2f5; padding: 15px; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h1 { text-align: center; color: #2c3e50; margin-bottom: 20px; font-size: 24px; }
-        
-        /* شاشات العدادات الرقمية */
-        .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
-        .counter-box { background: #222; color: #00ffcc; padding: 15px; border-radius: 10px; text-align: center; box-shadow: inset 0 0 10px rgba(0,0,0,0.8); }
-        .counter-box h3 { color: #fff; font-size: 14px; margin-bottom: 5px; }
-        .price { font-size: 28px; font-weight: bold; font-family: monospace; }
-        .details { font-size: 12px; color: #aaa; margin-top: 5px; }
-        
-        /* التحكم والإعدادات */
-        .controls { background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #e9ecef; }
-        .form-group { margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
-        .form-group label { font-weight: bold; font-size: 14px; }
-        .form-group input, .form-group select { padding: 6px 10px; width: 100px; border: 1px solid #ccc; border-radius: 5px; text-align: center; }
-        
-        /* الأزرار */
-        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        button { padding: 12px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .btn-start { background: #28a745; color: white; }
-        .btn-stop { background: #dc3545; color: white; }
-        .btn-add-passenger { background: #ffc107; color: #212529; grid-column: span 2; }
-        button:disabled { background: #ccc; color: #666; cursor: not-allowed; }
-        
-        /* الخريطة */
-        #map { height: 300px; border-radius: 10px; border: 2px solid #ccc; margin-top: 15px; z-index: 1; }
-        
-        /* سجل ركوب الأفراد السريع */
-        .passengers-log { margin-top: 15px; background: #eef2f7; padding: 10px; border-radius: 8px; font-size: 13px; }
-        .passengers-log h4 { margin-bottom: 5px; color: #495057; }
-        ul { list-style: none; padding-right: 10px; }
-        li { margin-bottom: 6px; border-bottom: 1px dashed #ccc; padding-bottom: 4px; }
-
-        /* نافذة الفاتورة المنبثقة (Modal Receipt) */
-        .receipt-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 999; justify-content: center; align-items: center; padding: 20px; }
-        .receipt-card { background: #fff; width: 100%; max-width: 450px; border-radius: 15px; padding: 25px; box-shadow: 0 5px 25px rgba(0,0,0,0.3); position: relative; }
-        .receipt-header { text-align: center; border-bottom: 2px dashed #333; padding-bottom: 15px; margin-bottom: 15px; }
-        .receipt-header h2 { color: #2c3e50; font-size: 22px; }
-        .receipt-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 15px; }
-        .receipt-total { border-top: 2px dashed #333; padding-top: 15px; margin-top: 15px; font-weight: bold; font-size: 18px; color: #28a745; }
-        .close-receipt-btn { background: #333; color: white; width: 100%; margin-top: 20px; padding: 10px; border-radius: 5px; }
+        :root {
+            --bg: #0f172a; --card: #1e293b; --text: #f1f5f9; --muted: #94a3b8;
+            --primary: #22d3ee; --success: #10b981; --danger: #ef4444; --warning: #f59e0b;
+            --glass: rgba(30, 41, 59, 0.7); --border: rgba(148, 163, 184, 0.2);
+        }
+        @media (prefers-color-scheme: light) {
+            :root {
+                --bg: #f1f5f9; --card: #ffffff; --text: #0f172a; --muted: #475569;
+                --glass: rgba(255, 255, 255, 0.7); --border: rgba(15, 23, 42, 0.1);
+            }
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
+        body { background: var(--bg); padding: 12px; color: var(--text); min-height: 100vh; transition: 0.3s; }
+        .container { max-width: 500px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 16px; }
+        .header h1 { font-size: 26px; font-weight: 900; background: linear-gradient(90deg, var(--primary), #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header p { color: var(--muted); font-size: 13px; }
+        .card { background: var(--glass); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 20px; padding: 16px; margin-bottom: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+        .main-meter { text-align: center; }
+        .fare-display { font-size: 48px; font-weight: 900; font-family: monospace; color: var(--primary); text-shadow: 0 0 20px rgba(34, 211, 238, 0.3); margin: 8px 0; }
+        .trip-type-badge { display: inline-block; background: var(--primary); color: var(--bg); padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+        .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; text-align: center; }
+        .stat-box h3 { font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: 4px; }
+        .stat-box .value { font-size: 18px; font-weight: 700; }
+        .form-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .form-row label { font-weight: 600; font-size: 14px; }
+        .form-row input, .form-row select { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; width: 110px; border-radius: 10px; text-align: center; font-weight: 700; }
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .btn { padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+        .btn:active { transform: scale(0.97); }
+        .btn-start { background: var(--success); color: white; }
+        .btn-stop { background: var(--danger); color: white; }
+        .btn-add { background: var(--warning); color: var(--bg); grid-column: span 2; }
+        .btn-secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+        .btn:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+        #map { height: 280px; border-radius: 16px; border: 1px solid var(--border); z-index: 1; }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 999; justify-content: center; align-items: center; padding: 16px; backdrop-filter: blur(5px); }
+        .receipt, .history-panel { background: var(--card); width: 100%; max-width: 420px; border-radius: 20px; overflow: hidden; border: 1px solid var(--border); max-height: 90vh; display: flex; flex-direction: column; }
+        .receipt-header { background: linear-gradient(135deg, var(--primary), #818cf8); padding: 20px; text-align: center; }
+        .receipt-header h2 { font-size: 20px; font-weight: 900; color: var(--bg); }
+        .receipt-body, .history-body { padding: 20px; overflow-y: auto; }
+        .receipt-line { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px; }
+        .receipt-line .label { color: var(--muted); }
+        .receipt-line .value { font-weight: 700; }
+        .receipt-divider { border-top: 1px dashed var(--border); margin: 16px 0; }
+        .receipt-total { font-size: 20px; font-weight: 900; color: var(--primary); }
+        .receipt-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 20px 20px; }
+        #qrcode { background: white; padding: 10px; border-radius: 12px; margin: 10px auto; width: fit-content; }
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--success); color: white; padding: 12px 20px; border-radius: 12px; font-weight: 700; z-index: 1000; display: none; }
+        .history-item { background: var(--bg); padding: 12px; border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--border); }
+        .history-item-header { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 6px; }
+        .history-item-details { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>🚕 عداد الأجرة الذكي (توقع أجرتك)</h1>
+    <div class="header">
+        <h1>توقع أجرتك Pro</h1>
+        <p id="tripStatusText">جاهز للبدء</p>
+    </div>
     
-    <div class="controls" id="setupSection">
-        <div class="form-group">
-            <label>نوع الرحلة المبدئي:</label>
+    <div class="card" id="setupSection">
+        <div class="form-row">
+            <label>نوع الرحلة:</label>
             <select id="tripType" onchange="toggleTripTypeSetup()">
                 <option value="makhsoos">مخصوص</option>
-                <option value="afrad">أفراد (5 ج/كم)</option>
+                <option value="afrad">أفراد</option>
             </select>
         </div>
-        <div class="form-group" id="makhsoosPriceGroup">
-            <label>سعر الكيلو للمخصوص (جنيه):</label>
-            <input type="number" id="kmPriceInput" value="5" min="1">
+        <div class="form-row" id="makhsoosPriceGroup">
+            <label>سعر الكيلو:</label>
+            <input type="number" id="kmPriceInput" value="5" min="1" max="12">
         </div>
     </div>
 
-    <div class="dashboard">
-        <div class="counter-box">
-            <h3>العداد الرئيسي الحالي</h3>
-            <div class="price" id="totalFareDisplay">0.00 ج</div>
-            <div class="details" id="tripStatusText">انتظار بدء الرحلة</div>
-        </div>
-        <div class="counter-box">
-            <h3>الإحصائيات الحية</h3>
-            <div class="details">المسافة الكلية: <span id="distDisplay" style="color:#00ffcc; font-weight:bold;">0.00</span> كم</div>
-            <div class="details">الانتظار الحقيقي: <span id="waitDisplay" style="color:#00ffcc; font-weight:bold;">0</span> ثانية</div>
-            <div class="details">الوضع الحالي: <span id="currentTypeDisplay" style="color:#ffc107;">-</span></div>
+    <div class="card main-meter">
+        <div class="trip-type-badge" id="currentTypeDisplay">-</div>
+        <div class="fare-display" id="totalFareDisplay">0.00 ج</div>
+        <div class="stats">
+            <div class="stat-box"><h3>المسافة</h3><div class="value"><span id="distDisplay">0.00</span> كم</div></div>
+            <div class="stat-box"><h3>المدة</h3><div class="value"><span id="durationDisplay">0</span> د</div></div>
+            <div class="stat-box"><h3>الرمز</h3><div class="value"><span id="codeDisplay">------</span></div></div>
         </div>
     </div>
 
-    <div class="btn-group">
-        <button class="btn-start" id="startBtn" onclick="checkPermissionsAndStart()">بدء الرحلة</button>
-        <button class="btn-stop" id="stopBtn" onclick="stopTrip()" disabled>إنهاء الرحلة</button>
-        <button class="btn-add-passenger" id="addPassengerBtn" onclick="addPassenger()" disabled>➕ إضافة راكب ثانٍ (تحويل لمخصوص)</button>
+    <div class="card">
+        <div class="btn-grid">
+            <button class="btn btn-start" id="startBtn" onclick="startTrip()">بدء الرحلة</button>
+            <button class="btn btn-stop" id="stopBtn" onclick="stopTrip()" disabled>إنهاء الرحلة</button>
+            <button class="btn btn-add" id="addPassengerBtn" onclick="addPassenger()" disabled>➕ إضافة راكب</button>
+            <button class="btn btn-secondary" onclick="toggleWeakGPS()">📡 GPS يدوي</button>
+            <button class="btn btn-secondary" onclick="sendSOS()">🆘 طوارئ</button>
+            <button class="btn btn-secondary" onclick="showHistory()">📋 سجل الرحلات</button>
+        </div>
     </div>
 
-    <div class="passengers-log" id="logSection">
-        <h4>📋 رصد الحالة الحية:</h4>
-        <ul id="passengerList">
-            <li>لا توجد رحلة نشطة حالياً. يرجى الضغط على بدء الرحلة أثناء التحرك.</li>
-        </ul>
-    </div>
-
-    <div id="map"></div>
+    <div class="card"><div id="map"></div></div>
 </div>
 
-<div class="receipt-overlay" id="receiptModal">
-    <div class="receipt-card">
-        <div class="receipt-header">
-            <h2>🧾 إيصال تفاصيل الرحلة</h2>
-            <p style="font-size: 12px; color: #666; margin-top: 5px;">تطبيق توقع أجرتك الذكي</p>
+<!-- Modal الفاتورة -->
+<div class="modal" id="receiptModal">
+    <div class="receipt">
+        <div class="receipt-header"><h2>🧾 فاتورة الرحلة</h2></div>
+        <div class="receipt-body" id="receiptBody"></div>
+        <div id="qrcode"></div>
+        <div class="receipt-actions">
+            <button class="btn btn-secondary" onclick="shareWhatsApp()">واتساب</button>
+            <button class="btn btn-start" onclick="closeReceipt()">إغلاق</button>
         </div>
-        
-        <div id="receiptBody">
-            </div>
-        
-        <button class="close-receipt-btn" onclick="closeReceipt()">إغلاق الفاتورة وبدء جديد</button>
     </div>
 </div>
+
+<!-- Modal سجل الرحلات -->
+<div class="modal" id="historyModal">
+    <div class="history-panel">
+        <div class="receipt-header"><h2>📋 سجل آخر الرحلات</h2></div>
+        <div class="history-body" id="historyBody"></div>
+        <div class="receipt-actions">
+            <button class="btn btn-danger" onclick="clearHistory()">مسح السجل</button>
+            <button class="btn btn-start" onclick="closeHistory()">إغلاق</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<audio id="beep" src="data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU..."></audio>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
 <script>
-    let map, currentMarker, pathLine;
-    let pathCoords = [];
-    let watchId = null;
-    let timerInterval = null;
-    
-    // قيم التسعير الثابتة والمتغيرة
-    const bandiraMakhsoos = 5;
-    const bandiraAfrad = 3;
-    const waitMinutePrice = 1; 
-    const afradKmPrice = 5;    
-    let kmPrice = 5;           
-    
-    // عدادات ومؤشرات الحركة الحية
-    let totalDistance = 0; 
-    let totalWaitSeconds = 0;
-    let lastPosition = null;
-    let isVehicleMoving = false; 
-    let tripType = 'makhsoos'; 
-    let isTripActive = false;
-
-    let tripSegments = {
-        phase1AfradDistance: 0,
-        phase1AfradWait: 0,
-        phase2MakhsoosDistance: 0,
-        phase2MakhsoosWait: 0
+    const PRICING = { 
+        afrad: { bandira: 5, km: 5, minute: 1 }, 
+        makhsoos: { bandira: 5, minFare: 10, minute: 1 } 
     };
+    let currentKmPrice = 5;
+    let map, watchId, timerInterval, startTime, lastPosition = null;
+    let isTripActive = false, tripType = 'makhsoos';
+    let totalDistance = 0, lastBeepKm = 0;
+    let pathCoords = [], pathLine, currentMarker;
+    let passengers = [], shareCode = '';
+    let lastTripData = null;
 
-    let passengers = [];
-
-    window.onload = function() {
+    // استرجاع رحلة لو المتصفح اتقفل
+    window.onload = () => {
         map = L.map('map').setView([30.0444, 31.2357], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        restoreTrip();
     };
 
     function toggleTripTypeSetup() {
@@ -160,297 +163,245 @@
         document.getElementById('makhsoosPriceGroup').style.display = (type === 'makhsoos') ? 'flex' : 'none';
     }
 
-    // التحقق من صلاحيات الـ GPS قبل بدء الرحلة
-    function checkPermissionsAndStart() {
-        if (!navigator.geolocation) {
-            alert("ميزة الـ GPS غير مدعومة في متصفحك أو جهازك.");
-            return;
-        }
+    function showToast(msg, color = 'var(--success)') {
+        const t = document.getElementById('toast');
+        t.innerText = msg; t.style.background = color; t.style.display = 'block';
+        setTimeout(() => t.style.display = 'none', 2500);
+    }
 
-        // فحص حالة الإذن لضمان التتبع المظبوط
-        navigator.permissions.query({ name: 'geolocation' }).then(function(result) {
-            if (result.state === 'denied') {
-                alert("❌ تم رفض صلاحية الموقع سابقاً! يرجى الدخول إلى إعدادات المتصفح أو القفل بجانب الرابط وتفعيل 'السماح بالموقع (Location)' ليعمل العداد.");
-            } else {
-                startTrip();
-            }
-        });
+    function saveTripState() {
+        if (!isTripActive) return;
+        const state = { startTime, tripType, currentKmPrice, totalDistance, pathCoords, passengers, shareCode };
+        localStorage.setItem('activeTrip', JSON.stringify(state));
+    }
+
+    function restoreTrip() {
+        const saved = localStorage.getItem('activeTrip');
+        if (!saved) return;
+        if (confirm('كان فيه رحلة شغالة. عايز تكملها؟')) {
+            const state = JSON.parse(saved);
+            startTime = state.startTime; tripType = state.tripType; currentKmPrice = state.currentKmPrice;
+            totalDistance = state.totalDistance; pathCoords = state.pathCoords; passengers = state.passengers; shareCode = state.shareCode;
+            isTripActive = true;
+            document.getElementById('setupSection').style.display = 'none';
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('codeDisplay').innerText = shareCode;
+            document.getElementById('currentTypeDisplay').innerText = tripType === 'makhsoos' ? 'مخصوص' : 'أفراد';
+            timerInterval = setInterval(updateCalculations, 1000);
+            watchId = navigator.geolocation.watchPosition(updateLocation, handleError, { enableHighAccuracy: true });
+            pathLine = L.polyline(pathCoords, {color: '#22d3ee'}).addTo(map);
+            showToast('تم استرجاع الرحلة');
+        } else {
+            localStorage.removeItem('activeTrip');
+        }
     }
 
     function startTrip() {
         if (isTripActive) return;
-        
-        isTripActive = true;
         tripType = document.getElementById('tripType').value;
-        kmPrice = parseFloat(document.getElementById('kmPriceInput').value) || 5;
+        currentKmPrice = parseFloat(document.getElementById('kmPriceInput').value) || 5;
+        isTripActive = true; startTime = Date.now();
+        totalDistance = 0; lastBeepKm = 0; pathCoords = []; passengers = [];
+        shareCode = Math.floor(100000 + Math.random() * 900000).toString();
+        passengers.push({ id: 1, name: "الراكب 1", startIndex: 0 });
         
-        pathCoords = [];
-        totalDistance = 0;
-        totalWaitSeconds = 0;
-        lastPosition = null;
-        isVehicleMoving = false;
-        passengers = [];
-        
-        tripSegments = { phase1AfradDistance: 0, phase1AfradWait: 0, phase2MakhsoosDistance: 0, phase2MakhsoosWait: 0 };
-
-        passengers.push({
-            id: 1,
-            name: "الراكب الأول",
-            startCoords: null,
-            endCoords: null,
-            fareAtSplit: 0,
-            finalFare: 0
-        });
-
-        document.getElementById('kmPriceInput').disabled = true;
-        document.getElementById('tripType').disabled = true;
+        document.getElementById('setupSection').style.display = 'none';
         document.getElementById('startBtn').disabled = true;
         document.getElementById('stopBtn').disabled = false;
         document.getElementById('addPassengerBtn').disabled = (tripType !== 'afrad');
-
-        document.getElementById('tripStatusText').innerText = "جاري تتبع الـ GPS لايف... 🟢";
         document.getElementById('currentTypeDisplay').innerText = tripType === 'makhsoos' ? 'مخصوص' : 'أفراد';
-
-        timerInterval = setInterval(updateLiveCalculations, 1000);
-
-        // تشغيل التتبع عالي الدقة المستمر (watchPosition)
-        watchId = navigator.geolocation.watchPosition(updateLocation, handleGPSError, {
-            enableHighAccuracy: true,  // تفعيل أعلى دقة للشريحة بالموبايل
-            maximumAge: 0,             // عدم الاعتماد على كاش قديم للموقع
-            timeout: 10000             // انتظار الإشارة 10 ثوان كحد أقصى
-        });
-    }
-
-    function updateLocation(position) {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        const currentLatLng = L.latLng(lat, lng);
-
-        document.getElementById('tripStatusText').innerText = "إشارة الـ GPS ممتازة وتتحرك لايف 📡";
-
-        if(passengers[0] && !passengers[0].startCoords) {
-            passengers[0].startCoords = currentLatLng;
-            L.marker(currentLatLng).addTo(map).bindPopup("🏁 نقطة ركوب الراكب 1").openPopup();
-        }
-
-        if (lastPosition) {
-            let distanceBetween = lastPosition.distanceTo(currentLatLng) / 1000; 
-            
-            // فلتر ذكي: إذا تحرك أكثر من 3 متر نعتبره يتحرك فعلياً ونضيفها للمسافة
-            if (distanceBetween > 0.003) {
-                isVehicleMoving = true;
-                totalDistance += distanceBetween;
-                
-                if (passengers.length === 1 && tripType === 'afrad') {
-                    tripSegments.phase1AfradDistance += distanceBetween;
-                } else {
-                    tripSegments.phase2MakhsoosDistance += distanceBetween;
-                }
-
-                pathCoords.push(currentLatLng);
-                
-                if (!pathLine) {
-                    pathLine = L.polyline(pathCoords, {color: '#007bff', weight: 5}).addTo(map);
-                } else {
-                    pathLine.setLatLngs(pathCoords);
-                }
-            } else {
-                isVehicleMoving = false; 
-            }
-        } else {
-            pathCoords.push(currentLatLng);
-        }
-
-        lastPosition = currentLatLng;
-        map.setView(currentLatLng, 16);
+        document.getElementById('codeDisplay').innerText = shareCode;
+        document.getElementById('tripStatusText').innerText = `الرحلة بدأت`;
         
-        if (!currentMarker) {
-            currentMarker = L.marker(currentLatLng).addTo(map);
-        } else {
-            currentMarker.setLatLng(currentLatLng);
-        }
-
-        document.getElementById('distDisplay').innerText = totalDistance.toFixed(2);
+        timerInterval = setInterval(updateCalculations, 1000);
+        watchId = navigator.geolocation.watchPosition(updateLocation, handleError, { enableHighAccuracy: true });
     }
 
-    function updateLiveCalculations() {
-        if (!isVehicleMoving && lastPosition !== null) {
-            totalWaitSeconds++;
-            document.getElementById('waitDisplay').innerText = totalWaitSeconds;
-
-            if (passengers.length === 1 && tripType === 'afrad') {
-                tripSegments.phase1AfradWait++;
-            } else {
-                tripSegments.phase2MakhsoosWait++;
-            }
-        }
-
-        let currentDisplayFare = 0;
-        let phase1WaitFare = (tripSegments.phase1AfradWait / 60) * waitMinutePrice;
-        let phase2WaitFare = (tripSegments.phase2MakhsoosWait / 60) * waitMinutePrice;
-
-        if (passengers.length === 1) {
-            if (tripType === 'makhsoos') {
-                currentDisplayFare = bandiraMakhsoos + (totalDistance * kmPrice) + ((totalWaitSeconds / 60) * waitMinutePrice);
-            } else {
-                currentDisplayFare = bandiraAfrad + (totalDistance * afradKmPrice) + ((totalWaitSeconds / 60) * waitMinutePrice);
+    function updateLocation(pos) {
+        const latLng = L.latLng(pos.coords.latitude, pos.coords.longitude);
+        if (lastPosition) {
+            const dist = lastPosition.distanceTo(latLng) / 1000;
+            if (dist > 0.005) {
+                totalDistance += dist;
+                pathCoords.push(latLng);
+                if (!pathLine) pathLine = L.polyline(pathCoords, {color: '#22d3ee'}).addTo(map);
+                else pathLine.setLatLngs(pathCoords);
+                
+                // صوت كل كيلو
+                if (Math.floor(totalDistance) > lastBeepKm) {
+                    lastBeepKm = Math.floor(totalDistance);
+                    document.getElementById('beep').play();
+                }
             }
         } else {
-            let p1Cost = bandiraAfrad + (tripSegments.phase1AfradDistance * afradKmPrice) + phase1WaitFare;
-            let p2Cost = bandiraMakhsoos + (tripSegments.phase2MakhsoosDistance * kmPrice) + phase2WaitFare;
-            currentDisplayFare = p1Cost + p2Cost;
+            pathCoords.push(latLng);
         }
+        lastPosition = latLng;
+        map.setView(latLng, 16);
+        if (!currentMarker) currentMarker = L.marker(latLng).addTo(map);
+        else currentMarker.setLatLng(latLng);
+        saveTripState();
+    }
 
-        document.getElementById('totalFareDisplay').innerText = currentDisplayFare.toFixed(2) + " ج";
-        updatePassengerListDisplay(currentDisplayFare);
+    function updateCalculations() {
+        const durationMinutes = (Date.now() - startTime) / 1000 / 60;
+        document.getElementById('durationDisplay').innerText = durationMinutes.toFixed(0);
+        document.getElementById('distDisplay').innerText = totalDistance.toFixed(2);
+        
+        const timeCost = durationMinutes * PRICING.afrad.minute; // 1ج للدقيقة
+        let totalFare = 0;
+        
+        if (tripType === 'afrad' && passengers.length === 1) {
+            totalFare = PRICING.afrad.bandira + (totalDistance * PRICING.afrad.km) + timeCost;
+        } else {
+            totalFare = PRICING.makhsoos.bandira + (totalDistance * currentKmPrice) + timeCost;
+            if (totalFare < PRICING.makhsoos.minFare) totalFare = PRICING.makhsoos.minFare;
+        }
+        document.getElementById('totalFareDisplay').innerText = totalFare.toFixed(2) + " ج";
     }
 
     function addPassenger() {
-        if (tripType !== 'afrad' || !isTripActive) return;
-
-        let phase1WaitFare = (tripSegments.phase1AfradWait / 60) * waitMinutePrice;
-        passengers[0].fareAtSplit = bandiraAfrad + (tripSegments.phase1AfradDistance * afradKmPrice) + phase1WaitFare;
-
-        if(lastPosition) {
-            passengers.push({
-                id: 2,
-                name: "الراكب الثاني",
-                startCoords: lastPosition,
-                endCoords: null,
-                fareAtSplit: 0,
-                finalFare: 0
-            });
-            L.marker(lastPosition, {
-                icon: L.icon({
-                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
-                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                    iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
-                })
-            }).addTo(map).bindPopup("🟢 نقطة ركوب الراكب 2").openPopup();
-        }
-
+        if (!isTripActive || tripType !== 'afrad') return;
+        passengers.push({ id: 2, name: "الراكب 2", startIndex: pathCoords.length });
         tripType = 'makhsoos';
-        document.getElementById('currentTypeDisplay').innerText = 'مخصوص مشترك 👥';
+        document.getElementById('currentTypeDisplay').innerText = 'مخصوص مشترك';
         document.getElementById('addPassengerBtn').disabled = true;
+        showToast("تم إضافة راكب. الرحلة مخصوص");
     }
 
     function stopTrip() {
         if (!isTripActive) return;
-
-        if (watchId) navigator.geolocation.clearWatch(watchId);
-        if (timerInterval) clearInterval(timerInterval);
-
+        navigator.geolocation.clearWatch(watchId);
+        clearInterval(timerInterval);
         isTripActive = false;
+        localStorage.removeItem('activeTrip');
+        
+        const durationMinutes = (Date.now() - startTime) / 1000 / 60;
+        const timeCost = durationMinutes * PRICING.afrad.minute;
+        let totalFare = 0, bandira = 0, distanceCost = 0;
+        
+        if (passengers.length === 1 && document.getElementById('tripType').value === 'afrad') {
+            bandira = PRICING.afrad.bandira;
+            distanceCost = totalDistance * PRICING.afrad.km;
+        } else {
+            bandira = PRICING.makhsoos.bandira;
+            distanceCost = totalDistance * currentKmPrice;
+        }
+        
+        totalFare = bandira + distanceCost + timeCost;
+        if (tripType === 'makhsoos' && totalFare < PRICING.makhsoos.minFare) totalFare = PRICING.makhsoos.minFare;
+        
+        lastTripData = { 
+            date: new Date().toLocaleString('ar-EG'), 
+            code: shareCode, 
+            type: tripType, 
+            distance: totalDistance.toFixed(2), 
+            duration: durationMinutes.toFixed(0), 
+            fare: totalFare.toFixed(2),
+            bandira, distanceCost, timeCost
+        };
+        saveToHistory(lastTripData);
+        generateReceipt(lastTripData);
+        
         document.getElementById('startBtn').disabled = false;
         document.getElementById('stopBtn').disabled = true;
-        document.getElementById('addPassengerBtn').disabled = true;
-        document.getElementById('kmPriceInput').disabled = false;
-        document.getElementById('tripType').disabled = false;
-        document.getElementById('tripStatusText').innerText = "🏁 تم إخراج إيصال الفاتورة بنجاح";
-
-        if (lastPosition) {
-            passengers.forEach(p => p.endCoords = lastPosition);
-            L.marker(lastPosition, {
-                icon: L.icon({
-                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
-                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                    iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
-                })
-            }).addTo(map).bindPopup("🛑 نقطة النهاية والوصول").openPopup();
-        }
-
-        let totalFinalRevenue = 0;
-        let phase1WaitFare = (tripSegments.phase1AfradWait / 60) * waitMinutePrice;
-        let phase2WaitFare = (tripSegments.phase2MakhsoosWait / 60) * waitMinutePrice;
-
-        if (passengers.length === 1) {
-            let finalWaitFare = (totalWaitSeconds / 60) * waitMinutePrice;
-            if (tripType === 'makhsoos') {
-                totalFinalRevenue = bandiraMakhsoos + (totalDistance * kmPrice) + finalWaitFare;
-            } else {
-                totalFinalRevenue = bandiraAfrad + (totalDistance * afradKmPrice) + finalWaitFare;
-            }
-            passengers[0].finalFare = totalFinalRevenue;
-        } else if (passengers.length === 2) {
-            let phase2MakhsoosTotalCost = bandiraMakhsoos + (tripSegments.phase2MakhsoosDistance * kmPrice) + phase2WaitFare;
-            let sharedMakhsoosSplit = phase2MakhsoosTotalCost / 2;
-
-            passengers[0].finalFare = passengers[0].fareAtSplit + sharedMakhsoosSplit;
-            passengers[1].finalFare = sharedMakhsoosSplit;
-            
-            totalFinalRevenue = passengers[0].fareAtSplit + phase2MakhsoosTotalCost;
-        }
-
-        // إخراج وطباعة الفاتورة المنبثقة للعميل فوراً
-        generateInvoiceModal(totalFinalRevenue, phase1WaitFare, phase2WaitFare);
+        document.getElementById('setupSection').style.display = 'block';
+        document.getElementById('tripStatusText').innerText = 'جاهز للبدء';
     }
 
-    function generateInvoiceModal(total, p1WaitCost, p2WaitCost) {
-        const modal = document.getElementById('receiptModal');
+    function generateReceipt(data) {
         const body = document.getElementById('receiptBody');
-        
-        let htmlContent = `
-            <div class="receipt-row"><span>المسافة الإجمالية المقطوعة:</span> <b>${totalDistance.toFixed(2)} كم</b></div>
-            <div class="receipt-row"><span>وقت الانتظار الكلي:</span> <b>${totalWaitSeconds} ثانية</b></div>
-            <hr style="margin: 10px 0; border: 0; border-top: 1px dashed #ccc;">
+        body.innerHTML = `
+            <div class="receipt-line"><span class="label">التاريخ</span><span class="value">${data.date}</span></div>
+            <div class="receipt-line"><span class="label">رمز المشاركة</span><span class="value">${data.code}</span></div>
+            <div class="receipt-line"><span class="label">نوع الرحلة</span><span class="value">${data.type === 'afrad' ? 'أفراد' : 'مخصوص'}</span></div>
+            <div class="receipt-divider"></div>
+            <div class="receipt-line"><span class="label">فتحة العداد</span><span class="value">${data.bandira.toFixed(2)} ج</span></div>
+            <div class="receipt-line"><span class="label">المسافة ${data.distance} كم</span><span class="value">${data.distanceCost.toFixed(2)} ج</span></div>
+            <div class="receipt-line"><span class="label">الوقت ${data.duration} دقيقة</span><span class="value">${data.timeCost.toFixed(2)} ج</span></div>
+            <div class="receipt-divider"></div>
+            <div class="receipt-line receipt-total"><span>الإجمالي</span><span>${data.fare} ج</span></div>
         `;
-
-        passengers.forEach(p => {
-            htmlContent += `
-                <div class="receipt-row" style="background: #fdfdfe; padding: 5px; border-radius: 4px;">
-                    <span>🎫 حساب <b>${p.name}:</b></span>
-                    <span style="font-weight:bold; color:#0056b3;">${p.finalFare.toFixed(2)} جنيه</span>
-                </div>
-            `;
+        // QR Code
+        document.getElementById('qrcode').innerHTML = '';
+        new QRCode(document.getElementById('qrcode'), {
+            text: `توقع أجرتك | كود: ${data.code} | المبلغ: ${data.fare} ج | ${data.date}`,
+            width: 128, height: 128
         });
+        document.getElementById('receiptModal').style.display = 'flex';
+    }
 
-        htmlContent += `
-            <div class="receipt-row receipt-total">
-                <span>💰 الحساب الإجمالي الكلي للسيارة:</span>
-                <span>${total.toFixed(2)} جنيه</span>
-            </div>
-        `;
+    function saveToHistory(trip) {
+        let history = JSON.parse(localStorage.getItem('tripHistory') || '[]');
+        history.unshift(trip);
+        if (history.length > 20) history = history.slice(0, 20);
+        localStorage.setItem('tripHistory', JSON.stringify(history));
+    }
 
-        body.innerHTML = htmlContent;
-        modal.style.display = "flex"; // إظهار الفاتورة
+    function showHistory() {
+        const history = JSON.parse(localStorage.getItem('tripHistory') || '[]');
+        const body = document.getElementById('historyBody');
+        if (history.length === 0) {
+            body.innerHTML = '<p style="text-align:center;color:var(--muted)">لا توجد رحلات مسجلة</p>';
+        } else {
+            body.innerHTML = history.map(t => `
+                <div class="history-item">
+                    <div class="history-item-header">
+                        <span>${t.code}</span>
+                        <span style="color:var(--primary)">${t.fare} ج</span>
+                    </div>
+                    <div class="history-item-details">
+                        <span>${t.date}</span>
+                        <span>${t.distance} كم | ${t.duration} د</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+        document.getElementById('historyModal').style.display = 'flex';
+    }
+
+    function clearHistory() {
+        if (confirm('متأكد عايز تمسح كل سجل الرحلات؟')) {
+            localStorage.removeItem('tripHistory');
+            showHistory();
+            showToast('تم مسح السجل');
+        }
+    }
+
+    function shareWhatsApp() {
+        if (!lastTripData) return;
+        const text = `فاتورة توقع أجرتك 🚕\nالتاريخ: ${lastTripData.date}\nالرمز: ${lastTripData.code}\nالمسافة: ${lastTripData.distance} كم\nالمدة: ${lastTripData.duration} دقيقة\nالإجمالي: ${lastTripData.fare} جنيه`;
+        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`);
+    }
+
+    function sendSOS() {
+        if (!lastPosition) { showToast('لا يوجد موقع GPS حالياً', 'var(--danger)'); return; }
+        const lat = lastPosition.lat, lng = lastPosition.lng;
+        const text = `🆘 طوارئ من توقع أجرتك!\nأنا محتاج مساعدة.\nموقعي الحي: https://maps.google.com/?q=${lat},${lng}\nرمز الرحلة: ${shareCode}`;
+        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`);
+    }
+
+    function toggleWeakGPS() {
+        const manual = prompt("أدخل المسافة الحالية بالكيلو متر:", totalDistance.toFixed(2));
+        if (manual && !isNaN(manual)) {
+            totalDistance = parseFloat(manual);
+            showToast("تم تحديث المسافة يدوياً");
+        }
     }
 
     function closeReceipt() {
-        document.getElementById('receiptModal').style.display = "none";
-        document.getElementById('totalFareDisplay').innerText = "0.00 ج";
-        document.getElementById('distDisplay').innerText = "0.00";
-        document.getElementById('waitDisplay').innerText = "0";
-        document.getElementById('tripStatusText').innerText = "انتظار بدء الرحلة";
+        document.getElementById('receiptModal').style.display = 'none';
         if(pathLine) map.removeLayer(pathLine);
         pathLine = null;
+        totalDistance = 0;
+        document.getElementById('totalFareDisplay').innerText = '0.00 ج';
+        document.getElementById('distDisplay').innerText = '0.00';
+        document.getElementById('durationDisplay').innerText = '0';
+        document.getElementById('codeDisplay').innerText = '------';
     }
-
-    function updatePassengerListDisplay(liveFare) {
-        const list = document.getElementById('passengerList');
-        if (passengers.length === 1) {
-            list.innerHTML = `<li>👤 <b>الراكب الأول:</b> الحساب التقديري الحي: <span style="color:#0056b3; font-weight:bold;">${liveFare.toFixed(2)} ج</span></li>`;
-        } else {
-            list.innerHTML = `<li>👤 <b>الراكب الأول:</b> مشواره الفردي تم تجميده وحفظه، وجاري تشغيل عداد الدمج...</li>
-                              <li>👥 <b>الراكب الثاني:</b> انضم للرحلة (الوضع الحالي مخصوص مشترك).</li>`;
-        }
-    }
-
-    function handleGPSError(error) {
-        const status = document.getElementById('tripStatusText');
-        switch(error.code) {
-            case error.PERMISSION_DENIED:
-                status.innerText = "❌ خطأ: السواق رفض إذن الـ GPS.";
-                alert("برجاء تفعيل صلاحية الموقع من المتصفح لتتبع خط السير.");
-                break;
-            case error.POSITION_UNAVAILABLE:
-                status.innerText = "📡 خطأ: إشارة الـ GPS ضعيفة أو منقطعة.";
-                break;
-            case error.TIMEOUT:
-                status.innerText = "⏳ خطأ: انتهت مهلة جلب الموقع.";
-                break;
-        }
-    }
+    function closeHistory() { document.getElementById('historyModal').style.display = 'none'; }
+    function handleError(err) { showToast("خطأ GPS: فعل الموقع من المتصفح", 'var(--danger)'); }
 </script>
-
 </body>
 </html>
