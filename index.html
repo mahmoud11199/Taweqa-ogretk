@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>توقع أجرتك Pro - العداد الذكي</title>
+    <title>توقع أجرتك - العداد الذكي Pro</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
     <style>
         :root {
@@ -14,28 +13,34 @@
             --primary: #22d3ee; --success: #10b981; --danger: #ef4444; --warning: #f59e0b;
             --glass: rgba(30, 41, 59, 0.7); --border: rgba(148, 163, 184, 0.2);
         }
-        @media (prefers-color-scheme: light) {
-            :root {
-                --bg: #f1f5f9; --card: #ffffff; --text: #0f172a; --muted: #475569;
-                --glass: rgba(255, 255, 255, 0.7); --border: rgba(15, 23, 42, 0.1);
-            }
-        }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
-        body { background: var(--bg); padding: 12px; color: var(--text); min-height: 100vh; transition: 0.3s; }
+        body { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); padding: 12px; color: var(--text); min-height: 100vh; }
         .container { max-width: 500px; margin: 0 auto; }
+        
+        /* Header */
         .header { text-align: center; margin-bottom: 16px; }
         .header h1 { font-size: 26px; font-weight: 900; background: linear-gradient(90deg, var(--primary), #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .header p { color: var(--muted); font-size: 13px; }
-        .card { background: var(--glass); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 20px; padding: 16px; margin-bottom: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+        
+        /* Glass Cards */
+        .card { background: var(--glass); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 20px; padding: 16px; margin-bottom: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+        
+        /* العداد الرئيسي */
         .main-meter { text-align: center; }
-        .fare-display { font-size: 48px; font-weight: 900; font-family: monospace; color: var(--primary); text-shadow: 0 0 20px rgba(34, 211, 238, 0.3); margin: 8px 0; }
+        .fare-display { font-size: 48px; font-weight: 900; font-family: monospace; color: var(--primary); text-shadow: 0 0 20px rgba(34, 211, 238, 0.5); margin: 8px 0; }
         .trip-type-badge { display: inline-block; background: var(--primary); color: var(--bg); padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+        
+        /* الإحصائيات */
         .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; text-align: center; }
         .stat-box h3 { font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: 4px; }
-        .stat-box .value { font-size: 18px; font-weight: 700; }
+        .stat-box .value { font-size: 18px; font-weight: 700; color: var(--text); }
+        
+        /* الإعدادات */
         .form-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
         .form-row label { font-weight: 600; font-size: 14px; }
         .form-row input, .form-row select { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; width: 110px; border-radius: 10px; text-align: center; font-weight: 700; }
+        
+        /* الأزرار */
         .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .btn { padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
         .btn:active { transform: scale(0.97); }
@@ -44,23 +49,23 @@
         .btn-add { background: var(--warning); color: var(--bg); grid-column: span 2; }
         .btn-secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); }
         .btn:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+        
         #map { height: 280px; border-radius: 16px; border: 1px solid var(--border); z-index: 1; }
+        
+        /* Modal الفاتورة */
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 999; justify-content: center; align-items: center; padding: 16px; backdrop-filter: blur(5px); }
-        .receipt, .history-panel { background: var(--card); width: 100%; max-width: 420px; border-radius: 20px; overflow: hidden; border: 1px solid var(--border); max-height: 90vh; display: flex; flex-direction: column; }
+        .receipt { background: var(--card); width: 100%; max-width: 420px; border-radius: 20px; padding: 0; overflow: hidden; border: 1px solid var(--border); }
         .receipt-header { background: linear-gradient(135deg, var(--primary), #818cf8); padding: 20px; text-align: center; }
         .receipt-header h2 { font-size: 20px; font-weight: 900; color: var(--bg); }
-        .receipt-body, .history-body { padding: 20px; overflow-y: auto; }
+        .receipt-body { padding: 20px; }
         .receipt-line { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px; }
         .receipt-line .label { color: var(--muted); }
         .receipt-line .value { font-weight: 700; }
         .receipt-divider { border-top: 1px dashed var(--border); margin: 16px 0; }
         .receipt-total { font-size: 20px; font-weight: 900; color: var(--primary); }
         .receipt-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 20px 20px; }
-        #qrcode { background: white; padding: 10px; border-radius: 12px; margin: 10px auto; width: fit-content; }
+        
         .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--success); color: white; padding: 12px 20px; border-radius: 12px; font-weight: 700; z-index: 1000; display: none; }
-        .history-item { background: var(--bg); padding: 12px; border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--border); }
-        .history-item-header { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 6px; }
-        .history-item-details { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; }
     </style>
 </head>
 <body>
@@ -81,11 +86,7 @@
         </div>
         <div class="form-row" id="makhsoosPriceGroup">
             <label>سعر الكيلو:</label>
-            <input type="number" id="kmPriceInput" value="5" min="1" max="20" step="0.5">
-        </div>
-        <div class="form-row" id="makhsoosBandiraGroup">
-            <label>فتحة العداد:</label>
-            <input type="number" id="bandiraInput" value="5" min="1" max="20" step="0.5">
+            <input type="number" id="kmPriceInput" value="5" min="1" max="12">
         </div>
     </div>
 
@@ -95,7 +96,7 @@
         <div class="stats">
             <div class="stat-box"><h3>المسافة</h3><div class="value"><span id="distDisplay">0.00</span> كم</div></div>
             <div class="stat-box"><h3>المدة</h3><div class="value"><span id="durationDisplay">0</span> د</div></div>
-            <div class="stat-box"><h3>الرمز</h3><div class="value"><span id="codeDisplay">------</span></div></div>
+            <div class="stat-box"><h3>الانتظار</h3><div class="value"><span id="waitDisplay">0</span> د</div></div>
         </div>
     </div>
 
@@ -103,21 +104,22 @@
         <div class="btn-grid">
             <button class="btn btn-start" id="startBtn" onclick="startTrip()">بدء الرحلة</button>
             <button class="btn btn-stop" id="stopBtn" onclick="stopTrip()" disabled>إنهاء الرحلة</button>
-            <button class="btn btn-add" id="addPassengerBtn" onclick="addPassenger()" disabled>➕ إضافة راكب</button>
-            <button class="btn btn-secondary" onclick="toggleWeakGPS()">📡 GPS يدوي</button>
-            <button class="btn btn-secondary" onclick="sendSOS()">🆘 طوارئ</button>
-            <button class="btn btn-secondary" onclick="showHistory()">📋 سجل الرحلات</button>
+            <button class="btn btn-add" id="addPassengerBtn" onclick="addPassenger()" disabled>➕ إضافة راكب للرحلة</button>
+            <button class="btn btn-secondary" onclick="toggleWeakGPS()">📡 GPS ضعيف</button>
+            <button class="btn btn-secondary" onclick="newMeter()">عداد جديد</button>
         </div>
     </div>
 
-    <div class="card"><div id="map"></div></div>
+    <div class="card">
+        <div id="map"></div>
+    </div>
 </div>
 
+<!-- Modal الفاتورة -->
 <div class="modal" id="receiptModal">
     <div class="receipt">
         <div class="receipt-header"><h2>🧾 فاتورة الرحلة</h2></div>
         <div class="receipt-body" id="receiptBody"></div>
-        <div id="qrcode"></div>
         <div class="receipt-actions">
             <button class="btn btn-secondary" onclick="shareWhatsApp()">واتساب</button>
             <button class="btn btn-start" onclick="closeReceipt()">إغلاق</button>
@@ -125,99 +127,60 @@
     </div>
 </div>
 
-<div class="modal" id="historyModal">
-    <div class="history-panel">
-        <div class="receipt-header"><h2>📋 سجل آخر الرحلات</h2></div>
-        <div class="history-body" id="historyBody"></div>
-        <div class="receipt-actions">
-            <button class="btn btn-danger" onclick="clearHistory()">مسح السجل</button>
-            <button class="btn btn-start" onclick="closeHistory()">إغلاق</button>
-        </div>
-    </div>
-</div>
-
 <div class="toast" id="toast"></div>
-<audio id="beep" src="data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU..."></audio>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+    // إعدادات التسعير
     const PRICING = { 
         afrad: { bandira: 5, km: 5, minute: 1 }, 
-        makhsoos: { minFare: 10, minute: 1 } // البنديرة بتتاخد من الـinput دلوقتي
+        makhsoos: { bandira: 5, minFare: 10, minute: 1 } 
     };
     let currentKmPrice = 5;
-    let currentBandira = 5;
+    
+    // حالة الرحلة
     let map, watchId, timerInterval, startTime, lastPosition = null;
     let isTripActive = false, tripType = 'makhsoos';
-    let totalDistance = 0, lastBeepKm = 0;
+    let totalDistance = 0, totalWaitSeconds = 0;
     let pathCoords = [], pathLine, currentMarker;
-    let passengers = [], shareCode = '';
-    let lastTripData = null;
+    let passengers = [];
+    let shareCode = '';
 
     window.onload = () => {
         map = L.map('map').setView([30.0444, 31.2357], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        restoreTrip();
     };
 
     function toggleTripTypeSetup() {
         const type = document.getElementById('tripType').value;
         document.getElementById('makhsoosPriceGroup').style.display = (type === 'makhsoos') ? 'flex' : 'none';
-        document.getElementById('makhsoosBandiraGroup').style.display = (type === 'makhsoos') ? 'flex' : 'none';
     }
 
-    function showToast(msg, color = 'var(--success)') {
+    function showToast(msg) {
         const t = document.getElementById('toast');
-        t.innerText = msg; t.style.background = color; t.style.display = 'block';
-        setTimeout(() => t.style.display = 'none', 2500);
-    }
-
-    function saveTripState() {
-        if (!isTripActive) return;
-        const state = { startTime, tripType, currentKmPrice, currentBandira, totalDistance, pathCoords, passengers, shareCode };
-        localStorage.setItem('activeTrip', JSON.stringify(state));
-    }
-
-    function restoreTrip() {
-        const saved = localStorage.getItem('activeTrip');
-        if (!saved) return;
-        if (confirm('كان فيه رحلة شغالة. عايز تكملها؟')) {
-            const state = JSON.parse(saved);
-            startTime = state.startTime; tripType = state.tripType; currentKmPrice = state.currentKmPrice;
-            currentBandira = state.currentBandira || 5;
-            totalDistance = state.totalDistance; pathCoords = state.pathCoords; passengers = state.passengers; shareCode = state.shareCode;
-            isTripActive = true;
-            document.getElementById('setupSection').style.display = 'none';
-            document.getElementById('startBtn').disabled = true;
-            document.getElementById('stopBtn').disabled = false;
-            document.getElementById('codeDisplay').innerText = shareCode;
-            document.getElementById('currentTypeDisplay').innerText = tripType === 'makhsoos' ? 'مخصوص' : 'أفراد';
-            timerInterval = setInterval(updateCalculations, 1000);
-            watchId = navigator.geolocation.watchPosition(updateLocation, handleError, { enableHighAccuracy: true });
-            if (pathCoords.length > 0) pathLine = L.polyline(pathCoords, {color: '#22d3ee'}).addTo(map);
-            showToast('تم استرجاع الرحلة');
-        } else {
-            localStorage.removeItem('activeTrip');
-        }
+        t.innerText = msg; t.style.display = 'block';
+        setTimeout(() => t.style.display = 'none', 2000);
     }
 
     function startTrip() {
         if (isTripActive) return;
         tripType = document.getElementById('tripType').value;
         currentKmPrice = parseFloat(document.getElementById('kmPriceInput').value) || 5;
-        currentBandira = parseFloat(document.getElementById('bandiraInput').value) || 5;
-        isTripActive = true; startTime = Date.now();
-        totalDistance = 0; lastBeepKm = 0; pathCoords = []; passengers = [];
-        shareCode = Math.floor(100000 + Math.random() * 900000).toString();
-        passengers.push({ id: 1, name: "الراكب 1", startIndex: 0 });
         
+        // Reset
+        isTripActive = true; startTime = Date.now();
+        totalDistance = 0; totalWaitSeconds = 0; pathCoords = []; passengers = [];
+        shareCode = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        passengers.push({ id: 1, name: "الراكب 1", startIndex: 0, fare: 0 });
+        
+        // UI
         document.getElementById('setupSection').style.display = 'none';
         document.getElementById('startBtn').disabled = true;
         document.getElementById('stopBtn').disabled = false;
         document.getElementById('addPassengerBtn').disabled = (tripType !== 'afrad');
         document.getElementById('currentTypeDisplay').innerText = tripType === 'makhsoos' ? 'مخصوص' : 'أفراد';
-        document.getElementById('codeDisplay').innerText = shareCode;
-        document.getElementById('tripStatusText').innerText = `الرحلة بدأت`;
+        document.getElementById('tripStatusText').innerText = `الرحلة بدأت | رمز المشاركة: ${shareCode}`;
         
         timerInterval = setInterval(updateCalculations, 1000);
         watchId = navigator.geolocation.watchPosition(updateLocation, handleError, { enableHighAccuracy: true });
@@ -227,16 +190,11 @@
         const latLng = L.latLng(pos.coords.latitude, pos.coords.longitude);
         if (lastPosition) {
             const dist = lastPosition.distanceTo(latLng) / 1000;
-            if (dist > 0.005) {
+            if (dist > 0.005) { // أكتر من 5 متر
                 totalDistance += dist;
                 pathCoords.push(latLng);
                 if (!pathLine) pathLine = L.polyline(pathCoords, {color: '#22d3ee'}).addTo(map);
                 else pathLine.setLatLngs(pathCoords);
-                
-                if (Math.floor(totalDistance) > lastBeepKm) {
-                    lastBeepKm = Math.floor(totalDistance);
-                    document.getElementById('beep').play().catch(()=>{});
-                }
             }
         } else {
             pathCoords.push(latLng);
@@ -245,21 +203,21 @@
         map.setView(latLng, 16);
         if (!currentMarker) currentMarker = L.marker(latLng).addTo(map);
         else currentMarker.setLatLng(latLng);
-        saveTripState();
     }
 
     function updateCalculations() {
         const durationMinutes = (Date.now() - startTime) / 1000 / 60;
         document.getElementById('durationDisplay').innerText = durationMinutes.toFixed(0);
         document.getElementById('distDisplay').innerText = totalDistance.toFixed(2);
+        document.getElementById('waitDisplay').innerText = (totalWaitSeconds / 60).toFixed(0);
         
-        const timeCost = durationMinutes * PRICING.afrad.minute;
         let totalFare = 0;
+        const timeCost = durationMinutes * PRICING.afrad.minute; // 1ج لكل دقيقة من وقت الرحلة كله
         
         if (tripType === 'afrad' && passengers.length === 1) {
             totalFare = PRICING.afrad.bandira + (totalDistance * PRICING.afrad.km) + timeCost;
-        } else {
-            totalFare = currentBandira + (totalDistance * currentKmPrice) + timeCost;
+        } else { // مخصوص أو مشترك
+            totalFare = PRICING.makhsoos.bandira + (totalDistance * currentKmPrice) + timeCost;
             if (totalFare < PRICING.makhsoos.minFare) totalFare = PRICING.makhsoos.minFare;
         }
         document.getElementById('totalFareDisplay').innerText = totalFare.toFixed(2) + " ج";
@@ -267,11 +225,11 @@
 
     function addPassenger() {
         if (!isTripActive || tripType !== 'afrad') return;
-        passengers.push({ id: 2, name: "الراكب 2", startIndex: pathCoords.length });
-        tripType = 'makhsoos';
+        passengers.push({ id: 2, name: "الراكب 2", startIndex: pathCoords.length, fare: 0 });
+        tripType = 'makhsoos'; // تتحول مخصوص تلقائي
         document.getElementById('currentTypeDisplay').innerText = 'مخصوص مشترك';
         document.getElementById('addPassengerBtn').disabled = true;
-        showToast("تم إضافة راكب. الرحلة مخصوص");
+        showToast("تم إضافة راكب. الرحلة اتحولت مخصوص");
     }
 
     function stopTrip() {
@@ -284,128 +242,68 @@
         const timeCost = durationMinutes * PRICING.afrad.minute;
         let totalFare = 0, bandira = 0, distanceCost = 0;
         
-        if (passengers.length === 1 && document.getElementById('tripType').value === 'afrad') {
-            bandira = PRICING.afrad.bandira;
-            distanceCost = totalDistance * PRICING.afrad.km;
-        } else {
-            bandira = currentBandira;
+        if (passengers.length === 1) {
+            if (document.getElementById('tripType').value === 'afrad') {
+                bandira = PRICING.afrad.bandira;
+                distanceCost = totalDistance * PRICING.afrad.km;
+            } else {
+                bandira = PRICING.makhsoos.bandira;
+                distanceCost = totalDistance * currentKmPrice;
+            }
+        } else { // رحلة مشتركة
+            bandira = PRICING.makhsoos.bandira;
             distanceCost = totalDistance * currentKmPrice;
         }
         
         totalFare = bandira + distanceCost + timeCost;
         if (tripType === 'makhsoos' && totalFare < PRICING.makhsoos.minFare) totalFare = PRICING.makhsoos.minFare;
         
-        lastTripData = { 
-            date: new Date().toLocaleString('ar-EG'), 
-            code: shareCode, 
-            type: tripType, 
-            distance: totalDistance.toFixed(2), 
-            duration: durationMinutes.toFixed(0), 
-            fare: totalFare.toFixed(2),
-            bandira, distanceCost, timeCost
-        };
+        generateReceipt({ bandira, distanceCost, timeCost, totalFare, durationMinutes });
         
-        saveToHistory(lastTripData);
-        generateReceipt(lastTripData); // الفاتورة تظهر أولاً
-        localStorage.removeItem('activeTrip'); // بعدين نمسح
-        
+        // Reset UI
         document.getElementById('startBtn').disabled = false;
         document.getElementById('stopBtn').disabled = true;
         document.getElementById('setupSection').style.display = 'block';
-        document.getElementById('tripStatusText').innerText = 'جاهز للبدء';
     }
 
     function generateReceipt(data) {
         const body = document.getElementById('receiptBody');
         body.innerHTML = `
-            <div class="receipt-line"><span class="label">التاريخ</span><span class="value">${data.date}</span></div>
-            <div class="receipt-line"><span class="label">رمز المشاركة</span><span class="value">${data.code}</span></div>
-            <div class="receipt-line"><span class="label">نوع الرحلة</span><span class="value">${data.type === 'afrad' ? 'أفراد' : 'مخصوص'}</span></div>
+            <div class="receipt-line"><span class="label">رمز المشاركة</span><span class="value">${shareCode}</span></div>
+            <div class="receipt-line"><span class="label">نوع الرحلة</span><span class="value">${tripType === 'afrad' ? 'أفراد' : 'مخصوص'}</span></div>
             <div class="receipt-divider"></div>
             <div class="receipt-line"><span class="label">فتحة العداد</span><span class="value">${data.bandira.toFixed(2)} ج</span></div>
-            <div class="receipt-line"><span class="label">المسافة ${data.distance} كم</span><span class="value">${data.distanceCost.toFixed(2)} ج</span></div>
-            <div class="receipt-line"><span class="label">الوقت ${data.duration} دقيقة</span><span class="value">${data.timeCost.toFixed(2)} ج</span></div>
+            <div class="receipt-line"><span class="label">المسافة ${totalDistance.toFixed(2)} كم</span><span class="value">${data.distanceCost.toFixed(2)} ج</span></div>
+            <div class="receipt-line"><span class="label">الوقت ${data.durationMinutes.toFixed(0)} دقيقة</span><span class="value">${data.timeCost.toFixed(2)} ج</span></div>
             <div class="receipt-divider"></div>
-            <div class="receipt-line receipt-total"><span>الإجمالي</span><span>${data.fare} ج</span></div>
+            <div class="receipt-line receipt-total"><span>الإجمالي</span><span>${data.totalFare.toFixed(2)} ج</span></div>
         `;
-        document.getElementById('qrcode').innerHTML = '';
-        new QRCode(document.getElementById('qrcode'), {
-            text: `توقع أجرتك | كود: ${data.code} | المبلغ: ${data.fare} ج | ${data.date}`,
-            width: 128, height: 128
-        });
         document.getElementById('receiptModal').style.display = 'flex';
     }
 
-    function saveToHistory(trip) {
-        let history = JSON.parse(localStorage.getItem('tripHistory') || '[]');
-        history.unshift(trip);
-        if (history.length > 20) history = history.slice(0, 20);
-        localStorage.setItem('tripHistory', JSON.stringify(history));
-    }
-
-    function showHistory() {
-        const history = JSON.parse(localStorage.getItem('tripHistory') || '[]');
-        const body = document.getElementById('historyBody');
-        if (history.length === 0) {
-            body.innerHTML = '<p style="text-align:center;color:var(--muted)">لا توجد رحلات مسجلة</p>';
-        } else {
-            body.innerHTML = history.map(t => `
-                <div class="history-item">
-                    <div class="history-item-header">
-                        <span>${t.code}</span>
-                        <span style="color:var(--primary)">${t.fare} ج</span>
-                    </div>
-                    <div class="history-item-details">
-                        <span>${t.date}</span>
-                        <span>${t.distance} كم | ${t.duration} د</span>
-                    </div>
-                </div>
-            `).join('');
-        }
-        document.getElementById('historyModal').style.display = 'flex';
-    }
-
-    function clearHistory() {
-        if (confirm('متأكد عايز تمسح كل سجل الرحلات؟')) {
-            localStorage.removeItem('tripHistory');
-            showHistory();
-            showToast('تم مسح السجل');
-        }
-    }
-
     function shareWhatsApp() {
-        if (!lastTripData) return;
-        const text = `فاتورة توقع أجرتك 🚕\nالتاريخ: ${lastTripData.date}\nالرمز: ${lastTripData.code}\nالمسافة: ${lastTripData.distance} كم\nالمدة: ${lastTripData.duration} دقيقة\nالإجمالي: ${lastTripData.fare} جنيه`;
+        const text = `فاتورة توقع أجرتك 🚕\nالرمز: ${shareCode}\nالإجمالي: ${document.getElementById('totalFareDisplay').innerText}`;
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`);
-    }
-
-    function sendSOS() {
-        if (!lastPosition) { showToast('لا يوجد موقع GPS حالياً', 'var(--danger)'); return; }
-        const lat = lastPosition.lat, lng = lastPosition.lng;
-        const text = `🆘 طوارئ من توقع أجرتك!\nأنا محتاج مساعدة.\nموقعي الحي: https://maps.google.com/?q=${lat},${lng}\nرمز الرحلة: ${shareCode}`;
-        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`);
-    }
-
-    function toggleWeakGPS() {
-        const manual = prompt("أدخل المسافة الحالية بالكيلو متر:", totalDistance.toFixed(2));
-        if (manual && !isNaN(manual)) {
-            totalDistance = parseFloat(manual);
-            showToast("تم تحديث المسافة يدوياً");
-        }
     }
 
     function closeReceipt() {
         document.getElementById('receiptModal').style.display = 'none';
         if(pathLine) map.removeLayer(pathLine);
         pathLine = null;
-        totalDistance = 0;
-        document.getElementById('totalFareDisplay').innerText = '0.00 ج';
-        document.getElementById('distDisplay').innerText = '0.00';
-        document.getElementById('durationDisplay').innerText = '0';
-        document.getElementById('codeDisplay').innerText = '------';
     }
-    function closeHistory() { document.getElementById('historyModal').style.display = 'none'; }
-    function handleError(err) { showToast("خطأ GPS: فعل الموقع من المتصفح", 'var(--danger)'); }
+
+    function toggleWeakGPS() {
+        const manual = prompt("أدخل المسافة يدوياً بالكيلو متر:", totalDistance.toFixed(2));
+        if (manual) totalDistance = parseFloat(manual);
+        showToast("تم تحديث المسافة يدوياً");
+    }
+    
+    function newMeter() {
+        if(isTripActive) { showToast("أنهي الرحلة الحالية أولاً"); return; }
+        showToast("جاهز لعداد جديد");
+    }
+
+    function handleError(err) { showToast("خطأ GPS: " + err.message); }
 </script>
 </body>
 </html>
