@@ -131,6 +131,10 @@
                 <label>دقيقة الانتظار (جنية):</label>
                 <input type="number" id="waitPriceInput" value="1" min="0" max="20">
             </div>
+            <div class="form-row">
+                <label>دقيقة الوقت الكلي (جنية):</label>
+                <input type="number" id="durationPriceInput" value="0.50" step="0.10" min="0" max="10">
+            </div>
         </div>
 
         <div class="card main-meter">
@@ -210,6 +214,7 @@
             tripType: 'makhsoos',
             kmPrice: 5,
             waitPrice: 1,
+            durationPrice: 0.50, // القيمة المطلوبة لوقت الرحلة الكلي من البداية للنهاية
             bandira: 5,
             minFare: 10,
             totalDistance: 0,
@@ -221,7 +226,8 @@
             lastLocationTime: null,
             isWaitingMode: false,
             shareCode: '',
-            finalFare: 0
+            finalFare: 0,
+            pathCoords: [] // مصفوفة لتخزين إحداثيات كل مسار على حدة والاحتفاظ بها عند الريفرش
         };
     }
 
@@ -260,9 +266,11 @@
         document.getElementById('tripType').value = m.tripType;
         document.getElementById('kmPriceInput').value = m.kmPrice;
         document.getElementById('waitPriceInput').value = m.waitPrice;
+        document.getElementById('durationPriceInput').value = m.durationPrice;
         
         onTripTypeChanged();
         renderMeterDataToUI();
+        redrawActiveRouteLine(); // إعادة رسم المسار الخاص بهذا العداد فوراً عند التبديل
     }
 
     function onTripTypeChanged() {
@@ -280,7 +288,7 @@
         document.getElementById('dot_2').className = 'meter-status-dot ' + (meters[2].isActive ? 'active' : '');
     }
 
-    // السيرفر الوهمي الداخلي لتحديث الأوقات والانتظار أوتوماتيكياً كل ثانية للعدادات النشطة
+    // السيرفر الداخلي لتحديث الأوقات والانتظار تلقائياً كل ثانية للعدادات النشطة
     setInterval(() => {
         let updated = false;
         for (let id in meters) {
@@ -292,7 +300,6 @@
                 if (m.isWaitingMode) {
                     m.totalWaitSeconds += 1;
                 } else if (m.lastLocationTime && (Date.now() - m.lastLocationTime > 5000)) {
-                    // إذا لم تأتي إحداثيات جديدة منذ 5 ثواني والسائق في حالة رحلة، يعتبر متوقف في زحام
                     m.totalWaitSeconds += 1;
                     m.isWaitingMode = true;
                 }
@@ -348,7 +355,6 @@
                 // تصفية أخطاء قفزات الـ GPS العشوائية أثناء الوقوف (Jitter Filter)
                 if (distanceKm >= GPS_FILTER.minDistance) {
                     
-                    // حساب السرعة الفركتلية إذا لم يعطها المودم مباشرة
                     const timeElapsedHours = (now - m.lastLocationTime) / 1000 / 3600;
                     const calculatedSpeed = distanceKm / timeElapsedHours;
                     const finalSpeed = speedKmh !== null ? speedKmh : calculatedSpeed;
@@ -356,6 +362,9 @@
                     if (finalSpeed > GPS_FILTER.waitingSpeedKmh) {
                         m.totalDistance += distanceKm;
                         m.isWaitingMode = false;
+                        
+                        // إضافة النقطة الجديدة لمسار العداد وحفظها
+                        m.pathCoords.push({lat: lat, lng: lng});
                     } else {
                         m.isWaitingMode = true;
                     }
@@ -364,35 +373,48 @@
                     m.lastLng = lng;
                     m.lastLocationTime = now;
                 } else {
-                    // إذا ثبت في مكانه والمسافة المقطوعة صفر أو شبه منعدمة
                     const timeDiff = (now - m.lastLocationTime) / 1000;
                     if(timeDiff > 4 && (speedKmh === null || speedKmh < GPS_FILTER.waitingSpeedKmh)) {
                         m.isWaitingMode = true;
                     }
                 }
             } else {
-                // أول نقطة إحداثية يتم تسجيلها للعداد
+                // أول نقطة إحداثية يتم تسجيلها للعداد عند انطلاقه
                 m.lastLat = lat;
                 m.lastLng = lng;
                 m.lastLocationTime = now;
                 m.isWaitingMode = false;
+                m.pathCoords.push({lat: lat, lng: lng});
             }
 
             calculateFare(m);
         }
 
         // تحديث رسم خط المسار للعداد النشط الحالي على الخريطة
-        drawActiveRouteLine();
+        redrawActiveRouteLine();
         renderMeterDataToUI();
         saveDataToStorage();
     }
 
-    function drawActiveRouteLine() {
-        // بما أننا لا نخزن مصفوفة الإحداثيات الضخمة لتفادي امتلاء الـ LocalStorage،
-        // نكتفي بوضع نقطة مؤشر القيادة الحالية، الكود مجهز للتطوير والربط بسيرفر خارجي.
+    // مسؤولة عن تنظيف الخريطة وإعادة رسم خط المسار الفعلي للعداد النشط بدقة
+    function redrawActiveRouteLine() {
+        if (!pathLine || !map) return;
+        
+        const m = meters[activeMeterId];
+        if (m.pathCoords && m.pathCoords.length > 0) {
+            const leafletLatLngs = m.pathCoords.map(coord => L.latLng(coord.lat, coord.lng));
+            pathLine.setLatLngs(leafletLatLngs);
+            
+            // جعل الخريطة تحتضن المسار بالكامل بشكل تلقائي وممتاز
+            if(m.isActive && leafletLatLngs.length > 1) {
+                map.fitBounds(pathLine.getBounds(), { padding: [30, 30] });
+            }
+        } else {
+            pathLine.setLatLngs([]);
+        }
     }
 
-    // معادلة حساب التكلفة الدقيقة والذكية منعا للازدواجية بين وقت الحركة ووقت الانتظار
+    // معادلة حساب التكلفة الدقيقة والذكية متضمنة قيمة دقيقة الوقت الكلي المستهلك
     function calculateFare(m) {
         let baseFare = m.bandira;
         let distanceCost = 0;
@@ -400,17 +422,19 @@
         if (m.tripType === 'makhsoos') {
             distanceCost = m.totalDistance * m.kmPrice;
         } else {
-            // نظام حساب الأفراد الافتراضي
             distanceCost = m.totalDistance * 5; 
         }
 
-        // تكلفة الانتظار التلقائي محسوبة بالدقائق بشكل منفصل ونقي
+        // 1. حساب تكلفة زمن الرحلة الكلي من البداية للنهاية (0.50 جنيهاً للدقيقة)
+        let totalDurationCost = m.totalDurationMinutes * m.durationPrice;
+
+        // 2. تكلفة الانتظار التلقائي محسوبة بالدقائق بشكل منفصل ونقي لضمان حق السائق في الإشارات
         let waitingMinutes = m.totalWaitSeconds / 60;
         let waitingCost = waitingMinutes * m.waitPrice;
 
-        let total = baseFare + distanceCost + waitingCost;
+        // الإجمالي = فتحة العداد + تكلفة الكيلومترات + تكلفة الوقت الكلي للرحلة + تكلفة الانتظار الإضافي
+        let total = baseFare + distanceCost + totalDurationCost + waitingCost;
 
-        // تطبيق الحد الأدنى للأجرة في المخصوص
         if (m.tripType === 'makhsoos' && total < m.minFare) {
             total = m.minFare;
         }
@@ -434,13 +458,11 @@
             document.getElementById('startBtn').disabled = true;
             document.getElementById('stopBtn').disabled = false;
             document.getElementById('addPassengerBtn').disabled = (m.tripType !== 'makhsoos');
-            document.getElementById('setupSection').style.disabled = true;
             document.getElementById('globalStatusText').innerText = `عداد رقم [${m.id}] شغال حالياً | كود: ${m.shareCode}`;
         } else {
             document.getElementById('startBtn').disabled = false;
             document.getElementById('stopBtn').disabled = true;
             document.getElementById('addPassengerBtn').disabled = true;
-            document.getElementById('setupSection').style.disabled = false;
             document.getElementById('globalStatusText').innerText = `عداد رقم [${m.id}] جاهز وجاهز للبدء`;
         }
     }
@@ -455,6 +477,7 @@
         m.tripType = document.getElementById('tripType').value;
         m.kmPrice = parseFloat(document.getElementById('kmPriceInput').value) || 5;
         m.waitPrice = parseFloat(document.getElementById('waitPriceInput').value) || 1;
+        m.durationPrice = parseFloat(document.getElementById('durationPriceInput').value) || 0.50;
         m.shareCode = Math.floor(100000 + Math.random() * 900000).toString();
         
         m.totalDistance = 0;
@@ -462,10 +485,12 @@
         m.lastLat = null;
         m.lastLng = null;
         m.lastLocationTime = null;
+        m.pathCoords = []; // تصفير نقاط المسار القديمة للعداد لتهيئة مسار جديد
 
         showToast(`تم تشغيل عداد رقم ${m.id} بنجاح`);
         updateDotsUI();
         renderMeterDataToUI();
+        redrawActiveRouteLine();
         saveDataToStorage();
     }
 
@@ -477,10 +502,10 @@
         m.isActive = false;
         calculateFare(m);
 
-        // حفظ الرحلة في سجل الـ LocalStorage قبل تصفير العداد
+        // حفظ الرحلة في سجل الـ LocalStorage بالمسار والتكلفة وكل شيء
         saveTripToHistory(m);
 
-        // توليد وعرض الفاتورة الفورية
+        // توليد وعرض الفاتورة الفورية للمستخدم
         generateReceipt(m);
 
         // إعادة ضبط العداد الحالي كعداد جديد فارغ
@@ -488,14 +513,14 @@
 
         updateDotsUI();
         renderMeterDataToUI();
+        redrawActiveRouteLine();
         saveDataToStorage();
     }
 
-    // ميزة تحويل الرحلة لركاب مشتركين مقسمين بالتساوي
     function convertTripToShared() {
         const m = meters[activeMeterId];
         if(!m.isActive) return;
-        m.kmPrice = m.kmPrice * 1.4; // رفع الحسبة الإجمالية للعداد لتوزيعها تضامنياً 
+        m.kmPrice = m.kmPrice * 1.4; 
         showToast("تم تحويل المشوار لنظام مشترك؛ جاري دمج الحسابات");
         calculateFare(m);
         renderMeterDataToUI();
@@ -506,12 +531,12 @@
             meters[activeMeterId] = createEmptyMeterObject(activeMeterId);
             updateDotsUI();
             renderMeterDataToUI();
+            redrawActiveRouteLine();
             saveDataToStorage();
             showToast("تم تصفير العداد بنجاح");
         }
     }
 
-    // حل ثغرة الـ GPS الضعيف بإدخال مسافة تقريبية يدوية من السائق
     function triggerManualDistance() {
         const m = meters[activeMeterId];
         const manual = prompt("إشارة الـ GPS ضعيفة، أدخل المسافة المقطوعة يدوياً (بالكيلومتر):", m.totalDistance.toFixed(2));
@@ -524,11 +549,12 @@
         }
     }
 
-    // توليد الفاتورة المرئية للمستخدم
+    // توليد الفاتورة مع توضيح خانة وقت الرحلة من البداية للنهاية بالتفصيل
     function generateReceipt(m) {
         const body = document.getElementById('receiptBody');
         const waitingMinutes = m.totalWaitSeconds / 60;
         const distCost = m.tripType === 'makhsoos' ? (m.totalDistance * m.kmPrice) : (m.totalDistance * 5);
+        const totalDurationCost = m.totalDurationMinutes * m.durationPrice;
         const waitCost = waitingMinutes * m.waitPrice;
 
         body.innerHTML = `
@@ -538,7 +564,8 @@
             <div class="receipt-divider"></div>
             <div class="receipt-line"><span class="label">فتحة العداد الثابتة</span><span class="value">${m.bandira.toFixed(2)} ج</span></div>
             <div class="receipt-line"><span class="label">حساب المسافة (${m.totalDistance.toFixed(2)} كم)</span><span class="value">${distCost.toFixed(2)} ج</span></div>
-            <div class="receipt-line"><span class="label">حساب الانتظار التلقائي (${waitingMinutes.toFixed(0)} د)</span><span class="value">${waitCost.toFixed(2)} ج</span></div>
+            <div class="receipt-line"><span class="label">زمن الرحلة الكلي (${m.totalDurationMinutes.toFixed(0)} دقيقة × ${m.durationPrice.toFixed(2)}ج)</span><span class="value">${totalDurationCost.toFixed(2)} ج</span></div>
+            <div class="receipt-line"><span class="label">حساب الانتظار الزائد (${waitingMinutes.toFixed(0)} د)</span><span class="value">${waitCost.toFixed(2)} ج</span></div>
             <div class="receipt-divider"></div>
             <div class="receipt-line receipt-total"><span>إجمالي الأجرة المستحقة</span><span>${m.finalFare.toFixed(2)} ج</span></div>
         `;
@@ -567,7 +594,6 @@
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
-                // مراجعة وإعادة إحياء الكائنات المخزنة لضمان سلامتها بعد الريفرش
                 for(let id in parsed) {
                     meters[id] = parsed[id];
                 }
@@ -587,9 +613,10 @@
             distance: m.totalDistance,
             duration: m.totalDurationMinutes,
             wait: m.totalWaitSeconds / 60,
-            fare: m.finalFare
+            fare: m.finalFare,
+            savedPath: m.pathCoords // يتم حفظ مصفوفة نقاط مسار الرحلة في السجل للرجوع إليها مستقبلاً
         };
-        history.unshift(tripRecord); // إضافة الرحلة الأحدث في بداية القائمة
+        history.unshift(tripRecord);
         localStorage.setItem('smart_meter_history', JSON.stringify(history));
     }
 
@@ -612,6 +639,7 @@
                     <div>العداد المستخدم: عداد ${item.meterId}</div>
                     <div>نوع الرحلة: ${item.tripType === 'makhsoos' ? 'مخصوص' : 'أفراد'}</div>
                     <div>المسافة المقطوعة: ${item.distance.toFixed(2)} كم</div>
+                    <div>مدة المشوار الكلية: ${item.duration.toFixed(0)} دقيقة</div>
                     <div>زمن الانتظار: ${item.wait.toFixed(0)} دقيقة</div>
                 </div>
                 <div class="history-fare" style="text-align: left; margin-top: 5px;">
