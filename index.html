@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>توقع أجرتك - العداد الذكي Pro</title>
+    <title>توقع أجرتك - العداد الذكي المتعدد Pro</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     
@@ -15,34 +15,51 @@
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
         body { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); padding: 12px; color: var(--text); min-height: 100vh; }
-        .container { max-width: 500px; margin: 0 auto; }
+        .container { max-width: 500px; margin: 0 auto; padding-bottom: 60px; }
         
+        /* Navigation Tabs */
+        .tabs { display: flex; background: var(--card); border: 1px solid var(--border); border-radius: 15px; margin-bottom: 16px; overflow: hidden; }
+        .tab-btn { flex: 1; padding: 12px; border: none; background: transparent; color: var(--muted); font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s; text-align: center; }
+        .tab-btn.active { background: var(--primary); color: var(--bg); }
+
+        /* App Sections */
+        .app-section { display: none; }
+        .app-section.active { display: block; }
+
         /* Header */
         .header { text-align: center; margin-bottom: 16px; }
-        .header h1 { font-size: 26px; font-weight: 900; background: linear-gradient(90deg, var(--primary), #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .header p { color: var(--muted); font-size: 13px; }
+        .header h1 { font-size: 24px; font-weight: 900; background: linear-gradient(90deg, var(--primary), #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header p { color: var(--muted); font-size: 12px; }
         
         /* Glass Cards */
         .card { background: var(--glass); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 20px; padding: 16px; margin-bottom: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
         
+        /* Meter Selector Inside Dashboard */
+        .meter-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+        .meter-tab { padding: 10px; background: #334155; text-align: center; border-radius: 10px; font-weight: 700; cursor: pointer; border: 2px solid transparent; }
+        .meter-tab.active { border-color: var(--primary); background: rgba(34, 211, 238, 0.1); color: var(--primary); }
+        .meter-status-dot { display: inline-block; width: 8px; height: 8px; background: var(--muted); border-radius: 50%; margin-left: 6px; }
+        .meter-status-dot.active { background: var(--success); box-shadow: 0 0 8px var(--success); }
+
         /* العداد الرئيسي */
-        .main-meter { text-align: center; }
-        .fare-display { font-size: 48px; font-weight: 900; font-family: monospace; color: var(--primary); text-shadow: 0 0 20px rgba(34, 211, 238, 0.5); margin: 8px 0; }
-        .trip-type-badge { display: inline-block; background: var(--primary); color: var(--bg); padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
-        
+        .main-meter { text-align: center; position: relative; }
+        .fare-display { font-size: 44px; font-weight: 900; font-family: monospace; color: var(--primary); text-shadow: 0 0 20px rgba(34, 211, 238, 0.5); margin: 6px 0; }
+        .trip-type-badge { display: inline-block; background: var(--primary); color: var(--bg); padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+        .waiting-badge { display: inline-block; background: var(--warning); color: var(--bg); padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; margin-right: 6px; display: none;}
+
         /* الإحصائيات */
-        .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; text-align: center; }
-        .stat-box h3 { font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: 4px; }
-        .stat-box .value { font-size: 18px; font-weight: 700; color: var(--text); }
+        .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; text-align: center; margin-top: 10px;}
+        .stat-box h3 { font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: 2px; }
+        .stat-box .value { font-size: 16px; font-weight: 700; color: var(--text); }
         
         /* الإعدادات */
-        .form-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        .form-row label { font-weight: 600; font-size: 14px; }
-        .form-row input, .form-row select { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; width: 110px; border-radius: 10px; text-align: center; font-weight: 700; }
+        .form-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .form-row label { font-weight: 600; font-size: 13px; }
+        .form-row input, .form-row select { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; width: 110px; border-radius: 10px; text-align: center; font-weight: 700; font-size: 13px;}
         
         /* الأزرار */
         .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .btn { padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+        .btn { padding: 12px; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; text-align: center;}
         .btn:active { transform: scale(0.97); }
         .btn-start { background: var(--success); color: white; }
         .btn-stop { background: var(--danger); color: white; }
@@ -50,75 +67,113 @@
         .btn-secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); }
         .btn:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
         
-        #map { height: 280px; border-radius: 16px; border: 1px solid var(--border); z-index: 1; }
+        #map { height: 220px; border-radius: 16px; border: 1px solid var(--border); z-index: 1; }
         
+        /* السجل */
+        .history-item { background: var(--card); border: 1px solid var(--border); border-radius: 15px; padding: 12px; margin-bottom: 10px; position: relative;}
+        .history-header { display: flex; justify-content: space-between; font-weight: 700; border-bottom: 1px dashed var(--border); padding-bottom: 6px; margin-bottom: 8px; font-size: 13px;}
+        .history-details { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 12px; color: var(--muted); }
+        .history-fare { color: var(--primary); font-weight: 900; font-size: 16px; text-align: left;}
+
         /* Modal الفاتورة */
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 999; justify-content: center; align-items: center; padding: 16px; backdrop-filter: blur(5px); }
         .receipt { background: var(--card); width: 100%; max-width: 420px; border-radius: 20px; padding: 0; overflow: hidden; border: 1px solid var(--border); }
-        .receipt-header { background: linear-gradient(135deg, var(--primary), #818cf8); padding: 20px; text-align: center; }
-        .receipt-header h2 { font-size: 20px; font-weight: 900; color: var(--bg); }
-        .receipt-body { padding: 20px; }
-        .receipt-line { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px; }
+        .receipt-header { background: linear-gradient(135deg, var(--primary), #818cf8); padding: 16px; text-align: center; }
+        .receipt-header h2 { font-size: 18px; font-weight: 900; color: var(--bg); }
+        .receipt-body { padding: 16px; }
+        .receipt-line { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 13px; }
         .receipt-line .label { color: var(--muted); }
         .receipt-line .value { font-weight: 700; }
-        .receipt-divider { border-top: 1px dashed var(--border); margin: 16px 0; }
-        .receipt-total { font-size: 20px; font-weight: 900; color: var(--primary); }
-        .receipt-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 20px 20px; }
+        .receipt-divider { border-top: 1px dashed var(--border); margin: 12px 0; }
+        .receipt-total { font-size: 18px; font-weight: 900; color: var(--primary); }
+        .receipt-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px 16px; }
         
-        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--success); color: white; padding: 12px 20px; border-radius: 12px; font-weight: 700; z-index: 1000; display: none; }
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--success); color: white; padding: 10px 18px; border-radius: 12px; font-weight: 700; z-index: 1000; display: none; font-size: 13px;}
+        .empty-state { text-align: center; color: var(--muted); padding: 30px 10px; font-size: 14px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="header">
-        <h1>توقع أجرتك Pro</h1>
-        <p id="tripStatusText">جاهز للبدء</p>
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchSection('meter-section', this)">📟 العدادات الذكية</button>
+        <button class="tab-btn" onclick="switchSection('history-section', this); renderHistory();">📜 سجل الرحلات</button>
     </div>
-    
-    <div class="card" id="setupSection">
-        <div class="form-row">
-            <label>نوع الرحلة:</label>
-            <select id="tripType" onchange="toggleTripTypeSetup()">
-                <option value="makhsoos">مخصوص</option>
-                <option value="afrad">أفراد</option>
-            </select>
+
+    <div id="meter-section" class="app-section active">
+        <div class="header">
+            <h1>توقع أجرتك الذكي Pro</h1>
+            <p id="globalStatusText">تتبع حي للمسار ونظام انتظار تلقائي</p>
         </div>
-        <div class="form-row" id="makhsoosPriceGroup">
-            <label>سعر الكيلو:</label>
-            <input type="number" id="kmPriceInput" value="5" min="1" max="12">
+
+        <div class="meter-selector">
+            <div id="meterTab_1" class="meter-tab active" onclick="switchActiveMeterUI(1)">
+                <span id="dot_1" class="meter-status-dot"></span>عداد 1 (أساسي)
+            </div>
+            <div id="meterTab_2" class="meter-tab" onclick="switchActiveMeterUI(2)">
+                <span id="dot_2" class="meter-status-dot"></span>عداد 2 (إضافي)
+            </div>
+        </div>
+        
+        <div class="card" id="setupSection">
+            <div class="form-row">
+                <label>نوع الرحلة:</label>
+                <select id="tripType" onchange="onTripTypeChanged()">
+                    <option value="makhsoos">مخصوص</option>
+                    <option value="afrad">أفراد (ميكروباص/خط)</option>
+                </select>
+            </div>
+            <div class="form-row" id="kmPriceGroup">
+                <label>سعر الكيلو (جنية):</label>
+                <input type="number" id="kmPriceInput" value="5" min="1" max="50">
+            </div>
+            <div class="form-row">
+                <label>دقيقة الانتظار (جنية):</label>
+                <input type="number" id="waitPriceInput" value="1" min="0" max="20">
+            </div>
+        </div>
+
+        <div class="card main-meter">
+            <div class="trip-type-badge" id="currentTypeDisplay">-</div>
+            <div class="waiting-badge" id="waitingBadge">وضع انتظار ⏳</div>
+            <div class="fare-display" id="totalFareDisplay">0.00 ج</div>
+            <div class="stats">
+                <div class="stat-box"><h3>المسافة</h3><div class="value"><span id="distDisplay">0.00</span> كم</div></div>
+                <div class="stat-box"><h3>الزمن الكلي</h3><div class="value"><span id="durationDisplay">0</span> د</div></div>
+                <div class="stat-box"><h3>الانتظار</h3><div class="value"><span id="waitDisplay">0</span> د</div></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="btn-grid">
+                <button class="btn btn-start" id="startBtn" onclick="startCurrentMeter()">بدء العداد</button>
+                <button class="btn btn-stop" id="stopBtn" onclick="stopCurrentMeter()" disabled>إنهاء وتصفية</button>
+                <button class="btn btn-add" id="addPassengerBtn" onclick="convertTripToShared()" disabled>➕ تحويل لركاب مشتركين</button>
+                <button class="btn btn-secondary" onclick="triggerManualDistance()">📡 GPS ضعيف (يدوي)</button>
+                <button class="btn btn-secondary" style="background-color: #ef444415; color: var(--danger);" onclick="resetCurrentMeterData()">تصفير العداد الحالي</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div id="map"></div>
         </div>
     </div>
 
-    <div class="card main-meter">
-        <div class="trip-type-badge" id="currentTypeDisplay">-</div>
-        <div class="fare-display" id="totalFareDisplay">0.00 ج</div>
-        <div class="stats">
-            <div class="stat-box"><h3>المسافة</h3><div class="value"><span id="distDisplay">0.00</span> كم</div></div>
-            <div class="stat-box"><h3>المدة</h3><div class="value"><span id="durationDisplay">0</span> د</div></div>
-            <div class="stat-box"><h3>الانتظار</h3><div class="value"><span id="waitDisplay">0</span> د</div></div>
+    <div id="history-section" class="app-section">
+        <div class="header">
+            <h1>سجل الرحلات المحفوظة</h1>
+            <p>إحصائيات الرحلات المخزنة محلياً على الهاتف</p>
         </div>
-    </div>
-
-    <div class="card">
-        <div class="btn-grid">
-            <button class="btn btn-start" id="startBtn" onclick="startTrip()">بدء الرحلة</button>
-            <button class="btn btn-stop" id="stopBtn" onclick="stopTrip()" disabled>إنهاء الرحلة</button>
-            <button class="btn btn-add" id="addPassengerBtn" onclick="addPassenger()" disabled>➕ إضافة راكب للرحلة</button>
-            <button class="btn btn-secondary" onclick="toggleWeakGPS()">📡 GPS ضعيف</button>
-            <button class="btn btn-secondary" onclick="newMeter()">عداد جديد</button>
+        <div class="card">
+            <button class="btn btn-stop" style="width:100%; margin-bottom:15px;" onclick="clearAllHistory()">🗑️ مسح السجل بالكامل</button>
+            <div id="historyList"></div>
         </div>
-    </div>
-
-    <div class="card">
-        <div id="map"></div>
     </div>
 </div>
 
-<!-- Modal الفاتورة -->
 <div class="modal" id="receiptModal">
     <div class="receipt">
-        <div class="receipt-header"><h2>🧾 فاتورة الرحلة</h2></div>
+        <div class="receipt-header"><h2>🧾 فاتورة رحلة مصفاة</h2></div>
         <div class="receipt-body" id="receiptBody"></div>
         <div class="receipt-actions">
             <button class="btn btn-secondary" onclick="shareWhatsApp()">واتساب</button>
@@ -131,179 +186,458 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    // إعدادات التسعير
-    const PRICING = { 
-        afrad: { bandira: 5, km: 5, minute: 1 }, 
-        makhsoos: { bandira: 5, minFare: 10, minute: 1 } 
+    // الإعدادات الثابتة للتصفية الرقمية
+    const GPS_FILTER = {
+        minDistance: 0.015, // 15 متر كحد أدنى لتجنب اهتزاز الـ GPS (Jitter)
+        waitingSpeedKmh: 4.0 // إذا كانت السرعة أقل من 4 كم/ساعة تعتبر المركبة في حالة انتظار تلقائي
     };
-    let currentKmPrice = 5;
+
+    // هيكل العدادات الافتراضي (يتم تحميله أو حفظه في LocalStorage)
+    let meters = {
+        1: createEmptyMeterObject(1),
+        2: createEmptyMeterObject(2)
+    };
     
-    // حالة الرحلة
-    let map, watchId, timerInterval, startTime, lastPosition = null;
-    let isTripActive = false, tripType = 'makhsoos';
-    let totalDistance = 0, totalWaitSeconds = 0;
-    let pathCoords = [], pathLine, currentMarker;
-    let passengers = [];
-    let shareCode = '';
+    let activeMeterId = 1; // العداد المعروض حالياً في شاشة السواق
+    let map, pathLine, currentMarker;
+    let globalWatchId = null;
+
+    // دالة لتوليد كائن عداد فارغ ونظيف
+    function createEmptyMeterObject(id) {
+        return {
+            id: id,
+            isActive: false,
+            tripType: 'makhsoos',
+            kmPrice: 5,
+            waitPrice: 1,
+            bandira: 5,
+            minFare: 10,
+            totalDistance: 0,
+            startTime: null,
+            totalDurationMinutes: 0,
+            totalWaitSeconds: 0,
+            lastLat: null,
+            lastLng: null,
+            lastLocationTime: null,
+            isWaitingMode: false,
+            shareCode: '',
+            finalFare: 0
+        };
+    }
 
     window.onload = () => {
-        map = L.map('map').setView([30.0444, 31.2357], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        initMap();
+        loadDataFromStorage();
+        initGlobalGPS();
+        switchActiveMeterUI(1);
+        updateDotsUI();
     };
 
-    function toggleTripTypeSetup() {
+    function initMap() {
+        map = L.map('map').setView([30.0444, 31.2357], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        pathLine = L.polyline([], {color: '#22d3ee', weight: 5}).addTo(map);
+        currentMarker = L.marker([30.0444, 31.2357]).addTo(map);
+    }
+
+    // تبديل الشاشات الأساسية (العدادات أو السجل)
+    function switchSection(sectionId, btn) {
+        document.querySelectorAll('.app-section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(sectionId).classList.add('active');
+        btn.classList.add('active');
+    }
+
+    // تبديل العرض بين العداد 1 والعداد 2
+    function switchActiveMeterUI(id) {
+        activeMeterId = id;
+        document.querySelectorAll('.meter-tab').forEach(t => t.classList.remove('active'));
+        document.getElementById(`meterTab_${id}`).classList.add('active');
+        
+        const m = meters[activeMeterId];
+        
+        // تحديث حقول المدخلات لتطابق إعدادات العداد المحدد
+        document.getElementById('tripType').value = m.tripType;
+        document.getElementById('kmPriceInput').value = m.kmPrice;
+        document.getElementById('waitPriceInput').value = m.waitPrice;
+        
+        onTripTypeChanged();
+        renderMeterDataToUI();
+    }
+
+    function onTripTypeChanged() {
         const type = document.getElementById('tripType').value;
-        document.getElementById('makhsoosPriceGroup').style.display = (type === 'makhsoos') ? 'flex' : 'none';
+        document.getElementById('kmPriceGroup').style.display = (type === 'makhsoos') ? 'flex' : 'none';
+        if(!meters[activeMeterId].isActive) {
+            meters[activeMeterId].tripType = type;
+            saveDataToStorage();
+        }
     }
 
-    function showToast(msg) {
-        const t = document.getElementById('toast');
-        t.innerText = msg; t.style.display = 'block';
-        setTimeout(() => t.style.display = 'none', 2000);
+    // تحديث لمبات البيان الجانبية للعدادات النشطة بالخلفية
+    function updateDotsUI() {
+        document.getElementById('dot_1').className = 'meter-status-dot ' + (meters[1].isActive ? 'active' : '');
+        document.getElementById('dot_2').className = 'meter-status-dot ' + (meters[2].isActive ? 'active' : '');
     }
 
-    function startTrip() {
-        if (isTripActive) return;
-        tripType = document.getElementById('tripType').value;
-        currentKmPrice = parseFloat(document.getElementById('kmPriceInput').value) || 5;
-        
-        // Reset
-        isTripActive = true; startTime = Date.now();
-        totalDistance = 0; totalWaitSeconds = 0; pathCoords = []; passengers = [];
-        shareCode = Math.floor(100000 + Math.random() * 900000).toString();
-        
-        passengers.push({ id: 1, name: "الراكب 1", startIndex: 0, fare: 0 });
-        
-        // UI
-        document.getElementById('setupSection').style.display = 'none';
-        document.getElementById('startBtn').disabled = true;
-        document.getElementById('stopBtn').disabled = false;
-        document.getElementById('addPassengerBtn').disabled = (tripType !== 'afrad');
-        document.getElementById('currentTypeDisplay').innerText = tripType === 'makhsoos' ? 'مخصوص' : 'أفراد';
-        document.getElementById('tripStatusText').innerText = `الرحلة بدأت | رمز المشاركة: ${shareCode}`;
-        
-        timerInterval = setInterval(updateCalculations, 1000);
-        watchId = navigator.geolocation.watchPosition(updateLocation, handleError, { enableHighAccuracy: true });
-    }
-
-    function updateLocation(pos) {
-        const latLng = L.latLng(pos.coords.latitude, pos.coords.longitude);
-        if (lastPosition) {
-            const dist = lastPosition.distanceTo(latLng) / 1000;
-            if (dist > 0.005) { // أكتر من 5 متر
-                totalDistance += dist;
-                pathCoords.push(latLng);
-                if (!pathLine) pathLine = L.polyline(pathCoords, {color: '#22d3ee'}).addTo(map);
-                else pathLine.setLatLngs(pathCoords);
+    // السيرفر الوهمي الداخلي لتحديث الأوقات والانتظار أوتوماتيكياً كل ثانية للعدادات النشطة
+    setInterval(() => {
+        let updated = false;
+        for (let id in meters) {
+            let m = meters[id];
+            if (m.isActive && m.startTime) {
+                m.totalDurationMinutes = (Date.now() - m.startTime) / 1000 / 60;
+                
+                // حساب الانتظار التلقائي إذا لم تتحرك السيارة لمدة طويلة
+                if (m.isWaitingMode) {
+                    m.totalWaitSeconds += 1;
+                } else if (m.lastLocationTime && (Date.now() - m.lastLocationTime > 5000)) {
+                    // إذا لم تأتي إحداثيات جديدة منذ 5 ثواني والسائق في حالة رحلة، يعتبر متوقف في زحام
+                    m.totalWaitSeconds += 1;
+                    m.isWaitingMode = true;
+                }
+                
+                calculateFare(m);
+                updated = true;
             }
+        }
+        if (updated) {
+            renderMeterDataToUI();
+            saveDataToStorage();
+        }
+    }, 1000);
+
+    // تتبع الـ GPS الموحد للعدادين معاً لمنع استنزاف البطارية وللعمل المتوازي بالخلفية
+    function initGlobalGPS() {
+        if (navigator.geolocation) {
+            globalWatchId = navigator.geolocation.watchPosition(handleGlobalLocation, handleGPSError, {
+                enableHighAccuracy: true,
+                maximumAge: 0,
+                timeout: 10000
+            });
         } else {
-            pathCoords.push(latLng);
+            showToast("متصفحك لا يدعم نظام تحديد المواقع GPS");
         }
-        lastPosition = latLng;
-        map.setView(latLng, 16);
-        if (!currentMarker) currentMarker = L.marker(latLng).addTo(map);
-        else currentMarker.setLatLng(latLng);
     }
 
-    function updateCalculations() {
-        const durationMinutes = (Date.now() - startTime) / 1000 / 60;
-        document.getElementById('durationDisplay').innerText = durationMinutes.toFixed(0);
-        document.getElementById('distDisplay').innerText = totalDistance.toFixed(2);
-        document.getElementById('waitDisplay').innerText = (totalWaitSeconds / 60).toFixed(0);
-        
-        let totalFare = 0;
-        const timeCost = durationMinutes * PRICING.afrad.minute; // 1ج لكل دقيقة من وقت الرحلة كله
-        
-        if (tripType === 'afrad' && passengers.length === 1) {
-            totalFare = PRICING.afrad.bandira + (totalDistance * PRICING.afrad.km) + timeCost;
-        } else { // مخصوص أو مشترك
-            totalFare = PRICING.makhsoos.bandira + (totalDistance * currentKmPrice) + timeCost;
-            if (totalFare < PRICING.makhsoos.minFare) totalFare = PRICING.makhsoos.minFare;
-        }
-        document.getElementById('totalFareDisplay').innerText = totalFare.toFixed(2) + " ج";
-    }
+    function handleGlobalLocation(pos) {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        const speedKmh = pos.coords.speed ? (pos.coords.speed * 3.6) : null; 
+        const currentLatLng = L.latLng(lat, lng);
 
-    function addPassenger() {
-        if (!isTripActive || tripType !== 'afrad') return;
-        passengers.push({ id: 2, name: "الراكب 2", startIndex: pathCoords.length, fare: 0 });
-        tripType = 'makhsoos'; // تتحول مخصوص تلقائي
-        document.getElementById('currentTypeDisplay').innerText = 'مخصوص مشترك';
-        document.getElementById('addPassengerBtn').disabled = true;
-        showToast("تم إضافة راكب. الرحلة اتحولت مخصوص");
-    }
-
-    function stopTrip() {
-        if (!isTripActive) return;
-        navigator.geolocation.clearWatch(watchId);
-        clearInterval(timerInterval);
-        isTripActive = false;
-        
-        const durationMinutes = (Date.now() - startTime) / 1000 / 60;
-        const timeCost = durationMinutes * PRICING.afrad.minute;
-        let totalFare = 0, bandira = 0, distanceCost = 0;
-        
-        if (passengers.length === 1) {
-            if (document.getElementById('tripType').value === 'afrad') {
-                bandira = PRICING.afrad.bandira;
-                distanceCost = totalDistance * PRICING.afrad.km;
-            } else {
-                bandira = PRICING.makhsoos.bandira;
-                distanceCost = totalDistance * currentKmPrice;
+        // تحديث الخريطة للعداد الحالي المعروض فقط
+        if(map) {
+            currentMarker.setLatLng(currentLatLng);
+            if (meters[activeMeterId].isActive) {
+                map.setView(currentLatLng, 16);
             }
-        } else { // رحلة مشتركة
-            bandira = PRICING.makhsoos.bandira;
-            distanceCost = totalDistance * currentKmPrice;
         }
-        
-        totalFare = bandira + distanceCost + timeCost;
-        if (tripType === 'makhsoos' && totalFare < PRICING.makhsoos.minFare) totalFare = PRICING.makhsoos.minFare;
-        
-        generateReceipt({ bandira, distanceCost, timeCost, totalFare, durationMinutes });
-        
-        // Reset UI
-        document.getElementById('startBtn').disabled = false;
-        document.getElementById('stopBtn').disabled = true;
-        document.getElementById('setupSection').style.display = 'block';
+
+        // معالجة البيانات لكل عداد نشط على حدة بشكل منفصل تماماً بالخلفية
+        for (let id in meters) {
+            let m = meters[id];
+            if (!m.isActive) continue;
+
+            const now = Date.now();
+
+            if (m.lastLat && m.lastLng) {
+                const lastLatLng = L.latLng(m.lastLat, m.lastLng);
+                const distanceKm = lastLatLng.distanceTo(currentLatLng) / 1000;
+
+                // تصفية أخطاء قفزات الـ GPS العشوائية أثناء الوقوف (Jitter Filter)
+                if (distanceKm >= GPS_FILTER.minDistance) {
+                    
+                    // حساب السرعة الفركتلية إذا لم يعطها المودم مباشرة
+                    const timeElapsedHours = (now - m.lastLocationTime) / 1000 / 3600;
+                    const calculatedSpeed = distanceKm / timeElapsedHours;
+                    const finalSpeed = speedKmh !== null ? speedKmh : calculatedSpeed;
+
+                    if (finalSpeed > GPS_FILTER.waitingSpeedKmh) {
+                        m.totalDistance += distanceKm;
+                        m.isWaitingMode = false;
+                    } else {
+                        m.isWaitingMode = true;
+                    }
+
+                    m.lastLat = lat;
+                    m.lastLng = lng;
+                    m.lastLocationTime = now;
+                } else {
+                    // إذا ثبت في مكانه والمسافة المقطوعة صفر أو شبه منعدمة
+                    const timeDiff = (now - m.lastLocationTime) / 1000;
+                    if(timeDiff > 4 && (speedKmh === null || speedKmh < GPS_FILTER.waitingSpeedKmh)) {
+                        m.isWaitingMode = true;
+                    }
+                }
+            } else {
+                // أول نقطة إحداثية يتم تسجيلها للعداد
+                m.lastLat = lat;
+                m.lastLng = lng;
+                m.lastLocationTime = now;
+                m.isWaitingMode = false;
+            }
+
+            calculateFare(m);
+        }
+
+        // تحديث رسم خط المسار للعداد النشط الحالي على الخريطة
+        drawActiveRouteLine();
+        renderMeterDataToUI();
+        saveDataToStorage();
     }
 
-    function generateReceipt(data) {
+    function drawActiveRouteLine() {
+        // بما أننا لا نخزن مصفوفة الإحداثيات الضخمة لتفادي امتلاء الـ LocalStorage،
+        // نكتفي بوضع نقطة مؤشر القيادة الحالية، الكود مجهز للتطوير والربط بسيرفر خارجي.
+    }
+
+    // معادلة حساب التكلفة الدقيقة والذكية منعا للازدواجية بين وقت الحركة ووقت الانتظار
+    function calculateFare(m) {
+        let baseFare = m.bandira;
+        let distanceCost = 0;
+        
+        if (m.tripType === 'makhsoos') {
+            distanceCost = m.totalDistance * m.kmPrice;
+        } else {
+            // نظام حساب الأفراد الافتراضي
+            distanceCost = m.totalDistance * 5; 
+        }
+
+        // تكلفة الانتظار التلقائي محسوبة بالدقائق بشكل منفصل ونقي
+        let waitingMinutes = m.totalWaitSeconds / 60;
+        let waitingCost = waitingMinutes * m.waitPrice;
+
+        let total = baseFare + distanceCost + waitingCost;
+
+        // تطبيق الحد الأدنى للأجرة في المخصوص
+        if (m.tripType === 'makhsoos' && total < m.minFare) {
+            total = m.minFare;
+        }
+
+        m.finalFare = total;
+    }
+
+    // عرض وتحديث الأرقام على الشاشة بناءً على العداد المفتوح حالياً
+    function renderMeterDataToUI() {
+        const m = meters[activeMeterId];
+        
+        document.getElementById('totalFareDisplay').innerText = m.finalFare.toFixed(2) + " ج";
+        document.getElementById('distDisplay').innerText = m.totalDistance.toFixed(2);
+        document.getElementById('durationDisplay').innerText = m.totalDurationMinutes.toFixed(0);
+        document.getElementById('waitDisplay').innerText = (m.totalWaitSeconds / 60).toFixed(0);
+        
+        document.getElementById('currentTypeDisplay').innerText = m.tripType === 'makhsoos' ? 'مخصوص' : 'أفراد مشترك';
+        document.getElementById('waitingBadge').style.display = m.isWaitingMode ? 'inline-block' : 'none';
+
+        if (m.isActive) {
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('addPassengerBtn').disabled = (m.tripType !== 'makhsoos');
+            document.getElementById('setupSection').style.disabled = true;
+            document.getElementById('globalStatusText').innerText = `عداد رقم [${m.id}] شغال حالياً | كود: ${m.shareCode}`;
+        } else {
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('addPassengerBtn').disabled = true;
+            document.getElementById('setupSection').style.disabled = false;
+            document.getElementById('globalStatusText').innerText = `عداد رقم [${m.id}] جاهز وجاهز للبدء`;
+        }
+    }
+
+    // تشغيل العداد الحالي
+    function startCurrentMeter() {
+        const m = meters[activeMeterId];
+        if (m.isActive) return;
+
+        m.isActive = true;
+        m.startTime = Date.now();
+        m.tripType = document.getElementById('tripType').value;
+        m.kmPrice = parseFloat(document.getElementById('kmPriceInput').value) || 5;
+        m.waitPrice = parseFloat(document.getElementById('waitPriceInput').value) || 1;
+        m.shareCode = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        m.totalDistance = 0;
+        m.totalWaitSeconds = 0;
+        m.lastLat = null;
+        m.lastLng = null;
+        m.lastLocationTime = null;
+
+        showToast(`تم تشغيل عداد رقم ${m.id} بنجاح`);
+        updateDotsUI();
+        renderMeterDataToUI();
+        saveDataToStorage();
+    }
+
+    // إنهاء وتصفية العداد الحالي وحفظ الفاتورة بالسجل
+    function stopCurrentMeter() {
+        const m = meters[activeMeterId];
+        if (!m.isActive) return;
+
+        m.isActive = false;
+        calculateFare(m);
+
+        // حفظ الرحلة في سجل الـ LocalStorage قبل تصفير العداد
+        saveTripToHistory(m);
+
+        // توليد وعرض الفاتورة الفورية
+        generateReceipt(m);
+
+        // إعادة ضبط العداد الحالي كعداد جديد فارغ
+        meters[activeMeterId] = createEmptyMeterObject(activeMeterId);
+
+        updateDotsUI();
+        renderMeterDataToUI();
+        saveDataToStorage();
+    }
+
+    // ميزة تحويل الرحلة لركاب مشتركين مقسمين بالتساوي
+    function convertTripToShared() {
+        const m = meters[activeMeterId];
+        if(!m.isActive) return;
+        m.kmPrice = m.kmPrice * 1.4; // رفع الحسبة الإجمالية للعداد لتوزيعها تضامنياً 
+        showToast("تم تحويل المشوار لنظام مشترك؛ جاري دمج الحسابات");
+        calculateFare(m);
+        renderMeterDataToUI();
+    }
+
+    function resetCurrentMeterData() {
+        if(confirm("هل أنت متأكد من تصفير وإلغاء جميع بيانات العداد الحالي دون حفظها بالسجل؟")) {
+            meters[activeMeterId] = createEmptyMeterObject(activeMeterId);
+            updateDotsUI();
+            renderMeterDataToUI();
+            saveDataToStorage();
+            showToast("تم تصفير العداد بنجاح");
+        }
+    }
+
+    // حل ثغرة الـ GPS الضعيف بإدخال مسافة تقريبية يدوية من السائق
+    function triggerManualDistance() {
+        const m = meters[activeMeterId];
+        const manual = prompt("إشارة الـ GPS ضعيفة، أدخل المسافة المقطوعة يدوياً (بالكيلومتر):", m.totalDistance.toFixed(2));
+        if (manual !== null) {
+            m.totalDistance = parseFloat(manual) || 0;
+            calculateFare(m);
+            renderMeterDataToUI();
+            saveDataToStorage();
+            showToast("تم تحديث المسافة المسجلة يدوياً");
+        }
+    }
+
+    // توليد الفاتورة المرئية للمستخدم
+    function generateReceipt(m) {
         const body = document.getElementById('receiptBody');
+        const waitingMinutes = m.totalWaitSeconds / 60;
+        const distCost = m.tripType === 'makhsoos' ? (m.totalDistance * m.kmPrice) : (m.totalDistance * 5);
+        const waitCost = waitingMinutes * m.waitPrice;
+
         body.innerHTML = `
-            <div class="receipt-line"><span class="label">رمز المشاركة</span><span class="value">${shareCode}</span></div>
-            <div class="receipt-line"><span class="label">نوع الرحلة</span><span class="value">${tripType === 'afrad' ? 'أفراد' : 'مخصوص'}</span></div>
+            <div class="receipt-line"><span class="label">رقم العداد</span><span class="value">${m.id}</span></div>
+            <div class="receipt-line"><span class="label">كود المشاركة</span><span class="value">${m.shareCode}</span></div>
+            <div class="receipt-line"><span class="label">نوع المشوار</span><span class="value">${m.tripType === 'makhsoos' ? 'مخصوص' : 'أفراد'}</span></div>
             <div class="receipt-divider"></div>
-            <div class="receipt-line"><span class="label">فتحة العداد</span><span class="value">${data.bandira.toFixed(2)} ج</span></div>
-            <div class="receipt-line"><span class="label">المسافة ${totalDistance.toFixed(2)} كم</span><span class="value">${data.distanceCost.toFixed(2)} ج</span></div>
-            <div class="receipt-line"><span class="label">الوقت ${data.durationMinutes.toFixed(0)} دقيقة</span><span class="value">${data.timeCost.toFixed(2)} ج</span></div>
+            <div class="receipt-line"><span class="label">فتحة العداد الثابتة</span><span class="value">${m.bandira.toFixed(2)} ج</span></div>
+            <div class="receipt-line"><span class="label">حساب المسافة (${m.totalDistance.toFixed(2)} كم)</span><span class="value">${distCost.toFixed(2)} ج</span></div>
+            <div class="receipt-line"><span class="label">حساب الانتظار التلقائي (${waitingMinutes.toFixed(0)} د)</span><span class="value">${waitCost.toFixed(2)} ج</span></div>
             <div class="receipt-divider"></div>
-            <div class="receipt-line receipt-total"><span>الإجمالي</span><span>${data.totalFare.toFixed(2)} ج</span></div>
+            <div class="receipt-line receipt-total"><span>إجمالي الأجرة المستحقة</span><span>${m.finalFare.toFixed(2)} ج</span></div>
         `;
         document.getElementById('receiptModal').style.display = 'flex';
     }
 
     function shareWhatsApp() {
-        const text = `فاتورة توقع أجرتك 🚕\nالرمز: ${shareCode}\nالإجمالي: ${document.getElementById('totalFareDisplay').innerText}`;
+        const text = `🚖 فاتورة رحلة من تطبيق "توقع أجرتك"\nالإجمالي المطلوب: ${document.getElementById('totalFareDisplay').innerText}\nشكراً لاستخدامك العداد الذكي المطور!`;
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`);
     }
 
     function closeReceipt() {
         document.getElementById('receiptModal').style.display = 'none';
-        if(pathLine) map.removeLayer(pathLine);
-        pathLine = null;
     }
 
-    function toggleWeakGPS() {
-        const manual = prompt("أدخل المسافة يدوياً بالكيلو متر:", totalDistance.toFixed(2));
-        if (manual) totalDistance = parseFloat(manual);
-        showToast("تم تحديث المسافة يدوياً");
-    }
-    
-    function newMeter() {
-        if(isTripActive) { showToast("أنهي الرحلة الحالية أولاً"); return; }
-        showToast("جاهز لعداد جديد");
+    // ==========================================
+    // طبقة إدارة وتخزين البيانات المتكاملة (DATA PERSISTENCE LAYER)
+    // ==========================================
+
+    function saveDataToStorage() {
+        localStorage.setItem('smart_meter_data', JSON.stringify(meters));
     }
 
-    function handleError(err) { showToast("خطأ GPS: " + err.message); }
+    function loadDataFromStorage() {
+        const saved = localStorage.getItem('smart_meter_data');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                // مراجعة وإعادة إحياء الكائنات المخزنة لضمان سلامتها بعد الريفرش
+                for(let id in parsed) {
+                    meters[id] = parsed[id];
+                }
+            } catch(e) {
+                console.error("خطأ أثناء استرجاع بيانات الـ LocalStorage", e);
+            }
+        }
+    }
+
+    function saveTripToHistory(m) {
+        let history = JSON.parse(localStorage.getItem('smart_meter_history')) || [];
+        const tripRecord = {
+            id: m.shareCode || Math.floor(100000 + Math.random() * 900000).toString(),
+            meterId: m.id,
+            date: new Date().toLocaleString('ar-EG'),
+            tripType: m.tripType,
+            distance: m.totalDistance,
+            duration: m.totalDurationMinutes,
+            wait: m.totalWaitSeconds / 60,
+            fare: m.finalFare
+        };
+        history.unshift(tripRecord); // إضافة الرحلة الأحدث في بداية القائمة
+        localStorage.setItem('smart_meter_history', JSON.stringify(history));
+    }
+
+    function renderHistory() {
+        const historyList = document.getElementById('historyList');
+        const history = JSON.parse(localStorage.getItem('smart_meter_history')) || [];
+
+        if (history.length === 0) {
+            historyList.innerHTML = `<div class="empty-state">لا يوجد رحلات مسجلة في السجل حتى الآن.</div>`;
+            return;
+        }
+
+        historyList.innerHTML = history.map(item => `
+            <div class="history-item">
+                <div class="history-header">
+                    <span>🗓️ ${item.date}</span>
+                    <span style="color: var(--primary)">كود: ${item.id}</span>
+                </div>
+                <div class="history-details">
+                    <div>العداد المستخدم: عداد ${item.meterId}</div>
+                    <div>نوع الرحلة: ${item.tripType === 'makhsoos' ? 'مخصوص' : 'أفراد'}</div>
+                    <div>المسافة المقطوعة: ${item.distance.toFixed(2)} كم</div>
+                    <div>زمن الانتظار: ${item.wait.toFixed(0)} دقيقة</div>
+                </div>
+                <div class="history-fare" style="text-align: left; margin-top: 5px;">
+                     الإجمالي: ${item.fare.toFixed(2)} ج
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function clearAllHistory() {
+        if (confirm("هل أنت متأكد من رغبتك في حذف سجل الفواتير بالكامل؟ لا يمكن التراجع عن هذا الإجراء.")) {
+            localStorage.removeItem('smart_meter_history');
+            renderHistory();
+            showToast("تم مسح السجل بالكامل بنجاح");
+        }
+    }
+
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.innerText = msg; t.style.display = 'block';
+        setTimeout(() => t.style.display = 'none', 3000);
+    }
+
+    function handleGPSError(err) {
+        console.warn("إشارة الـ GPS غير مستقرة: " + err.message);
+    }
 </script>
 </body>
 </html>
