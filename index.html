@@ -183,7 +183,8 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    const GPS_FILTER = { minDistance: 0.015, waitingSpeedKmh: 4.0 };
+    // تعديل الفلتر هنا لزيادة حساسية التقاط الحركة والمشي السريع والبطيء بدقة عالية
+    const GPS_FILTER = { minDistance: 0.005, waitingSpeedKmh: 1.5 };
 
     let meters = {
         1: createEmptyMeterObject(1),
@@ -346,7 +347,6 @@
         }
     }
 
-    // التحديث الجوهري: دمج آلية الـ Snap to Roads وحساب المسار الفعلي المتوافق مع الشوارع حياً
     async function handleGlobalLocation(pos) {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
@@ -379,7 +379,6 @@
                         m.isWaitingMode = false;
                         m.pathCoords.push({lat: lat, lng: lng});
 
-                        // دمج الـ API الخاص بـ OSRM لمطابقة نقطة القيادة على أقرب طريق حقيقي هندسياً
                         if (m.pathCoords.length >= 2) {
                             try {
                                 const lastPoint = m.pathCoords[m.pathCoords.length - 2];
@@ -391,18 +390,17 @@
                                 if (data.code === 'Ok' && data.routes && data.routes[0]) {
                                     const roadDistanceKm = data.routes[0].distance / 1000;
                                     
-                                    // حماية السيستم البرمجية ضد قفزات الـ GPS المفاجئة (GPS Jumps)
                                     if (roadDistanceKm < rawDistanceKm * 3) {
                                         m.totalDistance += roadDistanceKm;
                                     } else {
                                         m.totalDistance += rawDistanceKm;
                                     }
                                 } else {
-                                    m.totalDistance += rawDistanceKm; // Fallback لو السيرفر العام لم يستجب
+                                    m.totalDistance += rawDistanceKm; 
                                 }
                             } catch (error) {
                                 console.error("OSRM Error, falling back to raw GPS calculation:", error);
-                                m.totalDistance += rawDistanceKm; // Fallback في حالة ضعف الإنترنت أو انقطاعه بالنفق
+                                m.totalDistance += rawDistanceKm; 
                             }
                         } else {
                             m.totalDistance += rawDistanceKm;
@@ -433,7 +431,6 @@
         saveDataToStorage();
     }
 
-    // تعديل رسم المسار الحقيقي بشكل متناسق فوق الخرائط
     function redrawActiveRouteLine() {
         if (!pathLine || !map) return;
         const m = meters[activeMeterId];
