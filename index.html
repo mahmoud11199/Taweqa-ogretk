@@ -90,7 +90,6 @@
         <button class="tab-btn" onclick="switchSection('history-section', this); renderHistory();">📜 سجل الرحلات</button>
     </div>
 
-    <!-- SECTION 1: METERS -->
     <div id="meter-section" class="app-section active">
         <div class="header">
             <h1>توقع أجرتك الذكي Pro</h1>
@@ -106,7 +105,6 @@
             </div>
         </div>
         
-        <!-- لوحة التحكم الكاملة بالأسعار - ظاهرة دائماً للسائق -->
         <div class="card" id="setupSection">
             <div class="form-row">
                 <label>نوع الرحلة المبدئي:</label>
@@ -158,7 +156,6 @@
         </div>
     </div>
 
-    <!-- SECTION 2: HISTORY -->
     <div id="history-section" class="app-section">
         <div class="header">
             <h1>سجل الرحلات المحفوظة</h1>
@@ -264,7 +261,7 @@
         const btnBtn = document.getElementById('dynamicActionBtn');
         
         if (type === 'afrad') {
-            btnBtn.innerText = "👤 تحديث عدد الركاب الحاليين";
+            btnBtn.innerText = "👤 تحديث عدد الركابة الحاليين";
             btnBtn.style.backgroundColor = "var(--warning)";
         } else {
             btnBtn.innerText = "👥 تحويل المشوار لأفراد (مشترك)";
@@ -349,7 +346,8 @@
         }
     }
 
-    function handleGlobalLocation(pos) {
+    // التحديث الجوهري: دمج آلية الـ Snap to Roads وحساب المسار الفعلي المتوافق مع الشوارع حياً
+    async function handleGlobalLocation(pos) {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
         const speedKmh = pos.coords.speed ? (pos.coords.speed * 3.6) : null; 
@@ -370,17 +368,46 @@
 
             if (m.lastLat && m.lastLng) {
                 const lastLatLng = L.latLng(m.lastLat, m.lastLng);
-                const distanceKm = lastLatLng.distanceTo(currentLatLng) / 1000;
+                const rawDistanceKm = lastLatLng.distanceTo(currentLatLng) / 1000;
 
-                if (distanceKm >= GPS_FILTER.minDistance) {
+                if (rawDistanceKm >= GPS_FILTER.minDistance) {
                     const timeElapsedHours = (now - m.lastLocationTime) / 1000 / 3600;
-                    const calculatedSpeed = distanceKm / timeElapsedHours;
+                    const calculatedSpeed = rawDistanceKm / timeElapsedHours;
                     const finalSpeed = speedKmh !== null ? speedKmh : calculatedSpeed;
 
                     if (finalSpeed > GPS_FILTER.waitingSpeedKmh) {
-                        m.totalDistance += distanceKm;
                         m.isWaitingMode = false;
                         m.pathCoords.push({lat: lat, lng: lng});
+
+                        // دمج الـ API الخاص بـ OSRM لمطابقة نقطة القيادة على أقرب طريق حقيقي هندسياً
+                        if (m.pathCoords.length >= 2) {
+                            try {
+                                const lastPoint = m.pathCoords[m.pathCoords.length - 2];
+                                const url = `https://router.project-osrm.org/route/v1/driving/${lastPoint.lng},${lastPoint.lat};${lng},${lat}?overview=false`;
+                                
+                                const response = await fetch(url);
+                                const data = await response.json();
+                                
+                                if (data.code === 'Ok' && data.routes && data.routes[0]) {
+                                    const roadDistanceKm = data.routes[0].distance / 1000;
+                                    
+                                    // حماية السيستم البرمجية ضد قفزات الـ GPS المفاجئة (GPS Jumps)
+                                    if (roadDistanceKm < rawDistanceKm * 3) {
+                                        m.totalDistance += roadDistanceKm;
+                                    } else {
+                                        m.totalDistance += rawDistanceKm;
+                                    }
+                                } else {
+                                    m.totalDistance += rawDistanceKm; // Fallback لو السيرفر العام لم يستجب
+                                }
+                            } catch (error) {
+                                console.error("OSRM Error, falling back to raw GPS calculation:", error);
+                                m.totalDistance += rawDistanceKm; // Fallback في حالة ضعف الإنترنت أو انقطاعه بالنفق
+                            }
+                        } else {
+                            m.totalDistance += rawDistanceKm;
+                        }
+
                     } else {
                         m.isWaitingMode = true;
                     }
@@ -406,6 +433,7 @@
         saveDataToStorage();
     }
 
+    // تعديل رسم المسار الحقيقي بشكل متناسق فوق الخرائط
     function redrawActiveRouteLine() {
         if (!pathLine || !map) return;
         const m = meters[activeMeterId];
@@ -424,7 +452,6 @@
         if (m.tripType === 'makhsoos') {
             distanceCost = m.totalDistance * m.kmPrice;
         } else {
-            // التعديل هنا: يضرب المسافة في (سعر الكيلومتر المدخل بالواجهة كتحكم كامل × عدد ركاب المقاعد)
             distanceCost = m.totalDistance * m.kmPrice * m.passengerCount; 
         }
 
@@ -473,10 +500,9 @@
         const selectedType = document.getElementById('tripType').value;
         let initialPassengers = 1;
 
-        // التعديل المنطقي العبقري: السؤال فوراً عن عدد المقاعد الممتلئة إذا كانت رحلة أفراد
         if (selectedType === 'afrad') {
             const seats = prompt("المشوار أفراد، كم عدد المقاعد المحجوزة والممتلئة الآن عند البداية؟", "1");
-            if (seats === null) return; // إلغاء العملية لو السائق قفل النافذة
+            if (seats === null) return; 
             const parsedSeats = parseInt(seats);
             if (parsedSeats >= 1 && parsedSeats <= 20) {
                 initialPassengers = parsedSeats;
@@ -490,7 +516,6 @@
         m.startTime = Date.now();
         m.tripType = selectedType;
         
-        // جلب الأسعار الحالية والتحكم الكامل بها مباشرة من المدخلات
         m.kmPrice = parseFloat(document.getElementById('kmPriceInput').value) || 5;
         m.waitPrice = parseFloat(document.getElementById('waitPriceInput').value) || 1;
         m.durationPrice = parseFloat(document.getElementById('durationPriceInput').value) || 0.50;
