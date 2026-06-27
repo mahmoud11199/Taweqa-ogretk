@@ -640,7 +640,10 @@
       });
       if (error) { showAlert('register-alert', error.message || 'فشل التسجيل'); setLoading('register', false); return; }
       showAlert('register-alert', 'تم إنشاء الحساب بنجاح! جاري تحويلك...', 'success');
-      setTimeout(function() { initSession(); }, 1000);
+      // Safety fallback in case SIGNED_IN doesn't fire
+      setTimeout(function() {
+        if (!sessionInitialized) { safeInitSession(); }
+      }, 2000);
     } catch (e) { showAlert('register-alert', e.message || 'حدث خطأ'); setLoading('register', false); }
   };
 
@@ -696,6 +699,7 @@
     } catch (e) { window.showError(e.message || 'حدث خطأ'); document.getElementById('reset-btn').style.display = 'block'; document.getElementById('reset-loading').classList.add('hidden-el'); }
   };
   async function initSession() {
+    clearTimeout(loadingFallback);
     if (!supabase) { showLandingPage(); return; }
     try {
       var { data: { session }, error } = await supabase.auth.getSession();
@@ -1444,30 +1448,49 @@
 
   // ======================== INIT ========================
   var sessionInitialized = false;
-  async function init() {
-    // Check auth redirect first
-    var handled = await handleAuthRedirect();
-    if (handled) return;
-    // Listen for auth state changes
-    if (supabase) {
-      supabase.auth.onAuthStateChanged(function(event, session) {
-        if (event === 'INITIAL_SESSION') {
-          if (session && !sessionInitialized) { sessionInitialized = true; currentUser = session.user; initSession(); }
-        }
-        if (event === 'SIGNED_IN' && session) {
-          sessionInitialized = true;
-          currentUser = session.user;
-          initSession();
-        }
-        if (event === 'SIGNED_OUT') {
-          sessionInitialized = false;
-          currentUser = null; currentProfile = null;
-          showLandingPage();
-        }
-      });
+
+  // Fallback: show landing page after 4s regardless of what happens
+  var loadingFallback = setTimeout(function() {
+    if (loadingScreen && !loadingScreen.classList.contains('hidden')) {
+      console.warn('Loading fallback triggered');
+      showLandingPage();
     }
-    // Try to get existing session
-    initSession();
+  }, 4000);
+
+  function safeInitSession() {
+    if (sessionInitialized) return;
+    initSession().catch(function(e) {
+      console.error('initSession failed:', e);
+      showLandingPage();
+    });
+  }
+
+  async function init() {
+    try {
+      // Check auth redirect first
+      var handled = await handleAuthRedirect();
+      if (handled) { clearTimeout(loadingFallback); return; }
+      // Listen for auth state changes
+      if (supabase) {
+        supabase.auth.onAuthStateChanged(function(event, session) {
+          if (event === 'SIGNED_IN' && session) {
+            sessionInitialized = true;
+            currentUser = session.user;
+            initSession().catch(function(e) { console.error(e); showLandingPage(); });
+          }
+          if (event === 'SIGNED_OUT') {
+            sessionInitialized = false;
+            currentUser = null; currentProfile = null;
+            showLandingPage();
+          }
+        });
+      }
+      // Try to get existing session
+      safeInitSession();
+    } catch(e) {
+      console.error('Init error:', e);
+      showLandingPage();
+    }
   }
 
   init();
