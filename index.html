@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>توقع أجرتك - العداد الذكي المطور</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght=400;600;700;900&display=swap" rel="stylesheet">
     
     <style>
         :root {
@@ -223,8 +223,6 @@
             finalFare: 0,
             passengerCount: 1, 
             pathCoords: [],
-            
-            // مصفوفة تتبع الركاب المنفصلين لحساب كل فرد من نقطة ركوبه
             passengersData: []
         };
     }
@@ -331,22 +329,20 @@
             const action = prompt(`اختر الإجراء المطلوب للأفراد:\n1 - ركوب فرد جديد حياً في الطريق\n2 - نزول ومحاسبة فرد حالي وصل محطته`, "1");
             
             if (action === "1") {
-                // ركوب فرد جديد: يسجل نقطة ركوبه بالظبط من مسافة العداد الحالية
                 let pNumber = m.passengersData.length + 1;
+                // تعديل هنا: الراكب الجديد يحسب له المسافة فقط بدون بنديرة أو وقت
                 m.passengersData.push({
                     id: pNumber,
                     name: `راكب رقم ${pNumber}`,
                     startDistance: m.totalDistance,
-                    startDuration: m.totalDurationMinutes,
-                    startWait: m.totalWaitSeconds / 60,
                     isInside: true,
+                    isInitial: false, // علامة للتمييز أنه ركب في الطريق
                     individualFare: 0
                 });
                 m.passengerCount = m.passengersData.filter(p => p.isInside).length;
                 showToast(`➕ تم إركاب فرد جديد: راكب رقم ${pNumber}`);
             } 
             else if (action === "2") {
-                // نزول ومحاسبة فرد
                 let activeList = m.passengersData.filter(p => p.isInside);
                 if (activeList.length === 0) {
                     showToast("❌ لا يوجد ركاب داخل المركبة حالياً لمكاسبتهم");
@@ -365,23 +361,25 @@
                     targetPassenger.isInside = false;
                     m.passengerCount = m.passengersData.filter(p => p.isInside).length;
                     
-                    // حساب المسافة الصافية والوقت الصافي لهذا الفرد منذ ركوبه
                     let pDist = m.totalDistance - targetPassenger.startDistance;
-                    let pDuration = m.totalDurationMinutes - targetPassenger.startDuration;
-                    let pWait = (m.totalWaitSeconds / 60) - targetPassenger.startWait;
+                    let pFare = 0;
                     
-                    let pFare = m.bandira + (pDist * m.kmPrice) + (pDuration * m.durationPrice) + (pWait * m.waitPrice);
+                    if (targetPassenger.isInitial) {
+                        // الراكب الأساسي يحسب بالمعادلة كاملة (بنديرة + وقت + مسافة) لضمان حق السائق الأساسي
+                        let pDuration = m.totalDurationMinutes - (targetPassenger.startDuration || 0);
+                        let pWait = (m.totalWaitSeconds / 60) - (targetPassenger.startWait || 0);
+                        pFare = m.bandira + (pDist * m.kmPrice) + (pDuration * m.durationPrice) + (pWait * m.waitPrice);
+                    } else {
+                        // الراكب الإضافي يحسب مسافة فقط بناءً على طلبك
+                        pFare = pDist * m.kmPrice;
+                    }
+                    
                     targetPassenger.individualFare = pFare;
                     
-                    // عرض الفاتورة الصافية والمنفصلة للراكب النازل فوراً
                     const body = document.getElementById('receiptBody');
                     body.innerHTML = `
                         <div class="receipt-line"><span class="label">تصفية حساب فردي</span><span class="value" style="color:var(--warning)">${targetPassenger.name}</span></div>
                         <div class="receipt-line"><span class="label">المسافة الصافية المقطوعة</span><span class="value">${pDist.toFixed(2)} كم</span></div>
-                        <div class="receipt-line"><span class="label">وقت الجلوس الصافي</span><span class="value">${pDuration.toFixed(0)} دقيقة</span></div>
-                        <div class="receipt-divider"></div>
-                        <div class="receipt-line"><span class="label">فتحة العداد للفرد</span><span class="value">${m.bandira.toFixed(2)} ج</span></div>
-                        <div class="receipt-line"><span class="label">حساب مسافة الفرد</span><span class="value">${(pDist * m.kmPrice).toFixed(2)} ج</span></div>
                         <div class="receipt-divider"></div>
                         <div class="receipt-line receipt-total"><span>المطلوب من الراكب</span><span>${pFare.toFixed(2)} ج</span></div>
                     `;
@@ -399,7 +397,6 @@
                     m.tripType = 'afrad'; 
                     m.passengerCount = 1; 
                     
-                    // تحويل الزبون الحالي ليكون الراكب رقم 1 من مسافة التحويل
                     m.passengersData = [{
                         id: 1,
                         name: "راكب رقم 1 (المخصوص السابق)",
@@ -407,6 +404,7 @@
                         startDuration: m.totalDurationMinutes,
                         startWait: m.totalWaitSeconds / 60,
                         isInside: true,
+                        isInitial: true, // يعتبر راكب أساسي لأنه دفع البنديرة والوقت من البداية
                         individualFare: 0
                     }];
                     
@@ -564,16 +562,23 @@
             if (total < m.minFare) total = m.minFare;
             m.finalFare = total;
         } else {
-            // في وضع الأفراد: إجمالي العداد الحقيقي هو مجموع حساب الركاب الفردي لجميع من ركب ونزل
             let totalRevenue = 0;
             m.passengersData.forEach(p => {
                 if (!p.isInside) {
                     totalRevenue += p.individualFare;
                 } else {
                     let currentPDist = m.totalDistance - p.startDistance;
-                    let currentPDuration = m.totalDurationMinutes - p.startDuration;
-                    let currentPWait = (m.totalWaitSeconds / 60) - p.startWait;
-                    let currentPFare = m.bandira + (currentPDist * m.kmPrice) + (currentPDuration * m.durationPrice) + (currentPWait * m.waitPrice);
+                    let currentPFare = 0;
+                    
+                    if (p.isInitial) {
+                        // الركاب اللي بدأوا مع الرحلة (الأساسيين) يتم تطبيق المعادلة كاملة عليهم
+                        let currentPDuration = m.totalDurationMinutes - (p.startDuration || 0);
+                        let currentPWait = (m.totalWaitSeconds / 60) - (p.startWait || 0);
+                        currentPFare = m.bandira + (currentPDist * m.kmPrice) + (currentPDuration * m.durationPrice) + (currentPWait * m.waitPrice);
+                    } else {
+                        // الركاب المضافين من الطريق: مسافة صافية فقط مضروبة في السعر
+                        currentPFare = currentPDist * m.kmPrice;
+                    }
                     totalRevenue += currentPFare;
                 }
             });
@@ -654,7 +659,6 @@
         m.lastLat = null; m.lastLng = null; m.lastLocationTime = null;
         m.pathCoords = []; 
 
-        // في حالة البداية أفراد، تهيئة الركاب المبدئيين حياً من الصفر
         if (selectedType === 'afrad') {
             m.passengersData = [];
             for(let i = 1; i <= initialPassengers; i++) {
@@ -665,6 +669,7 @@
                     startDuration: 0,
                     startWait: 0,
                     isInside: true,
+                    isInitial: true, // ركاب البداية يتم محاسبتهم بالمعادلة كاملة
                     individualFare: 0
                 });
             }
@@ -686,15 +691,20 @@
             if (m.lastPauseTimestamp) m.pausedTimeTotal += (Date.now() - m.lastPauseTimestamp);
         }
 
-        // قبل الإنهاء الكامل، أي زبون ما زال راكباً يتم محاسبته وتصفية رقمه تلقائياً
         if (m.tripType === 'afrad') {
             m.passengersData.forEach(p => {
                 if (p.isInside) {
                     p.isInside = false;
                     let pDist = m.totalDistance - p.startDistance;
-                    let pDuration = m.totalDurationMinutes - p.startDuration;
-                    let pWait = (m.totalWaitSeconds / 60) - p.startWait;
-                    p.individualFare = m.bandira + (pDist * m.kmPrice) + (pDuration * m.durationPrice) + (pWait * m.waitPrice);
+                    
+                    if (p.isInitial) {
+                        let pDuration = m.totalDurationMinutes - (p.startDuration || 0);
+                        let pWait = (m.totalWaitSeconds / 60) - (p.startWait || 0);
+                        p.individualFare = m.bandira + (pDist * m.kmPrice) + (pDuration * m.durationPrice) + (pWait * m.waitPrice);
+                    } else {
+                        // الركاب المتبقين الذين ركبوا بالطريق يحسب لهم مسافة فقط عند الإغلاق التام
+                        p.individualFare = pDist * m.kmPrice;
+                    }
                 }
             });
         }
@@ -751,7 +761,6 @@
                 <div class="receipt-line"><span class="label">حساب الانتظار والتوقف</span><span class="value">${waitCost.toFixed(2)} ج</span></div>
             `;
         } else {
-            // في وضع الأفراد: الفاتورة تعرض تفصيلاً حساب كل فرد ركب بالمشوار بالمليم لراحة السواق
             itemsDetailsHTML = `<div style="font-weight:700; font-size:12px; margin-bottom:6px; color:var(--primary);">تصفية حساب أفراد المشترك التفصيلية:</div>`;
             m.passengersData.forEach(p => {
                 itemsDetailsHTML += `<div class="receipt-line"><span class="label">👈 ${p.name}</span><span class="value">${p.individualFare.toFixed(2)} ج</span></div>`;
