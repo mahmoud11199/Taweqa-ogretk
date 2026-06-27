@@ -2,8 +2,9 @@
 <html dir="rtl" lang="ar">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=Edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	  <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+	  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co https://router.project-osrm.org; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';">
+	  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="توقع أجرتك - تطبيق التوك توك الذكي لحساب الأجرة، إدارة الرحلات، والمحفظة الإلكترونية">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -646,11 +647,15 @@
     if (pass !== confirm) { showAlert('register-alert', 'كلمة السر غير متطابقة'); return; }
     setLoading('register', true);
     try {
-      var { data, error } = await supabase.auth.signUp({
-        email: email, password: pass,
-        options: { data: { full_name: name, role: selectedRole, phone: phone } }
-      });
-      if (error) { showAlert('register-alert', error.message || 'فشل التسجيل'); setLoading('register', false); return; }
+	      var requestedRole = selectedRole;
+	      var { data, error } = await supabase.auth.signUp({
+	        email: email, password: pass,
+	        options: { data: { full_name: name, role: 'passenger', requested_role: requestedRole, phone: phone } }
+	      });
+	      if (error) { showAlert('register-alert', error.message || 'فشل التسجيل'); setLoading('register', false); return; }
+	      if (requestedRole === 'driver' && data && data.user) {
+	        await supabase.from('driver_applications').upsert({ user_id: data.user.id, status: 'pending', payload: { full_name: name, phone: phone } });
+	      }
       showAlert('register-alert', 'تم إنشاء الحساب بنجاح! جاري تحويلك...', 'success');
       // Safety fallback in case SIGNED_IN doesn't fire
       setTimeout(function() {
@@ -907,7 +912,7 @@
   var globalWatchId = null;
 
 	  function createEmptyMeterObject(id) {
-	    return { id: id, isActive: false, isPaused: false, tripType: 'makhsoos', kmPrice: 5, waitPrice: 1, durationPrice: 0.50, bandira: 5, minFare: 10, totalDistance: 0, startTime: null, pausedTimeTotal: 0, lastPauseTimestamp: null, totalDurationMinutes: 0, totalWaitSeconds: 0, lastLat: null, lastLng: null, lastLocationTime: null, isWaitingMode: false, shareCode: '', tripId: null, lastSupabaseSync: 0, finalFare: 0, passengerCount: 1, pathCoords: [], passengersData: [] };
+	    return { id: id, isActive: false, isPaused: false, tripType: 'makhsoos', kmPrice: 5, waitPrice: 1, durationPrice: 0.50, bandira: 5, minFare: 10, totalDistance: 0, startTime: null, pausedTimeTotal: 0, lastPauseTimestamp: null, totalDurationMinutes: 0, totalWaitSeconds: 0, waitingStartedAt: null, waitingBaseSeconds: 0, lastLat: null, lastLng: null, lastLocationTime: null, isWaitingMode: false, shareCode: '', tripId: null, lastSupabaseSync: 0, finalFare: 0, passengerCount: 1, pathCoords: [], passengersData: [] };
 	  }
 
   function initDriverMap() {
@@ -1037,7 +1042,7 @@
 	    m.durationPrice = clampNumber(document.getElementById('durationPriceInput').value, 0, 10, 0.50);
 	    m.shareCode = Math.floor(100000 + Math.random() * 900000).toString();
 	    m.tripId = null; m.lastSupabaseSync = 0;
-    m.totalDistance = 0; m.totalWaitSeconds = 0;
+	    m.totalDistance = 0; m.totalWaitSeconds = 0; m.waitingStartedAt = null; m.waitingBaseSeconds = 0;
     m.passengerCount = initialPassengers;
     m.lastLat = null; m.lastLng = null; m.lastLocationTime = null;
     m.pathCoords = [];
@@ -1053,9 +1058,10 @@
   }
   window.startCurrentMeter = startCurrentMeter;
 
-  function stopCurrentMeter() {
-    var m = meters[activeMeterId];
-    if (!m.isActive) return;
+	  function stopCurrentMeter() {
+	    var m = meters[activeMeterId];
+	    if (!m.isActive) return;
+	    updateWaitSeconds(m);
     if (m.isPaused) { m.isPaused = false; if (m.lastPauseTimestamp) m.pausedTimeTotal += (Date.now() - m.lastPauseTimestamp); }
     if (m.tripType === 'afrad') {
       m.passengersData.forEach(function(p) {
@@ -1083,13 +1089,34 @@
   function togglePauseCurrentMeter() {
     var m = meters[activeMeterId];
     if (!m.isActive) return;
-    if (!m.isPaused) { m.isPaused = true; m.lastPauseTimestamp = Date.now(); m.isWaitingMode = false; showToast('تم إيقاف العداد مؤقتاً'); }
+	    if (!m.isPaused) { m.isPaused = true; m.lastPauseTimestamp = Date.now(); setWaitingMode(m, false); showToast('تم إيقاف العداد مؤقتاً'); }
     else { m.isPaused = false; if (m.lastPauseTimestamp) m.pausedTimeTotal += (Date.now() - m.lastPauseTimestamp); m.lastLocationTime = Date.now(); showToast('تم استئناف العداد'); }
     updateDotsUI(); renderMeterDataToUI(); saveDataToStorage();
   }
-  window.togglePauseCurrentMeter = togglePauseCurrentMeter;
+	  window.togglePauseCurrentMeter = togglePauseCurrentMeter;
 
-  function handleDynamicActionButton() {
+	  function setWaitingMode(m, isWaiting) {
+	    if (!m) return;
+	    if (isWaiting && !m.isWaitingMode) {
+	      m.isWaitingMode = true;
+	      m.waitingBaseSeconds = clampNumber(m.totalWaitSeconds, 0, 86400, 0);
+	      m.waitingStartedAt = Date.now();
+	    } else if (!isWaiting && m.isWaitingMode) {
+	      updateWaitSeconds(m);
+	      m.isWaitingMode = false;
+	      m.waitingStartedAt = null;
+	      m.waitingBaseSeconds = m.totalWaitSeconds;
+	    }
+	  }
+
+	  function updateWaitSeconds(m) {
+	    if (m && m.isWaitingMode && m.waitingStartedAt) {
+	      var elapsed = (Date.now() - m.waitingStartedAt) / 1000;
+	      m.totalWaitSeconds = clampNumber((m.waitingBaseSeconds || 0) + elapsed, 0, 86400, 0);
+	    }
+	  }
+
+	  function handleDynamicActionButton() {
     var m = meters[activeMeterId];
     if (!m.isActive || m.isPaused) return;
     if (m.tripType === 'afrad') {
@@ -1143,8 +1170,8 @@
       var m = meters[id];
       if (m.isActive && m.startTime && !m.isPaused) {
         m.totalDurationMinutes = ((Date.now() - m.startTime) - m.pausedTimeTotal) / 1000 / 60;
-	        if (m.isWaitingMode) { m.totalWaitSeconds += 1; }
-	        else if (m.lastLocationTime && (Date.now() - m.lastLocationTime > 5000)) { m.totalWaitSeconds += 1; m.isWaitingMode = true; }
+	        if (m.isWaitingMode) { updateWaitSeconds(m); }
+	        else if (m.lastLocationTime && (Date.now() - m.lastLocationTime > 5000)) { setWaitingMode(m, true); updateWaitSeconds(m); }
 	        calculateFare(m); syncStartedTripToSupabase(m, false); updated = true;
 	      }
 	    }
@@ -1184,7 +1211,7 @@
 	          var finalSpeed = speedKmh !== null ? speedKmh : calculatedSpeed;
 	          if (finalSpeed > 80) { m.lastLat = lat; m.lastLng = lng; m.lastLocationTime = now; continue; }
           if (finalSpeed > GPS_FILTER.waitingSpeedKmh) {
-            m.isWaitingMode = false;
+	            setWaitingMode(m, false);
             m.pathCoords.push({lat: lat, lng: lng});
             if (m.pathCoords.length >= 2) {
               try {
@@ -1198,14 +1225,14 @@
                 } else { m.totalDistance += rawDistanceKm; }
               } catch (e) { m.totalDistance += rawDistanceKm; }
             } else { m.totalDistance += rawDistanceKm; }
-          } else { m.isWaitingMode = true; }
+	          } else { setWaitingMode(m, true); }
           m.lastLat = lat; m.lastLng = lng; m.lastLocationTime = now;
         } else {
-          if ((now - m.lastLocationTime)/1000 > 4 && (speedKmh === null || speedKmh < GPS_FILTER.waitingSpeedKmh)) m.isWaitingMode = true;
+	          if ((now - m.lastLocationTime)/1000 > 4 && (speedKmh === null || speedKmh < GPS_FILTER.waitingSpeedKmh)) setWaitingMode(m, true);
         }
       } else {
         m.lastLat = lat; m.lastLng = lng; m.lastLocationTime = now;
-        m.isWaitingMode = false;
+	        setWaitingMode(m, false);
         m.pathCoords.push({lat: lat, lng: lng});
       }
       calculateFare(m);
@@ -1221,8 +1248,9 @@
     } else { pathLine.setLatLngs([]); }
   }
 
-  function calculateFare(m) {
-    if (m.tripType === 'makhsoos') {
+	  function calculateFare(m) {
+	    updateWaitSeconds(m);
+	    if (m.tripType === 'makhsoos') {
       var total = m.bandira + (m.totalDistance * m.kmPrice) + (m.totalDurationMinutes * m.durationPrice) + ((m.totalWaitSeconds / 60) * m.waitPrice);
       m.finalFare = total < m.minFare ? m.minFare : total;
     } else {
@@ -1354,15 +1382,29 @@
 	      passenger_count: clampNumber(m.passengerCount, 0, 20, 1),
 	      passenger_breakdown: JSON.stringify(m.passengersData || [])
 	    };
+		  }
+
+	  async function invokeTripEvent(action, m) {
+	    if (!supabase || !currentUser) return null;
+	    var latestPoint = m.pathCoords && m.pathCoords.length ? m.pathCoords[m.pathCoords.length - 1] : null;
+	    var { data, error } = await supabase.functions.invoke('trip-events', {
+	      body: {
+	        action: action,
+	        tripId: m.tripId || null,
+	        meter: m,
+	        location: latestPoint ? { lat: latestPoint.lat, lng: latestPoint.lng } : null
+	      }
+	    });
+	    if (error) throw error;
+	    return data || null;
 	  }
 
 	  async function createStartedTripInSupabase(m) {
 	    if (!supabase || !currentUser) return;
 	    try {
 	      calculateFare(m);
-	      var { data, error } = await supabase.from('trips').insert(buildTripPayload(m, 'started')).select('id').single();
-	      if (error) { console.warn('Start trip sync error:', error.message || error); return; }
-	      if (data && data.id) { m.tripId = data.id; m.lastSupabaseSync = Date.now(); saveDataToStorage(); }
+	      var data = await invokeTripEvent('start', m);
+	      if (data && data.tripId) { m.tripId = data.tripId; m.lastSupabaseSync = Date.now(); saveDataToStorage(); }
 	    } catch (e) { console.error('Start trip error:', e); }
 	  }
 
@@ -1371,23 +1413,16 @@
 	    var now = Date.now();
 	    if (!force && now - (m.lastSupabaseSync || 0) < 5000) return;
 	    try {
-	      var payload = buildTripPayload(m, 'started');
-	      delete payload.driver_id;
-	      var { error } = await supabase.from('trips').update(payload).eq('id', m.tripId).eq('driver_id', currentUser.id);
-	      if (!error) m.lastSupabaseSync = now;
+	      await invokeTripEvent('sync', m);
+	      m.lastSupabaseSync = now;
 	    } catch (e) { console.error('Live trip sync error:', e); }
 	  }
 
 	  async function saveTripToSupabase(m) {
 	    if (!supabase || !currentUser) return;
 	    try {
-	      var payload = buildTripPayload(m, 'completed');
-	      if (m.tripId) {
-	        delete payload.driver_id;
-	        await supabase.from('trips').update(payload).eq('id', m.tripId).eq('driver_id', currentUser.id);
-	      } else {
-	        await supabase.from('trips').insert(payload);
-	      }
+	      if (!m.tripId) await createStartedTripInSupabase(m);
+	      await invokeTripEvent('complete', m);
 	    } catch (e) { console.error('Save trip error:', e); }
 	  }
   // ======================== PASSENGER ========================
@@ -1470,8 +1505,21 @@
 
   function handleGPSError(err) { console.warn('GPS error:', err.message); }
 
-  // ======================== PASSWORD STRENGTH ========================
-  document.addEventListener('DOMContentLoaded', function() {
+	  // ======================== PASSWORD STRENGTH ========================
+	  document.addEventListener('visibilitychange', function() {
+	    for (var id in meters) {
+	      var m = meters[id];
+	      if (m && m.isActive && !m.isPaused) {
+	        updateWaitSeconds(m);
+	        if (m.startTime) m.totalDurationMinutes = ((Date.now() - m.startTime) - m.pausedTimeTotal) / 1000 / 60;
+	        calculateFare(m);
+	      }
+	    }
+	    renderMeterDataToUI();
+	    saveDataToStorage();
+	  });
+
+	  document.addEventListener('DOMContentLoaded', function() {
     var np = document.getElementById('new-password');
     var cp = document.getElementById('confirm-password');
     var pe = document.getElementById('password-error');
