@@ -1,898 +1,1477 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
+﻿<!DOCTYPE html>
+<html dir="rtl" lang="ar">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>توقع أجرتك - العداد الذكي المطور</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght=400;600;700;900&display=swap" rel="stylesheet">
-    
-    <style>
-        :root {
-            --bg: #0f172a; --card: #1e293b; --text: #f1f5f9; --muted: #94a3b8;
-            --primary: #22d3ee; --success: #10b981; --danger: #ef4444; --warning: #f59e0b;
-            --glass: rgba(30, 41, 59, 0.7); --border: rgba(148, 163, 184, 0.2);
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
-        body { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); padding: 12px; color: var(--text); min-height: 100vh; }
-        .container { max-width: 500px; margin: 0 auto; padding-bottom: 60px; }
-        
-        .tabs { display: flex; background: var(--card); border: 1px solid var(--border); border-radius: 15px; margin-bottom: 16px; overflow: hidden; }
-        .tab-btn { flex: 1; padding: 12px; border: none; background: transparent; color: var(--muted); font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s; text-align: center; }
-        .tab-btn.active { background: var(--primary); color: var(--bg); }
-
-        .app-section { display: none; }
-        .app-section.active { display: block; }
-
-        .header { text-align: center; margin-bottom: 16px; }
-        .header h1 { font-size: 24px; font-weight: 900; background: linear-gradient(90deg, var(--primary), #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .header p { color: var(--muted); font-size: 12px; }
-        
-        .card { background: var(--glass); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 20px; padding: 16px; margin-bottom: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
-        
-        .meter-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-        .meter-tab { padding: 10px; background: #334155; text-align: center; border-radius: 10px; font-weight: 700; cursor: pointer; border: 2px solid transparent; }
-        .meter-tab.active { border-color: var(--primary); background: rgba(34, 211, 238, 0.1); color: var(--primary); }
-        .meter-status-dot { display: inline-block; width: 8px; height: 8px; background: var(--muted); border-radius: 50%; margin-left: 6px; }
-        .meter-status-dot.active { background: var(--success); box-shadow: 0 0 8px var(--success); }
-        .meter-status-dot.paused { background: var(--warning); box-shadow: 0 0 8px var(--warning); }
-
-        .main-meter { text-align: center; position: relative; }
-        .fare-display { font-size: 44px; font-weight: 900; font-family: monospace; color: var(--primary); text-shadow: 0 0 20px rgba(34, 211, 238, 0.5); margin: 6px 0; }
-        .trip-type-badge { display: inline-block; background: var(--primary); color: var(--bg); padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; }
-        .waiting-badge { display: inline-block; background: var(--warning); color: var(--bg); padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; margin-right: 6px; display: none;}
-        .paused-badge { display: inline-block; background: var(--danger); color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; margin-right: 6px; display: none;}
-        .passengers-badge { display: inline-block; background: #818cf8; color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; margin-right: 6px; }
-
-        .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; text-align: center; margin-top: 10px;}
-        .stat-box h3 { font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: 2px; }
-        .stat-box .value { font-size: 16px; font-weight: 700; color: var(--text); }
-        
-        .form-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .form-row label { font-weight: 600; font-size: 13px; }
-        .form-row input, .form-row select { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; width: 110px; border-radius: 10px; text-align: center; font-weight: 700; font-size: 13px;}
-        
-        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .btn { padding: 12px; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; text-align: center;}
-        .btn:active { transform: scale(0.97); }
-        .btn-start { background: var(--success); color: white; }
-        .btn-stop { background: var(--danger); color: white; }
-        .btn-pause { background: var(--warning); color: var(--bg); grid-column: span 2; }
-        .btn-dynamic { background: #818cf8; color: white; grid-column: span 2; }
-        .btn-secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); }
-        .btn:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
-        
-        #map { height: 220px; border-radius: 16px; border: 1px solid var(--border); z-index: 1; }
-        
-        .history-item { background: var(--card); border: 1px solid var(--border); border-radius: 15px; padding: 12px; margin-bottom: 15px; position: relative;}
-        .history-header { display: flex; justify-content: space-between; font-weight: 700; border-bottom: 1px dashed var(--border); padding-bottom: 6px; margin-bottom: 8px; font-size: 13px;}
-        .history-details { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
-        .history-fare { color: var(--primary); font-weight: 900; font-size: 16px; text-align: left;}
-        .history-map { height: 130px; border-radius: 10px; border: 1px solid var(--border); margin-top: 8px; z-index: 1; }
-
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 999; justify-content: center; align-items: center; padding: 16px; backdrop-filter: blur(5px); }
-        .receipt { background: var(--card); width: 100%; max-width: 420px; border-radius: 20px; padding: 0; overflow: hidden; border: 1px solid var(--border); }
-        .receipt-header { background: linear-gradient(135deg, var(--primary), #818cf8); padding: 16px; text-align: center; }
-        .receipt-header h2 { font-size: 18px; font-weight: 900; color: var(--bg); }
-        .receipt-body { padding: 16px; }
-        .receipt-line { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 13px; }
-        .receipt-line .label { color: var(--muted); }
-        .receipt-line .value { font-weight: 700; }
-        .receipt-divider { border-top: 1px dashed var(--border); margin: 12px 0; }
-        .receipt-total { font-size: 18px; font-weight: 900; color: var(--primary); }
-        .receipt-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px 16px; }
-        
-        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--success); color: white; padding: 10px 18px; border-radius: 12px; font-weight: 700; z-index: 1000; display: none; font-size: 13px;}
-        .empty-state { text-align: center; color: var(--muted); padding: 30px 10px; font-size: 14px; }
-    </style>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="توقع أجرتك - تطبيق التوك توك الذكي لحساب الأجرة، إدارة الرحلات، والمحفظة الإلكترونية">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="توقع أجرتك">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <title>توقع أجرتك - تطبيق التوك توك الذكي</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --primary: #667eea; --primary-light: #8b9cf7; --primary-dark: #4c5fc7;
+      --accent: #f59e0b; --success: #22c55e; --gold: #f59e0b;
+      --pink: #ec4899; --blue: #3b82f6; --emerald: #10b981; --orange: #f97316;
+      --bg-deep: #07071a; --bg-card: rgba(255,255,255,0.04);
+      --glass: rgba(255,255,255,0.06); --glass-border: rgba(255,255,255,0.08);
+      --glass-hover: rgba(255,255,255,0.1); --text: #fff;
+      --text-muted: rgba(255,255,255,0.55); --error: #ef4444;
+      --shadow-glow: 0 0 40px rgba(102,126,234,0.15);
+      --meter-bg: #0f172a; --meter-card: #1e293b; --meter-text: #f1f5f9;
+      --meter-muted: #94a3b8; --meter-primary: #22d3ee; --meter-border: rgba(148,163,184,0.2);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+      background: var(--bg-deep); color: var(--text);
+      min-height: 100vh; overflow-x: hidden; position: relative;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 0% 20%, rgba(102,126,234,0.12) 0%, transparent 60%),
+                  radial-gradient(ellipse 60% 50% at 100% 0%, rgba(167,139,250,0.08) 0%, transparent 50%),
+                  radial-gradient(ellipse 50% 40% at 50% 100%, rgba(34,197,94,0.06) 0%, transparent 50%);
+      z-index: -1; animation: ambientShift 20s ease-in-out infinite alternate;
+    }
+    @keyframes ambientShift { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+    a { color: inherit; text-decoration: none; }
+    .navbar {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px 20px; max-width: 1200px; margin: 0 auto;
+      position: sticky; top: 0; z-index: 100;
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      background: rgba(7,7,26,0.7); border-bottom: 1px solid var(--glass-border);
+    }
+    .navbar .logo { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 800; }
+    .navbar .logo i { font-size: 22px; color: var(--primary); }
+    .navbar .logo span { background: linear-gradient(135deg, var(--primary), #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 28px; border-radius: 50px; font-size: 14px;
+      font-weight: 700; cursor: pointer; border: none;
+      transition: all 0.3s; font-family: inherit;
+    }
+    .btn-accent { background: linear-gradient(135deg, var(--accent), #fbbf24); color: #000; box-shadow: 0 4px 20px rgba(245,158,11,0.25); }
+    .btn-accent:hover { transform: translateY(-3px); box-shadow: 0 10px 35px rgba(245,158,11,0.35); }
+    .btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: #fff; box-shadow: 0 4px 20px rgba(102,126,234,0.25); }
+    .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 10px 35px rgba(102,126,234,0.35); }
+    .btn-outline { background: transparent; border: 1.5px solid rgba(255,255,255,0.15); color: #fff; }
+    .btn-outline:hover { border-color: var(--primary); background: rgba(102,126,234,0.1); transform: translateY(-3px); }
+    .btn-success { background: linear-gradient(135deg, var(--success), #4ade80); color: #000; box-shadow: 0 4px 20px rgba(34,197,94,0.25); }
+    .btn-success:hover { transform: translateY(-3px); }
+    .btn-sm { padding: 10px 22px; font-size: 13px; }
+    .btn-danger { background: linear-gradient(135deg, #ef4444, #f87171); color: #fff; }
+    .btn-danger:hover { transform: translateY(-3px); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+    .nav-btn { padding: 8px 18px; font-size: 13px; }
+    .nav-download { background: linear-gradient(135deg, var(--accent), #fbbf24); color: #000; padding: 10px 24px; border-radius: 50px; font-size: 13px; font-weight: 700; font-family: inherit; transition: all 0.3s; box-shadow: 0 4px 20px rgba(245,158,11,0.25); }
+    .nav-download:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(245,158,11,0.35); }
+    .nav-download i { margin-left: 6px; }
+    #landing-page { display: block; }
+    #landing-page.hidden { display: none; }
+    .hero { text-align: center; padding: 80px 24px 60px; position: relative; }
+    .hero-icon { width: 100px; height: 100px; margin: 0 auto 24px; background: linear-gradient(135deg, var(--primary), #a78bfa); border-radius: 28px; display: flex; align-items: center; justify-content: center; font-size: 42px; color: #fff; box-shadow: 0 20px 60px rgba(102,126,234,0.3); animation: float 3s ease-in-out infinite; }
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    .hero h1 { font-size: 48px; font-weight: 800; margin-bottom: 12px; letter-spacing: -1px; }
+    .hero h1 .gradient { background: linear-gradient(135deg, var(--primary), #a78bfa, var(--accent)); background-size: 200% 200%; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: gradientShift 4s ease-in-out infinite; }
+    @keyframes gradientShift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+    .hero p { font-size: 17px; color: var(--text-muted); max-width: 560px; margin: 0 auto 36px; line-height: 1.8; }
+    .hero-buttons { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+    .container { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+    .section-title { text-align: center; font-size: 30px; font-weight: 700; margin-bottom: 8px; }
+    .section-subtitle { text-align: center; color: var(--text-muted); font-size: 15px; margin-bottom: 44px; line-height: 1.6; }
+    .stats-section { padding: 40px 0 60px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+    .stat-card { background: var(--bg-card); backdrop-filter: blur(16px); border: 1px solid var(--glass-border); border-radius: 18px; padding: 24px; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden; opacity: 0; transform: translateY(20px); }
+    .stat-card.visible { opacity: 1; transform: translateY(0); }
+    .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; opacity: 0; transition: opacity 0.4s; }
+    .stat-card:hover::before { opacity: 1; }
+    .stat-card:hover { transform: translateY(-4px); background: var(--glass); border-color: rgba(255,255,255,0.15); box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+    .stat-card .stat-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-bottom: 14px; }
+    .stat-card .stat-value { font-size: 32px; font-weight: 800; line-height: 1.1; margin-bottom: 4px; }
+    .stat-card .stat-label { font-size: 13px; color: var(--text-muted); }
+    .stat-card .stat-sublabel { font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 2px; }
+    .stat-purple::before { background: linear-gradient(90deg, #667eea, #a78bfa); }
+    .stat-purple .stat-icon { background: rgba(102,126,234,0.15); color: #a78bfa; }
+    .stat-purple .stat-value { color: #a78bfa; }
+    .stat-green::before { background: linear-gradient(90deg, #22c55e, #4ade80); }
+    .stat-green .stat-icon { background: rgba(34,197,94,0.15); color: #4ade80; }
+    .stat-green .stat-value { color: #4ade80; }
+    .stat-gold::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    .stat-gold .stat-icon { background: rgba(245,158,11,0.15); color: #fbbf24; }
+    .stat-gold .stat-value { color: #fbbf24; }
+    .stat-blue::before { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+    .stat-blue .stat-icon { background: rgba(59,130,246,0.15); color: #60a5fa; }
+    .stat-blue .stat-value { color: #60a5fa; }
+    .stat-pink::before { background: linear-gradient(90deg, #ec4899, #f472b6); }
+    .stat-pink .stat-icon { background: rgba(236,72,153,0.15); color: #f472b6; }
+    .stat-pink .stat-value { color: #f472b6; }
+    .stat-orange::before { background: linear-gradient(90deg, #f97316, #fb923c); }
+    .stat-orange .stat-icon { background: rgba(249,115,22,0.15); color: #fb923c; }
+    .stat-orange .stat-value { color: #fb923c; }
+    .stat-emerald::before { background: linear-gradient(90deg, #10b981, #34d399); }
+    .stat-emerald .stat-icon { background: rgba(16,185,129,0.15); color: #34d399; }
+    .stat-emerald .stat-value { color: #34d399; }
+    .stat-wide { grid-column: 1 / -1; }
+    .features-section { padding: 60px 0; }
+    .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+    .feature-card { background: var(--bg-card); backdrop-filter: blur(16px); border: 1px solid var(--glass-border); border-radius: 18px; padding: 32px 28px; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); text-align: center; opacity: 0; transform: translateY(20px); }
+    .feature-card.visible { opacity: 1; transform: translateY(0); }
+    .feature-card:hover { transform: translateY(-6px); background: var(--glass); border-color: rgba(255,255,255,0.15); box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+    .feature-card .feat-icon { width: 56px; height: 56px; border-radius: 16px; background: linear-gradient(135deg, var(--primary), #a78bfa); display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; font-size: 24px; color: #fff; box-shadow: 0 8px 30px rgba(102,126,234,0.25); }
+    .feature-card:nth-child(2) .feat-icon { background: linear-gradient(135deg, var(--success), #4ade80); }
+    .feature-card:nth-child(3) .feat-icon { background: linear-gradient(135deg, var(--accent), #fbbf24); }
+    .feature-card:nth-child(4) .feat-icon { background: linear-gradient(135deg, var(--pink), #f472b6); }
+    .feature-card:nth-child(5) .feat-icon { background: linear-gradient(135deg, var(--blue), #60a5fa); }
+    .feature-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+    .feature-card p { font-size: 13px; color: var(--text-muted); line-height: 1.7; }
+    .faq-section { padding: 40px 0 60px; }
+    .faq-list { max-width: 680px; margin: 0 auto; }
+    .faq-item { background: var(--bg-card); backdrop-filter: blur(12px); border: 1px solid var(--glass-border); border-radius: 14px; margin-bottom: 10px; overflow: hidden; }
+    .faq-item:hover { border-color: rgba(255,255,255,0.12); }
+    .faq-question { padding: 18px 22px; font-size: 15px; font-weight: 600; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; gap: 12px; }
+    .faq-question:hover { background: rgba(255,255,255,0.03); }
+    .faq-question .faq-icon { font-size: 12px; color: var(--primary); transition: transform 0.3s; flex-shrink: 0; }
+    .faq-question.open .faq-icon { transform: rotate(45deg); }
+    .faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.35s ease, padding 0.35s ease; padding: 0 22px; color: var(--text-muted); font-size: 14px; line-height: 1.7; }
+    .faq-answer.open { max-height: 300px; padding: 0 22px 18px; }
+    footer { text-align: center; padding: 32px 24px; color: rgba(255,255,255,0.25); font-size: 13px; border-top: 1px solid var(--glass-border); }
+    footer a { color: var(--primary-light); }
+    footer a:hover { text-decoration: underline; }
+    .reveal { opacity: 0; transform: translateY(24px); transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+    #auth-container { display: none; width: 100%; max-width: 440px; margin: 40px auto; padding: 0 20px; }
+    .auth-card { background: var(--bg-card); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 20px; padding: 36px 28px; text-align: center; box-shadow: var(--shadow-glow); }
+    .auth-card h1 { font-size: 22px; margin-bottom: 6px; font-weight: 700; }
+    .auth-card .subtitle { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
+    .auth-card .field { margin-bottom: 14px; text-align: right; }
+    .auth-card .field label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; }
+    .auth-card .field input, .auth-card .field select { width: 100%; padding: 12px 16px; border: 1px solid var(--glass-border); border-radius: 12px; font-size: 14px; background: rgba(255,255,255,0.04); color: #fff; outline: none; transition: border-color 0.3s, box-shadow 0.3s; font-family: inherit; }
+    .auth-card .field input:focus, .auth-card .field select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(102,126,234,0.15); }
+    .auth-card .field input::placeholder { color: rgba(255,255,255,0.2); }
+    .auth-card .field select option { background: #1a1a3e; color: #fff; }
+    .auth-card .btn { width: 100%; justify-content: center; margin-top: 8px; }
+    .auth-card .auth-link { color: var(--text-muted); font-size: 13px; margin-top: 16px; }
+    .auth-card .auth-link a { color: var(--primary-light); cursor: pointer; }
+    .auth-card .auth-link a:hover { text-decoration: underline; }
+    .auth-card .role-selector { display: flex; gap: 10px; margin-bottom: 20px; }
+    .auth-card .role-btn { flex: 1; padding: 12px; border-radius: 12px; border: 2px solid var(--glass-border); background: transparent; color: var(--text-muted); font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.3s; font-family: inherit; }
+    .auth-card .role-btn:hover { border-color: var(--primary); background: rgba(102,126,234,0.08); }
+    .auth-card .role-btn.active { border-color: var(--primary); background: rgba(102,126,234,0.12); color: var(--primary); }
+    .password-strength { height: 3px; border-radius: 4px; margin-top: 6px; transition: all 0.3s; }
+    .error-msg { color: var(--error); font-size: 13px; margin-top: 4px; display: none; }
+    .auth-alert { padding: 10px; border-radius: 10px; font-size: 13px; margin-bottom: 14px; display: none; }
+    .auth-alert.error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); color: #f87171; display: block; }
+    .auth-alert.success { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.2); color: #4ade80; display: block; }
+    .spinner { width: 36px; height: 36px; border: 3px solid rgba(255,255,255,0.08); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .hidden-el { display: none !important; }
+    .loader-dots { display: inline-flex; gap: 6px; margin: 12px 0; }
+    .loader-dots span { width: 8px; height: 8px; border-radius: 50%; background: var(--primary); animation: dotBounce 1.4s infinite ease-in-out both; }
+    .loader-dots span:nth-child(1) { animation-delay: -0.32s; }
+    .loader-dots span:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes dotBounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+    .app-container { display: none; max-width: 540px; margin: 0 auto; padding: 0 12px 80px; }
+    .app-container.active { display: block; }
+    .app-nav { display: flex; background: var(--meter-card); border: 1px solid var(--meter-border); border-radius: 15px; margin: 12px 0 16px; overflow: hidden; }
+    .app-nav .tab-btn { flex: 1; padding: 12px; border: none; background: transparent; color: var(--meter-muted); font-weight: 700; font-size: 13px; cursor: pointer; transition: all 0.2s; text-align: center; font-family: inherit; }
+    .app-nav .tab-btn.active { background: var(--meter-primary); color: var(--meter-bg); }
+    .app-nav .tab-btn .tab-icon { display: block; font-size: 18px; margin-bottom: 2px; }
+    .meter-header { text-align: center; margin-bottom: 14px; }
+    .meter-header h1 { font-size: 22px; font-weight: 900; background: linear-gradient(90deg, var(--meter-primary), #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .meter-header p { color: var(--meter-muted); font-size: 12px; }
+    .meter-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .meter-tab { padding: 10px; background: #334155; text-align: center; border-radius: 10px; font-weight: 700; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; font-size: 13px; }
+    .meter-tab.active { border-color: var(--meter-primary); background: rgba(34,211,238,0.1); color: var(--meter-primary); }
+    .meter-status-dot { display: inline-block; width: 8px; height: 8px; background: var(--meter-muted); border-radius: 50%; margin-left: 6px; }
+    .meter-status-dot.active { background: var(--success); box-shadow: 0 0 8px var(--success); }
+    .meter-status-dot.paused { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+    .card { background: var(--glass); backdrop-filter: blur(12px); border: 1px solid var(--meter-border); border-radius: 20px; padding: 16px; margin-bottom: 14px; }
+    .main-meter { text-align: center; position: relative; }
+    .fare-display { font-size: 40px; font-weight: 900; font-family: monospace; color: var(--meter-primary); text-shadow: 0 0 20px rgba(34,211,238,0.5); margin: 6px 0; }
+    .trip-type-badge { display: inline-block; background: var(--meter-primary); color: var(--meter-bg); padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+    .passengers-badge { display: inline-block; background: #818cf8; color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; margin-right: 6px; }
+    .waiting-badge { display: inline-block; background: var(--accent); color: var(--meter-bg); padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; margin-right: 6px; display: none; }
+    .paused-badge { display: inline-block; background: var(--error); color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; margin-right: 6px; display: none; }
+    .meter-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; text-align: center; margin-top: 10px; }
+    .meter-stats .stat-box h3 { font-size: 11px; color: var(--meter-muted); font-weight: 600; margin-bottom: 2px; }
+    .meter-stats .stat-box .value { font-size: 16px; font-weight: 700; color: var(--text); }
+    .form-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .form-row label { font-weight: 600; font-size: 13px; }
+    .form-row input, .form-row select { background: var(--meter-bg); border: 1px solid var(--meter-border); color: var(--text); padding: 6px 10px; width: 110px; border-radius: 10px; text-align: center; font-weight: 700; font-size: 13px; }
+    .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .btn-grid .btn { padding: 12px; border: none; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; text-align: center; font-family: inherit; }
+    .btn-grid .btn:active { transform: scale(0.97); }
+    .btn-start { background: var(--success); color: white; }
+    .btn-stop { background: var(--error); color: white; }
+    .btn-pause { background: var(--accent); color: var(--meter-bg); grid-column: span 2; }
+    .btn-dynamic { background: #818cf8; color: white; grid-column: span 2; }
+    .btn-secondary2 { background: var(--meter-card); color: var(--text); border: 1px solid var(--meter-border); }
+    .btn-grid .btn:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+    #map { height: 200px; border-radius: 14px; border: 1px solid var(--meter-border); z-index: 1; }
+    .history-item { background: var(--meter-card); border: 1px solid var(--meter-border); border-radius: 15px; padding: 12px; margin-bottom: 12px; }
+    .history-header { display: flex; justify-content: space-between; font-weight: 700; border-bottom: 1px dashed var(--meter-border); padding-bottom: 6px; margin-bottom: 8px; font-size: 13px; }
+    .history-details { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 12px; color: var(--meter-muted); margin-bottom: 6px; }
+    .history-fare { color: var(--meter-primary); font-weight: 900; font-size: 16px; text-align: left; }
+    .history-map { height: 120px; border-radius: 10px; border: 1px solid var(--meter-border); margin-top: 8px; z-index: 1; }
+    .empty-state { text-align: center; color: var(--meter-muted); padding: 40px 10px; font-size: 14px; }
+    .track-input-group { display: flex; gap: 10px; margin-bottom: 16px; }
+    .track-input-group input { flex: 1; padding: 12px 16px; border: 1px solid var(--glass-border); border-radius: 12px; font-size: 14px; background: rgba(255,255,255,0.04); color: #fff; outline: none; font-family: inherit; text-align: center; letter-spacing: 3px; font-weight: 700; }
+    .track-input-group input:focus { border-color: var(--primary); }
+    .track-input-group input::placeholder { letter-spacing: 0; font-weight: 400; }
+    .track-info { background: rgba(102,126,234,0.08); border: 1px solid rgba(102,126,234,0.2); border-radius: 14px; padding: 16px; margin-bottom: 14px; display: none; }
+    .track-info .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+    .track-info .info-row .label { color: var(--text-muted); }
+    .track-info .info-row .val { font-weight: 700; }
+    .track-fare { font-size: 32px; font-weight: 900; color: var(--meter-primary); text-align: center; padding: 10px 0; }
+    .request-form { margin-top: 10px; }
+    .request-form .field { margin-bottom: 12px; text-align: right; }
+    .request-form .field label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600; }
+    .request-form .field input, .request-form .field select { width: 100%; padding: 10px 14px; border: 1px solid var(--glass-border); border-radius: 12px; font-size: 14px; background: rgba(255,255,255,0.04); color: #fff; outline: none; font-family: inherit; }
+    .request-form .field input:focus, .request-form .field select:focus { border-color: var(--primary); }
+    .profile-card { text-align: center; }
+    .profile-avatar { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), #a78bfa); display: flex; align-items: center; justify-content: center; font-size: 28px; margin: 0 auto 12px; }
+    .profile-name { font-size: 18px; font-weight: 700; }
+    .profile-role { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
+    .profile-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; }
+    .profile-stat { background: rgba(255,255,255,0.04); border-radius: 12px; padding: 12px; }
+    .profile-stat .num { font-size: 20px; font-weight: 800; color: var(--primary); }
+    .profile-stat .lbl { font-size: 11px; color: var(--text-muted); }
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 999; justify-content: center; align-items: center; padding: 16px; backdrop-filter: blur(5px); }
+    .receipt { background: var(--meter-card); width: 100%; max-width: 400px; border-radius: 20px; overflow: hidden; }
+    .receipt-header { background: linear-gradient(135deg, var(--meter-primary), #818cf8); padding: 14px; text-align: center; }
+    .receipt-header h2 { font-size: 16px; font-weight: 900; color: var(--meter-bg); }
+    .receipt-body { padding: 16px; }
+    .receipt-line { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; }
+    .receipt-line .label { color: var(--meter-muted); }
+    .receipt-line .value { font-weight: 700; }
+    .receipt-divider { border-top: 1px dashed var(--meter-border); margin: 12px 0; }
+    .receipt-total { font-size: 18px; font-weight: 900; color: var(--meter-primary); }
+    .receipt-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px 16px; }
+    .receipt-actions .btn { justify-content: center; }
+    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--success); color: white; padding: 10px 18px; border-radius: 12px; font-weight: 700; z-index: 1000; display: none; font-size: 13px; white-space: nowrap; }
+    #loading-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    #loading-screen.hidden { display: none; }
+    @media (max-width: 900px) { .hero h1 { font-size: 34px; } .hero { padding: 60px 20px 40px; } .stats-grid { grid-template-columns: repeat(2, 1fr); } .stat-card .stat-value { font-size: 26px; } }
+    @media (max-width: 600px) { .hero h1 { font-size: 28px; } .hero p { font-size: 15px; } .stats-grid { grid-template-columns: 1fr; } .features-grid { grid-template-columns: 1fr; } .stat-wide { grid-column: 1; } .navbar .logo { font-size: 17px; } .hero-icon { width: 72px; height: 72px; font-size: 30px; } .auth-card { padding: 28px 20px; } .app-container { padding: 0 8px 80px; } .fare-display { font-size: 32px; } .track-input-group { flex-direction: column; } }
+  </style>
 </head>
 <body>
-
-<div class="container">
-    <div class="tabs">
-        <button class="tab-btn active" onclick="switchSection('meter-section', this)">📟 العدادات الذكية</button>
-        <button class="tab-btn" onclick="switchSection('history-section', this); setTimeout(renderHistory, 100);">📜 سجل الرحلات</button>
+<div id="loading-screen"><div style="text-align:center"><div class="spinner"></div><p style="color:var(--text-muted);font-size:16px;margin-top:8px;">توقع أجرتك</p></div></div>
+<div id="landing-page" class="hidden">
+  <nav class="navbar">
+    <div class="logo"><i class="fas fa-motorcycle"></i><span>توقع أجرتك</span></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn btn-sm btn-outline nav-btn" onclick="showAuth('login')">تسجيل دخول</button>
+      <button class="btn btn-sm btn-accent nav-btn" onclick="showAuth('register')">حساب جديد</button>
     </div>
-
-    <div id="meter-section" class="app-section active">
-        <div class="header">
-            <h1>توقع أجرتك الذكي Pro</h1>
-            <p id="globalStatusText">تتبع حي للمسار ونظام ركاب ديناميكي مرن</p>
-        </div>
-
-        <div class="meter-selector">
-            <div id="meterTab_1" class="meter-tab active" onclick="switchActiveMeterUI(1)">
-                <span id="dot_1" class="meter-status-dot"></span>عداد 1 (أساسي)
-            </div>
-            <div id="meterTab_2" class="meter-tab" onclick="switchActiveMeterUI(2)">
-                <span id="dot_2" class="meter-status-dot"></span>عداد 2 (إضافي)
-            </div>
-        </div>
-        
-        <div class="card" id="setupSection">
-            <div class="form-row">
-                <label>نوع الرحلة المبدئي:</label>
-                <select id="tripType" onchange="onTripTypeChanged()">
-                    <option value="makhsoos">مخصوص</option>
-                    <option value="afrad">أفراد (خط/مشترك)</option>
-                </select>
-            </div>
-            <div class="form-row" id="kmPriceGroup">
-                <label>سعر الكيلو (جنية):</label>
-                <input type="number" id="kmPriceInput" value="5" min="1" max="50">
-            </div>
-            <div class="form-row">
-                <label>دقيقة الانتظار (جنية):</label>
-                <input type="number" id="waitPriceInput" value="1" min="0" max="20">
-            </div>
-            <div class="form-row">
-                <label>دقيقة الوقت الكلي (جنية):</label>
-                <input type="number" id="durationPriceInput" value="0.50" step="0.10" min="0" max="10">
-            </div>
-        </div>
-
-        <div class="card main-meter">
-            <div class="trip-type-badge" id="currentTypeDisplay">-</div>
-            <div class="passengers-badge" id="passengersBadge">👥 ركاب: 1</div>
-            <div class="waiting-badge" id="waitingBadge">وضع انتظار ⏳</div>
-            <div class="paused-badge" id="pausedBadge">العداد موقوف 🛑</div>
-            <div class="fare-display" id="totalFareDisplay">0.00 ج</div>
-            <div class="stats">
-                <div class="stat-box"><h3>المسافة</h3><div class="value"><span id="distDisplay">0.00</span> كم</div></div>
-                <div class="stat-box"><h3>الزمن الكلي</h3><div class="value"><span id="durationDisplay">0</span> د</div></div>
-                <div class="stat-box"><h3>الانتظار</h3><div class="value"><span id="waitDisplay">0</span> د</div></div>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="btn-grid">
-                <button class="btn btn-start" id="startBtn" onclick="startCurrentMeter()">بدء العداد</button>
-                <button class="btn btn-stop" id="stopBtn" onclick="stopCurrentMeter()" disabled>إنهاء وتصفية</button>
-                
-                <button class="btn btn-pause" id="pauseBtn" onclick="togglePauseCurrentMeter()" disabled>🛑 إيقاف مؤقت (عطل / تموين)</button>
-                <button class="btn btn-dynamic" id="dynamicActionBtn" onclick="handleDynamicActionButton()" disabled>⚙️ إجراء على الركاب</button>
-                
-                <button class="btn btn-secondary" onclick="triggerManualDistance()">📡 GPS ضعيف (يدوي)</button>
-                <button class="btn btn-secondary" style="background-color: #ef444415; color: var(--danger);" onclick="resetCurrentMeterData()">تصفير العداد الحالي</button>
-            </div>
-        </div>
-
-        <div class="card">
-            <div id="map"></div>
-        </div>
+  </nav>
+  <section class="hero reveal">
+    <div class="hero-icon"><i class="fas fa-calculator"></i></div>
+    <h1>توقع <span class="gradient">أجرتك</span></h1>
+    <p>التطبيق الذكي لسائقي وركاب التوك توك — احسب أجرتك بدقة، تابع رحلتك، وحافظ على أرباحك</p>
+    <div class="hero-buttons">
+      <button class="btn btn-accent" onclick="showAuth('register')"><i class="fas fa-user-plus"></i> إنشاء حساب</button>
+      <button class="btn btn-outline" onclick="showAuth('login')"><i class="fas fa-sign-in-alt"></i> تسجيل دخول</button>
     </div>
-
-    <div id="history-section" class="app-section">
-        <div class="header">
-            <h1>سجل الرحلات المحفوظة</h1>
-            <p>إحصائيات الرحلات المخزنة محلياً مع لقطات مسار الخريطة</p>
-        </div>
-        <div class="card">
-            <button class="btn btn-stop" style="width:100%; margin-bottom:15px;" onclick="clearAllHistory()">🗑️ مسح السجل بالكامل</button>
-            <div id="historyList"></div>
-        </div>
+  </section>
+  <section class="stats-section" id="stats">
+    <div class="container">
+      <h2 class="section-title reveal">إحصائيات المنصة</h2>
+      <p class="section-subtitle reveal">نمو مستمر وأرقام تتحدث عن نفسها</p>
+      <div class="stats-grid" id="statsGrid"></div>
     </div>
+  </section>
+  <section class="features-section" id="features">
+    <div class="container">
+      <h2 class="section-title reveal">مميزات التطبيق</h2>
+      <p class="section-subtitle reveal">كل ما تحتاجه في تطبيق واحد</p>
+      <div class="features-grid">
+        <div class="feature-card"><div class="feat-icon"><i class="fas fa-calculator"></i></div><h3>حساب الأجرة الذكي</h3><p>يحتسب الأجرة بناءً على المسافة، عدد الركاب، ووقت الانتظار — بدقة عالية في ثوانٍ</p></div>
+        <div class="feature-card"><div class="feat-icon"><i class="fas fa-map"></i></div><h3>خرائط مفتوحة</h3><p>يعمل مع OpenStreetMap و OSRM بدون إنترنت قوي — تتبع دقيق مع وضع التوفير</p></div>
+        <div class="feature-card"><div class="feat-icon"><i class="fas fa-star"></i></div><h3>نظام تقييم</h3><p>قيم رحلاتك وتابع تقييمك — شفافية كاملة بين السائق والراكب لتحسين الخدمة</p></div>
+        <div class="feature-card"><div class="feat-icon"><i class="fas fa-wallet"></i></div><h3>محفظة إلكترونية</h3><p>اشحن رصيدك، تابع أرباحك، واسحب أموالك بكل سهولة وأمان تام</p></div>
+        <div class="feature-card"><div class="feat-icon"><i class="fas fa-chart-line"></i></div><h3>تقارير وأرباح</h3><p>تقارير يومية وأسبوعية وشهرية عن رحلاتك وأرباحك وأدائك في لمحة</p></div>
+      </div>
+    </div>
+  </section>
+  <section class="faq-section" id="faq">
+    <div class="container">
+      <h2 class="section-title reveal">الأسئلة الشائعة</h2>
+      <p class="section-subtitle reveal">إجابات لأكثر الأسئلة تكراراً</p>
+      <div class="faq-list">
+        <div class="faq-item reveal"><div class="faq-question" onclick="toggleFaq(this)"><span>ما هو تطبيق توقع أجرتك؟</span><i class="fas fa-plus faq-icon"></i></div><div class="faq-answer">تطبيق توقع أجرتك هو تطبيق ذكي لسائقي التوك توك يساعدك في حساب الأجرة بدقة. كما يتيح مشاركة كود الرحلة مع الركاب لتتبعها.</div></div>
+        <div class="faq-item reveal"><div class="faq-question" onclick="toggleFaq(this)"><span>كيف يمكنني تحميل التطبيق؟</span><i class="fas fa-plus faq-icon"></i></div><div class="faq-answer">يمكنك تحميل التطبيق من رابط التحميل الموجود في أعلى الصفحة. التطبيق متاح لنظام Android بصيغة APK.</div></div>
+        <div class="faq-item reveal"><div class="faq-question" onclick="toggleFaq(this)"><span>هل يمكن للراكب تتبع الرحلات؟</span><i class="fas fa-plus faq-icon"></i></div><div class="faq-answer">نعم! يمكن للراكب إدخال كود المشاركة المكون من 6 أرقام الذي يولده السائق في بداية الرحلة لتتبع المسار والأجرة بشكل مباشر.</div></div>
+      </div>
+    </div>
+  </section>
+  <footer class="reveal"><p>&copy; 2026 توقع أجرتك — جميع الحقوق محفوظة</p><p style="margin-top:6px;font-size:12px;">تطبيق ذكي لسائقي وركاب التوك توك</p></footer>
+</div>
+
+<div id="auth-container" style="display:none">
+  <div class="auth-card" id="login-card">
+    <div style="font-size:48px;margin-bottom:8px;">&#x1F511;</div>
+    <h1>تسجيل الدخول</h1>
+    <p class="subtitle">أهلاً بعودتك! أدخل بياناتك للمتابعة</p>
+    <div class="auth-alert" id="login-alert"></div>
+    <div class="field"><label>البريد الإلكتروني</label><input type="email" id="login-email" placeholder="example@email.com" autocomplete="email"></div>
+    <div class="field"><label>كلمة السر</label><input type="password" id="login-password" placeholder="كلمة السر" autocomplete="current-password"></div>
+    <button class="btn btn-primary" id="login-btn" onclick="handleLogin()"><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</button>
+    <div id="login-loading" class="hidden-el"><div class="loader-dots"><span></span><span></span><span></span></div></div>
+    <div class="auth-link">ليس لديك حساب؟ <a onclick="showAuthForm('register')">سجل الآن</a></div>
+    <div class="auth-link"><a onclick="handleForgotPassword()">نسيت كلمة السر؟</a></div>
+  </div>
+
+  <div class="auth-card" id="register-card" style="display:none">
+    <div style="font-size:48px;margin-bottom:8px;">&#x1F680;</div>
+    <h1>حساب جديد</h1>
+    <p class="subtitle">أنشئ حسابك واختر نوع المستخدم</p>
+    <div class="auth-alert" id="register-alert"></div>
+    <div class="role-selector">
+      <button class="role-btn" id="role-driver" onclick="selectRole('driver')">&#x1F697; سائق</button>
+      <button class="role-btn active" id="role-passenger" onclick="selectRole('passenger')">&#x1F464; راكب</button>
+    </div>
+    <div class="field"><label>الاسم الكامل</label><input type="text" id="reg-name" placeholder="الاسم ثلاثي" autocomplete="name"></div>
+    <div class="field"><label>البريد الإلكتروني</label><input type="email" id="reg-email" placeholder="example@email.com" autocomplete="email"></div>
+    <div class="field"><label>رقم الهاتف</label><input type="tel" id="reg-phone" placeholder="01XXXXXXXXX" autocomplete="tel"></div>
+    <div class="field"><label>كلمة السر (6 أحرف على الأقل)</label><input type="password" id="reg-password" placeholder="كلمة السر" minlength="6" autocomplete="new-password"><div class="password-strength" id="reg-password-strength"></div></div>
+    <div class="field"><label>تأكيد كلمة السر</label><input type="password" id="reg-confirm" placeholder="أعد إدخال كلمة السر"><div class="error-msg" id="reg-password-error">كلمة السر غير متطابقة</div></div>
+    <button class="btn btn-accent" id="register-btn" onclick="handleRegister()"><i class="fas fa-user-plus"></i> <span id="register-btn-text">تسجيل كراكب</span></button>
+    <div id="register-loading" class="hidden-el"><div class="loader-dots"><span></span><span></span><span></span></div></div>
+    <div class="auth-link">لديك حساب؟ <a onclick="showAuthForm('login')">تسجيل دخول</a></div>
+  </div>
+
+  <div class="auth-card" id="forgot-card" style="display:none">
+    <div style="font-size:48px;margin-bottom:8px;">&#x1F510;</div>
+    <h1>نسيت كلمة السر</h1>
+    <p class="subtitle">أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة التعيين</p>
+    <div class="auth-alert" id="forgot-alert"></div>
+    <div class="field"><label>البريد الإلكتروني</label><input type="email" id="forgot-email" placeholder="example@email.com"></div>
+    <button class="btn btn-primary" id="forgot-btn" onclick="handleForgotPasswordSend()"><i class="fas fa-paper-plane"></i> إرسال رابط التعيين</button>
+    <div id="forgot-loading" class="hidden-el"><div class="loader-dots"><span></span><span></span><span></span></div></div>
+    <div class="auth-link"><a onclick="showAuthForm('login')">العودة لتسجيل الدخول</a></div>
+  </div>
+
+  <div class="auth-card" id="reset-form" style="display:none">
+    <div style="font-size:48px;margin-bottom:8px;">&#x1F511;</div>
+    <h1>إعادة تعيين كلمة السر</h1>
+    <p class="subtitle">أدخل كلمة السر الجديدة</p>
+    <div class="field"><label>كلمة السر الجديدة</label><input type="password" id="new-password" placeholder="على الأقل 6 أحرف" minlength="6"><div class="password-strength" id="password-strength"></div></div>
+    <div class="field"><label>تأكيد كلمة السر</label><input type="password" id="confirm-password" placeholder="أعد إدخال كلمة السر"><div class="error-msg" id="password-error">كلمة السر غير متطابقة</div></div>
+    <button class="btn btn-primary" id="reset-btn" onclick="handlePasswordReset()" style="width:100%;justify-content:center;">حفظ كلمة السر الجديدة</button>
+    <div id="reset-loading" class="hidden-el"><div class="loader-dots"><span></span><span></span><span></span></div></div>
+  </div>
+
+  <div class="auth-card" id="success-card" style="display:none">
+    <div style="font-size:56px;margin-bottom:12px;">&#x2705;</div>
+    <h1 id="success-title">تم بنجاح!</h1>
+    <p id="success-message"></p>
+    <a href="taweqeogretk://open" class="btn btn-success">فتح التطبيق</a>
+  </div>
+  <div class="auth-card" id="error-card" style="display:none">
+    <div style="font-size:56px;margin-bottom:12px;">&#x274C;</div>
+    <h1>حدث خطأ</h1>
+    <p id="error-message"></p>
+    <a href="/" class="btn btn-primary">العودة للصفحة الرئيسية</a>
+  </div>
+  <div class="auth-card" id="processing-card" style="display:none">
+    <div class="spinner"></div>
+    <h1>جاري المعالجة...</h1>
+    <p>يرجى الانتظار</p>
+  </div>
+</div>
+<div class="app-container" id="driver-app">
+  <nav class="navbar" style="padding:10px 14px;margin:0 -12px;border-radius:0">
+    <div class="logo"><i class="fas fa-motorcycle"></i><span>السائق</span></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span id="driver-status-badge" style="font-size:12px;background:var(--success);color:var(--bg-deep);padding:4px 12px;border-radius:20px;font-weight:700;">متصل</span>
+      <button class="btn btn-sm btn-outline nav-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i></button>
+    </div>
+  </nav>
+  <div class="app-nav">
+    <button class="tab-btn active" onclick="switchDriverTab('meter', this)"><span class="tab-icon">&#x1F4DF;</span>العداد</button>
+    <button class="tab-btn" onclick="switchDriverTab('history', this);setTimeout(renderDriverHistory,100)"><span class="tab-icon">&#x1F4DC;</span>السجل</button>
+    <button class="tab-btn" onclick="switchDriverTab('profile', this)"><span class="tab-icon">&#x1F464;</span>حسابي</button>
+  </div>
+
+  <div id="driver-meter-section">
+    <div class="meter-header"><h1>العداد الذكي Pro</h1><p id="globalStatusText">تتبع حي للمسار ونظام ركاب ديناميكي</p></div>
+    <div class="meter-selector">
+      <div id="meterTab_1" class="meter-tab active" onclick="switchActiveMeterUI(1)"><span id="dot_1" class="meter-status-dot"></span>عداد 1</div>
+      <div id="meterTab_2" class="meter-tab" onclick="switchActiveMeterUI(2)"><span id="dot_2" class="meter-status-dot"></span>عداد 2</div>
+    </div>
+    <div class="card" id="setupSection">
+      <div class="form-row"><label>نوع الرحلة:</label><select id="tripType" onchange="onTripTypeChanged()"><option value="makhsoos">مخصوص</option><option value="afrad">أفراد (خط/مشترك)</option></select></div>
+      <div class="form-row" id="kmPriceGroup"><label>سعر الكيلو (ج):</label><input type="number" id="kmPriceInput" value="5" min="1" max="50"></div>
+      <div class="form-row"><label>دقيقة الانتظار (ج):</label><input type="number" id="waitPriceInput" value="1" min="0" max="20"></div>
+      <div class="form-row"><label>دقيقة الوقت (ج):</label><input type="number" id="durationPriceInput" value="0.50" step="0.10" min="0" max="10"></div>
+    </div>
+    <div class="card main-meter">
+      <div>
+        <span class="trip-type-badge" id="currentTypeDisplay">-</span>
+        <span class="passengers-badge" id="passengersBadge">&#x1F465; ركاب: 1</span>
+        <span class="waiting-badge" id="waitingBadge">&#x23F3; انتظار</span>
+        <span class="paused-badge" id="pausedBadge">&#x1F6D1; موقوف</span>
+      </div>
+      <div class="fare-display" id="totalFareDisplay">0.00 ج</div>
+      <div class="meter-stats">
+        <div class="stat-box"><h3>المسافة</h3><div class="value"><span id="distDisplay">0.00</span> كم</div></div>
+        <div class="stat-box"><h3>الزمن</h3><div class="value"><span id="durationDisplay">0</span> د</div></div>
+        <div class="stat-box"><h3>الانتظار</h3><div class="value"><span id="waitDisplay">0</span> د</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="btn-grid">
+        <button class="btn btn-start" id="startBtn" onclick="startCurrentMeter()">بدء العداد</button>
+        <button class="btn btn-stop" id="stopBtn" onclick="stopCurrentMeter()" disabled>إنهاء وتصفية</button>
+        <button class="btn btn-pause" id="pauseBtn" onclick="togglePauseCurrentMeter()" disabled>&#x1F6D1; إيقاف مؤقت</button>
+        <button class="btn btn-dynamic" id="dynamicActionBtn" onclick="handleDynamicActionButton()" disabled>&#x2699;&#xFE0F; إجراء على الركاب</button>
+        <button class="btn btn-secondary2" onclick="triggerManualDistance()">&#x1F4E1; GPS ضعيف (يدوي)</button>
+        <button class="btn btn-secondary2" style="color:var(--error);" onclick="resetCurrentMeterData()">تصفير العداد</button>
+      </div>
+    </div>
+    <div class="card"><div id="map"></div></div>
+  </div>
+
+  <div id="driver-history-section" style="display:none">
+    <div class="meter-header"><h1>سجل الرحلات</h1><p>جميع رحلاتك السابقة</p></div>
+    <div class="card">
+      <button class="btn btn-danger" style="width:100%;margin-bottom:12px;" onclick="clearDriverHistory()">&#x1F5D1;&#xFE0F; مسح السجل بالكامل</button>
+      <div id="driverHistoryList"><div class="empty-state">لا توجد رحلات مسجلة</div></div>
+    </div>
+  </div>
+
+  <div id="driver-profile-section" style="display:none">
+    <div class="card profile-card">
+      <div class="profile-avatar"><i class="fas fa-user"></i></div>
+      <div class="profile-name" id="driver-profile-name">-</div>
+      <div class="profile-role">&#x1F697; سائق</div>
+      <div class="profile-stats">
+        <div class="profile-stat"><div class="num" id="driver-stat-trips">0</div><div class="lbl">إجمالي الرحلات</div></div>
+        <div class="profile-stat"><div class="num" id="driver-stat-revenue">0</div><div class="lbl">الإيرادات (ج)</div></div>
+      </div>
+      <button class="btn btn-outline" style="width:100%;margin-top:12px;" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>
+    </div>
+  </div>
+</div>
+
+<div class="app-container" id="passenger-app">
+  <nav class="navbar" style="padding:10px 14px;margin:0 -12px;border-radius:0">
+    <div class="logo"><i class="fas fa-motorcycle"></i><span>الراكب</span></div>
+    <button class="btn btn-sm btn-outline nav-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i></button>
+  </nav>
+  <div class="app-nav">
+    <button class="tab-btn active" onclick="switchPassengerTab('track', this)"><span class="tab-icon">&#x1F4CD;</span>تتبع</button>
+    <button class="tab-btn" onclick="switchPassengerTab('request', this)"><span class="tab-icon">&#x1F680;</span>طلب رحلة</button>
+    <button class="tab-btn" onclick="switchPassengerTab('history', this);setTimeout(loadPassengerHistory,100)"><span class="tab-icon">&#x1F4DC;</span>تاريخي</button>
+    <button class="tab-btn" onclick="switchPassengerTab('profile', this)"><span class="tab-icon">&#x1F464;</span>حسابي</button>
+  </div>
+
+  <div id="passenger-track-section">
+    <div class="meter-header"><h1>تتبع رحلة</h1><p>أدخل كود المشاركة من السائق لتتبع الرحلة</p></div>
+    <div class="card">
+      <div class="track-input-group">
+        <input type="text" id="track-code" placeholder="أدخل كود المشاركة (6 أرقام)" maxlength="6" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+        <button class="btn btn-primary" onclick="trackTrip()" style="white-space:nowrap;padding:12px 20px;"><i class="fas fa-search"></i></button>
+      </div>
+      <div id="track-status" style="text-align:center;color:var(--text-muted);font-size:13px;">أدخل الكود واضغط بحث</div>
+    </div>
+    <div class="track-info" id="track-info">
+      <div class="track-fare" id="track-fare-display">0.00 ج</div>
+      <div class="info-row"><span class="label">حالة الرحلة</span><span class="val" id="track-status-val">-</span></div>
+      <div class="info-row"><span class="label">اسم السائق</span><span class="val" id="track-driver-name">-</span></div>
+      <div class="info-row"><span class="label">المسافة</span><span class="val" id="track-distance">0.00 كم</span></div>
+      <div class="info-row"><span class="label">المدة</span><span class="val" id="track-duration">0 د</span></div>
+    </div>
+    <div class="card" id="track-map-card" style="display:none"><div id="track-map" style="height:200px;border-radius:14px;"></div></div>
+  </div>
+
+  <div id="passenger-request-section" style="display:none">
+    <div class="meter-header"><h1>طلب رحلة</h1><p>أرسل طلب رحلة لسائق قريب</p></div>
+    <div class="card">
+      <div class="auth-alert" id="request-alert"></div>
+      <div class="request-form">
+        <div class="field"><label>موقع pickup</label><div style="display:flex;gap:8px;"><input type="text" id="request-pickup" placeholder="العنوان أو المنطقة" style="flex:1;"><button class="btn btn-sm btn-outline" onclick="getCurrentLocation()" style="white-space:nowrap;"><i class="fas fa-location-dot"></i></button></div></div>
+        <div class="field"><label>الوجهة</label><input type="text" id="request-destination" placeholder="الوجهة (اختياري)"></div>
+        <div class="field"><label>نوع الرحلة</label><select id="request-type"><option value="private">مخصوص</option><option value="shared">أفراد (مشترك)</option></select></div>
+        <div class="field"><label>عدد الركاب</label><input type="number" id="request-passengers" value="1" min="1" max="10"></div>
+        <button class="btn btn-accent" id="request-btn" onclick="requestRide()" style="width:100%;justify-content:center;"><i class="fas fa-paper-plane"></i> إرسال طلب رحلة</button>
+        <div id="request-loading" class="hidden-el" style="text-align:center;"><div class="loader-dots"><span></span><span></span><span></span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="passenger-history-section" style="display:none">
+    <div class="meter-header"><h1>تاريخ رحلاتي</h1><p>جميع الرحلات السابقة</p></div>
+    <div class="card"><div id="passengerHistoryList"><div class="empty-state">لا توجد رحلات سابقة</div></div></div>
+  </div>
+
+  <div id="passenger-profile-section" style="display:none">
+    <div class="card profile-card">
+      <div class="profile-avatar"><i class="fas fa-user"></i></div>
+      <div class="profile-name" id="passenger-profile-name">-</div>
+      <div class="profile-role">&#x1F464; راكب</div>
+      <div class="profile-stats">
+        <div class="profile-stat"><div class="num" id="passenger-stat-trips">0</div><div class="lbl">إجمالي الرحلات</div></div>
+        <div class="profile-stat"><div class="num" id="passenger-stat-spent">0</div><div class="lbl">الإجمالي (ج)</div></div>
+      </div>
+      <button class="btn btn-outline" style="width:100%;margin-top:12px;" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>
+    </div>
+  </div>
 </div>
 
 <div class="modal" id="receiptModal">
-    <div class="receipt">
-        <div class="receipt-header"><h2>🧾 فاتورة رحلة مصفاة</h2></div>
-        <div class="receipt-body" id="receiptBody"></div>
-        <div class="receipt-actions">
-            <button class="btn btn-secondary" onclick="shareWhatsApp()">واتساب</button>
-            <button class="btn btn-start" onclick="closeReceipt()">إغلاق</button>
-        </div>
+  <div class="receipt">
+    <div class="receipt-header"><h2>&#x1F9FE; فاتورة الرحلة</h2></div>
+    <div class="receipt-body" id="receiptBody"></div>
+    <div class="receipt-actions">
+      <button class="btn btn-secondary2" onclick="shareWhatsApp()">واتساب</button>
+      <button class="btn btn-start" onclick="closeReceipt()">إغلاق</button>
     </div>
+  </div>
 </div>
-
 <div class="toast" id="toast"></div>
-
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    const GPS_FILTER = { minDistance: 0.005, waitingSpeedKmh: 1.5 };
+(function() {
+  'use strict';
 
-    let meters = {
-        1: createEmptyMeterObject(1),
-        2: createEmptyMeterObject(2)
-    };
-    
-    let activeMeterId = 1; 
-    let map, pathLine, currentMarker;
-    let globalWatchId = null;
+  var SUPABASE_URL = 'https://hhuiseftzbqssswnuwrv.supabase.co';
+  var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhodWlzZWZ0emJxc3Nzd251d3J2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMDE5NjEsImV4cCI6MjA5NjY3Nzk2MX0.HSfq7SDEnuoK6ERAV_mINDN49ZJntiBRkVc8L7RsAYY';
+  var supabase = null;
+  try { if (window.supabase) { supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); } }
+  catch (e) { console.warn('Supabase unavailable:', e); }
 
-    function createEmptyMeterObject(id) {
-        return {
-            id: id,
-            isActive: false,
-            isPaused: false, 
-            tripType: 'makhsoos',
-            kmPrice: 5,
-            waitPrice: 1,
-            durationPrice: 0.50, 
-            bandira: 5,
-            minFare: 10,
-            totalDistance: 0,
-            startTime: null,
-            pausedTimeTotal: 0, 
-            lastPauseTimestamp: null,
-            totalDurationMinutes: 0,
-            totalWaitSeconds: 0,
-            lastLat: null, lastLng: null, lastLocationTime: null,
-            isWaitingMode: false,
-            shareCode: '',
-            finalFare: 0,
-            passengerCount: 1, 
-            pathCoords: [],
-            passengersData: []
-        };
-    }
+  var currentUser = null, currentProfile = null;
+  var loadingScreen = document.getElementById('loading-screen');
+  var landingPage = document.getElementById('landing-page');
+  var authContainer = document.getElementById('auth-container');
+  var driverApp = document.getElementById('driver-app');
+  var passengerApp = document.getElementById('passenger-app');
 
-    window.onload = () => {
-        initMap();
-        loadDataFromStorage();
-        initGlobalGPS();
-        switchActiveMeterUI(1);
-        updateDotsUI();
-    };
+  function hideAllScreens() {
+    landingPage.classList.add('hidden');
+    authContainer.style.display = 'none';
+    driverApp.classList.remove('active'); driverApp.style.display = 'none';
+    passengerApp.classList.remove('active'); passengerApp.style.display = 'none';
+    loadingScreen.classList.add('hidden');
+  }
 
-    function initMap() {
-        map = L.map('map').setView([30.0444, 31.2357], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        pathLine = L.polyline([], {color: '#22d3ee', weight: 5}).addTo(map);
-        currentMarker = L.marker([30.0444, 31.2357]).addTo(map);
-    }
+  function showScreen(id) {
+    hideAllScreens();
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (id === 'landing-page') el.classList.remove('hidden');
+    else if (id === 'auth-container') el.style.display = 'block';
+    else { el.classList.add('active'); el.style.display = 'block'; }
+  }
 
-    function switchSection(sectionId, btn) {
-        document.querySelectorAll('.app-section').forEach(s => s.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(sectionId).classList.add('active');
-        btn.classList.add('active');
-    }
+  function showLandingPage() { showScreen('landing-page'); initLandingPage(); }
+  function showAuth(form) { showScreen('auth-container'); showAuthForm(form || 'login'); }
+  window.showAuth = showAuth;
 
-    function switchActiveMeterUI(id) {
-        activeMeterId = id;
-        document.querySelectorAll('.meter-tab').forEach(t => t.classList.remove('active'));
-        document.getElementById(`meterTab_${id}`).classList.add('active');
-        
-        const m = meters[activeMeterId];
-        
-        document.getElementById('tripType').value = m.tripType;
-        document.getElementById('kmPriceInput').value = m.kmPrice;
-        document.getElementById('waitPriceInput').value = m.waitPrice;
-        document.getElementById('durationPriceInput').value = m.durationPrice;
-        
-        onTripTypeChanged();
-        renderMeterDataToUI();
-        redrawActiveRouteLine(); 
-    }
+  var selectedRole = 'passenger';
+  function showAuthForm(form) {
+    ['login-card','register-card','forgot-card','reset-form','success-card','error-card','processing-card'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+    var card = document.getElementById(form + '-card');
+    if (card) card.style.display = 'block';
+  }
+  window.showAuthForm = showAuthForm;
 
-    function onTripTypeChanged() {
-        const type = document.getElementById('tripType').value;
-        const btnBtn = document.getElementById('dynamicActionBtn');
-        
-        if (type === 'afrad') {
-            btnBtn.innerText = "⚙️ إجراء على الركاب";
-            btnBtn.style.backgroundColor = "var(--warning)";
-            btnBtn.style.color = "var(--bg)";
-        } else {
-            btnBtn.innerText = "👥 تحويل المشوار لأفراد (مشترك)";
-            btnBtn.style.backgroundColor = "#818cf8";
-            btnBtn.style.color = "white";
+  function selectRole(role) {
+    selectedRole = role;
+    document.getElementById('role-driver').classList.toggle('active', role === 'driver');
+    document.getElementById('role-passenger').classList.toggle('active', role === 'passenger');
+    document.getElementById('register-btn-text').textContent = role === 'driver' ? 'تسجيل كسائق' : 'تسجيل كراكب';
+  }
+  window.selectRole = selectRole;
+
+  function setLoading(prefix, loading) {
+    var btn = document.getElementById(prefix + '-btn');
+    var ld = document.getElementById(prefix + '-loading');
+    if (btn) btn.style.display = loading ? 'none' : '';
+    if (ld) ld.classList.toggle('hidden-el', !loading);
+  }
+
+  function showAlert(id, msg, type) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = msg;
+    el.className = 'auth-alert ' + (type || 'error');
+  }
+
+  window.showToast = function(msg) {
+    var t = document.getElementById('toast');
+    t.innerText = msg; t.style.display = 'block';
+    setTimeout(function() { t.style.display = 'none'; }, 3000);
+  };
+
+  window.handleRegister = async function() {
+    if (!supabase) { showToast('خدمة التسجيل غير متاحة'); return; }
+    var name = document.getElementById('reg-name').value.trim();
+    var email = document.getElementById('reg-email').value.trim();
+    var phone = document.getElementById('reg-phone').value.trim();
+    var pass = document.getElementById('reg-password').value;
+    var confirm = document.getElementById('reg-confirm').value;
+    if (!name) { showAlert('register-alert', 'يرجى إدخال الاسم الكامل'); return; }
+    if (!email) { showAlert('register-alert', 'يرجى إدخال البريد الإلكتروني'); return; }
+    if (!pass || pass.length < 6) { showAlert('register-alert', 'كلمة السر يجب أن تكون 6 أحرف على الأقل'); return; }
+    if (pass !== confirm) { showAlert('register-alert', 'كلمة السر غير متطابقة'); return; }
+    setLoading('register', true);
+    try {
+      var { data, error } = await supabase.auth.signUp({
+        email: email, password: pass,
+        options: { data: { full_name: name, role: selectedRole, phone: phone } }
+      });
+      if (error) { showAlert('register-alert', error.message || 'فشل التسجيل'); setLoading('register', false); return; }
+      showAlert('register-alert', 'تم إنشاء الحساب بنجاح! جاري تحويلك...', 'success');
+      setTimeout(function() { initSession(); }, 1000);
+    } catch (e) { showAlert('register-alert', e.message || 'حدث خطأ'); setLoading('register', false); }
+  };
+
+  window.handleLogin = async function() {
+    if (!supabase) { showToast('خدمة الدخول غير متاحة'); return; }
+    var email = document.getElementById('login-email').value.trim();
+    var pass = document.getElementById('login-password').value;
+    if (!email || !pass) { showAlert('login-alert', 'يرجى إدخال البريد وكلمة السر'); return; }
+    setLoading('login', true);
+    try {
+      var { data, error } = await supabase.auth.signInWithPassword({ email: email, password: pass });
+      if (error) { showAlert('login-alert', error.message || 'فشل تسجيل الدخول'); setLoading('login', false); return; }
+      initSession();
+    } catch (e) { showAlert('login-alert', e.message || 'حدث خطأ'); setLoading('login', false); }
+  };
+
+  window.handleLogout = async function() {
+    if (!supabase) return;
+    await supabase.auth.signOut();
+    currentUser = null; currentProfile = null;
+    showLandingPage();
+    showToast('تم تسجيل الخروج');
+  };
+
+  window.handleForgotPassword = function() { showAuthForm('forgot'); };
+  window.handleForgotPasswordSend = async function() {
+    if (!supabase) return;
+    var email = document.getElementById('forgot-email').value.trim();
+    if (!email) { showAlert('forgot-alert', 'يرجى إدخال البريد الإلكتروني'); return; }
+    setLoading('forgot', true);
+    try {
+      var { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname });
+      if (error) { showAlert('forgot-alert', error.message); setLoading('forgot', false); return; }
+      showAlert('forgot-alert', 'تم إرسال رابط إعادة التعيين إلى بريدك', 'success');
+      setLoading('forgot', false);
+    } catch (e) { showAlert('forgot-alert', e.message); setLoading('forgot', false); }
+  };
+
+  window.handlePasswordReset = async function() {
+    if (!supabase) return;
+    var np = document.getElementById('new-password');
+    var cp = document.getElementById('confirm-password');
+    var pe = document.getElementById('password-error');
+    pe.style.display = 'none';
+    if (np.value.length < 6) { pe.textContent = 'كلمة السر يجب أن تكون 6 أحرف على الأقل'; pe.style.display = 'block'; return; }
+    if (np.value !== cp.value) { pe.textContent = 'كلمة السر غير متطابقة'; pe.style.display = 'block'; return; }
+    document.getElementById('reset-btn').style.display = 'none';
+    document.getElementById('reset-loading').classList.remove('hidden-el');
+    try {
+      var { error } = await supabase.auth.updateUser({ password: np.value });
+      if (error) { window.showError(error.message || 'فشل تغيير كلمة السر'); document.getElementById('reset-btn').style.display = 'block'; document.getElementById('reset-loading').classList.add('hidden-el'); return; }
+      window.showSuccess('تم تغيير كلمة السر بنجاح', 'يمكنك الآن تسجيل الدخول بكلمة السر الجديدة');
+    } catch (e) { window.showError(e.message || 'حدث خطأ'); document.getElementById('reset-btn').style.display = 'block'; document.getElementById('reset-loading').classList.add('hidden-el'); }
+  };
+  async function initSession() {
+    if (!supabase) { showLandingPage(); return; }
+    try {
+      var { data: { session }, error } = await supabase.auth.getSession();
+      if (error || !session) { sessionInitialized = true; showLandingPage(); return; }
+      sessionInitialized = true;
+      currentUser = session.user;
+      var { data: profile } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
+      currentProfile = profile;
+      if (!profile) { showLandingPage(); return; }
+      if (profile.role === 'driver') showDriverDashboard();
+      else if (profile.role === 'passenger') showPassengerDashboard();
+      else showLandingPage();
+    } catch (e) { console.error('Session error:', e); showLandingPage(); }
+  }
+
+  function showDriverDashboard() {
+    showScreen('driver-app');
+    document.getElementById('driver-profile-name').textContent = currentProfile.full_name || currentUser.email;
+    loadDriverStats();
+    loadDataFromStorage();
+    switchActiveMeterUI(1);
+    updateDotsUI();
+    initDriverMap();
+    initGlobalGPS();
+  }
+
+  function showPassengerDashboard() {
+    showScreen('passenger-app');
+    document.getElementById('passenger-profile-name').textContent = currentProfile.full_name || currentUser.email;
+    loadPassengerStats();
+  }
+
+  async function loadDriverStats() {
+    if (!supabase || !currentUser) return;
+    try {
+      var { data: trips } = await supabase.from('trips').select('total_fare').eq('driver_id', currentUser.id).eq('status', 'completed');
+      if (trips) {
+        document.getElementById('driver-stat-trips').textContent = trips.length;
+        var rev = trips.reduce(function(s, t) { return s + (parseFloat(t.total_fare) || 0); }, 0);
+        document.getElementById('driver-stat-revenue').textContent = rev.toFixed(0);
+      }
+    } catch (e) { console.error(e); }
+  }
+
+  async function loadPassengerStats() {
+    if (!supabase || !currentUser) return;
+    try {
+      var { data: trips } = await supabase.from('trips').select('total_fare').eq('passenger_id', currentUser.id).eq('status', 'completed');
+      if (trips) {
+        document.getElementById('passenger-stat-trips').textContent = trips.length;
+        var spent = trips.reduce(function(s, t) { return s + (parseFloat(t.total_fare) || 0); }, 0);
+        document.getElementById('passenger-stat-spent').textContent = spent.toFixed(0);
+      }
+    } catch (e) { console.error(e); }
+  }
+
+  // Auth redirect handler
+  function parseHash() {
+    var hash = window.location.hash.replace('#', '');
+    if (!hash) return null;
+    var params = {};
+    hash.split('&').forEach(function(pair) {
+      var parts = pair.split('=');
+      if (parts[0] && parts[1]) params[decodeURIComponent(parts[0])] = decodeURIComponent(parts[1]);
+    });
+    return params;
+  }
+
+  function showOnly(el) {
+    [document.getElementById('processing-card'), document.getElementById('success-card'), document.getElementById('error-card'), document.getElementById('reset-form')].forEach(function(e) { if (e) e.style.display = 'none'; });
+    if (el) el.style.display = 'block';
+  }
+
+  window.showError = function(msg) {
+    var el = document.getElementById('error-message');
+    if (el) el.textContent = msg;
+    showOnly(document.getElementById('error-card'));
+  };
+  window.showSuccess = function(title, msg) {
+    var st = document.getElementById('success-title');
+    var sm = document.getElementById('success-message');
+    if (st) st.textContent = title;
+    if (sm) sm.textContent = msg;
+    showOnly(document.getElementById('success-card'));
+  };
+
+  async function handleAuthRedirect() {
+    var params = parseHash();
+    if (!params || !params.access_token) return false;
+    if (!supabase) return false;
+    showScreen('auth-container');
+    document.getElementById('processing-card').style.display = 'block';
+    try {
+      var { error } = await supabase.auth.setSession({ access_token: params.access_token, refresh_token: params.refresh_token || '' });
+      if (error) {
+        document.getElementById('processing-card').style.display = 'block';
+        if (params.type === 'signup') {
+          var v = await supabase.auth.verifyOtp({ type: 'signup', token_hash: params.token_hash || '' });
+          if (v.error) { window.showError(v.error.message || 'فشل تأكيد الحساب'); return true; }
         }
+      }
+      var type = params.type || '';
+      if (type === 'signup') window.showSuccess('تم تأكيد حسابك', 'يمكنك الآن فتح التطبيق');
+      else if (type === 'recovery') { document.getElementById('processing-card').style.display = 'none'; showOnly(document.getElementById('reset-form')); }
+      else if (type === 'invite') window.showSuccess('تم قبول الدعوة', 'يمكنك الآن فتح التطبيق');
+      else if (type === 'magiclink') window.showSuccess('تم تسجيل الدخول', 'يمكنك الآن فتح التطبيق');
+      else window.showSuccess('تم بنجاح', 'يمكنك الآن فتح التطبيق');
+    } catch (e) { console.error('Auth redirect error:', e); return false; }
+    return true;
+  }
 
-        if(!meters[activeMeterId].isActive) {
-            meters[activeMeterId].tripType = type;
-            saveDataToStorage();
-        }
+  // Landing page
+  var landingInitialized = false;
+  function initLandingPage() {
+    if (landingInitialized) return;
+    landingInitialized = true;
+    initReveal();
+    loadStats();
+    setInterval(loadStats, 60000);
+  }
+
+  function initReveal() {
+    var els = document.querySelectorAll('.reveal:not(.visible)');
+    if (!els.length) return;
+    var obs = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) { entry.target.classList.add('visible'); obs.unobserve(entry.target); }
+      });
+    }, { threshold: 0.1 });
+    els.forEach(function(el) { obs.observe(el); });
+  }
+
+  function animateCounters() {
+    document.querySelectorAll('.stat-value').forEach(function(el) {
+      var target = parseFloat(el.getAttribute('data-target'));
+      if (isNaN(target)) return;
+      var suffix = el.getAttribute('data-suffix') || '';
+      var duration = 1200, start = performance.now();
+      function step(now) {
+        var p = Math.min((now - start) / duration, 1);
+        var eased = 1 - Math.pow(1 - p, 3);
+        var current = Math.round(eased * target);
+        el.textContent = current.toLocaleString('ar-EG') + suffix;
+        if (p < 1) requestAnimationFrame(step);
+        else el.textContent = target.toLocaleString('ar-EG') + suffix;
+      }
+      requestAnimationFrame(step);
+    });
+  }
+
+  async function loadStats() {
+    var grid = document.getElementById('statsGrid');
+    if (!grid) return;
+    try {
+      var res = await fetch(SUPABASE_URL + '/functions/v1/get-public-stats');
+      if (!res.ok) throw new Error('Failed');
+      var stats = await res.json();
+      var fn = function(n) { return (!n && n !== 0) ? '0' : Number(n).toLocaleString('ar-EG'); };
+      var cards = [
+        { val: stats.users.total, label: 'إجمالي المستخدمين', sub: fn(stats.users.drivers) + ' سائق | ' + fn(stats.users.passengers) + ' راكب', icon: 'fa-users', cls: 'stat-purple', suffix: '' },
+        { val: stats.trips.completed, label: 'رحلات مكتملة', sub: fn(stats.trips.total) + ' إجمالي | ' + fn(stats.trips.cancelled) + ' ملغية', icon: 'fa-check-circle', cls: 'stat-green', suffix: '' },
+        { val: stats.trips.today, label: 'رحلات اليوم', sub: fn(stats.trips.this_week) + ' أسبوع | ' + fn(stats.trips.this_month) + ' شهر', icon: 'fa-calendar-day', cls: 'stat-blue', suffix: '' },
+        { val: stats.trips.total_fare, label: 'إجمالي الإيرادات', sub: 'متوسط ' + fn(stats.trips.avg_fare) + ' ج.م للرحلة', icon: 'fa-money-bill-wave', cls: 'stat-gold', suffix: '' },
+        { val: Math.round(stats.trips.total_distance_km), label: 'إجمالي المسافة', sub: 'جميع الرحلات المكتملة', icon: 'fa-road', cls: 'stat-orange', suffix: ' كم' },
+        { val: stats.drivers.active, label: 'سائقين نشطين', sub: fn(stats.drivers.available_now) + ' متاح الآن', icon: 'fa-users-gear', cls: 'stat-emerald', suffix: '' },
+        { val: stats.ratings.avg_score, label: 'متوسط التقييم', sub: fn(stats.ratings.total) + ' تقييم', icon: 'fa-star', cls: 'stat-pink', suffix: '' },
+        { val: stats.referrals.total, label: 'إحالات السائقين', sub: fn(stats.referrals.successful) + ' إحالة ناجحة', icon: 'fa-link', cls: 'stat-blue', suffix: '' }
+      ];
+      var html = '';
+      cards.forEach(function(c, i) {
+        html += '<div class="stat-card ' + c.cls + '" style="transition-delay:' + (0.05*i) + 's"><div class="stat-icon"><i class="fas ' + c.icon + '"></i></div><div class="stat-value" data-target="' + c.val + '" data-suffix="' + c.suffix + '">0</div><div class="stat-label">' + c.label + '</div><div class="stat-sublabel">' + c.sub + '</div></div>';
+      });
+      grid.innerHTML = html;
+      setTimeout(function() {
+        grid.querySelectorAll('.stat-card').forEach(function(el, i) { setTimeout(function() { el.classList.add('visible'); }, i * 80); });
+        animateCounters();
+      }, 200);
+    } catch (e) { console.error('Stats error:', e); grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--text-muted);padding:40px;">تعذر تحميل الإحصائيات</div>'; }
+  }
+
+  window.toggleFaq = function(el) {
+    el.classList.toggle('open');
+    var a = el.nextElementSibling;
+    if (a) a.classList.toggle('open');
+  };
+  // ======================== DRIVER METER ========================
+  var GPS_FILTER = { minDistance: 0.005, waitingSpeedKmh: 1.5 };
+  var meters = { 1: createEmptyMeterObject(1), 2: createEmptyMeterObject(2) };
+  var activeMeterId = 1;
+  var driverMap, pathLine, currentMarker;
+  var globalWatchId = null;
+
+  function createEmptyMeterObject(id) {
+    return { id: id, isActive: false, isPaused: false, tripType: 'makhsoos', kmPrice: 5, waitPrice: 1, durationPrice: 0.50, bandira: 5, minFare: 10, totalDistance: 0, startTime: null, pausedTimeTotal: 0, lastPauseTimestamp: null, totalDurationMinutes: 0, totalWaitSeconds: 0, lastLat: null, lastLng: null, lastLocationTime: null, isWaitingMode: false, shareCode: '', finalFare: 0, passengerCount: 1, pathCoords: [], passengersData: [] };
+  }
+
+  function initDriverMap() {
+    if (driverMap) { driverMap.invalidateSize(); return; }
+    try {
+      driverMap = L.map('map').setView([30.0444, 31.2357], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(driverMap);
+      pathLine = L.polyline([], {color: '#22d3ee', weight: 4}).addTo(driverMap);
+      currentMarker = L.marker([30.0444, 31.2357]).addTo(driverMap);
+      setTimeout(function() { driverMap.invalidateSize(); }, 300);
+    } catch(e) { console.error('Map init error:', e); }
+  }
+
+  function switchDriverTab(tab, btn) {
+    ['meter','history','profile'].forEach(function(t) {
+      var el = document.getElementById('driver-' + t + '-section');
+      if (el) el.style.display = t === tab ? 'block' : 'none';
+    });
+    if (btn) {
+      document.querySelectorAll('#driver-app .app-nav .tab-btn').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
     }
+    if (tab === 'meter' && driverMap) setTimeout(function() { driverMap.invalidateSize(); }, 200);
+  }
+  window.switchDriverTab = switchDriverTab;
 
-    function updateDotsUI() {
-        for (let id of [1, 2]) {
-            let dot = document.getElementById(`dot_${id}`);
-            if (meters[id].isPaused) {
-                dot.className = 'meter-status-dot paused';
-            } else if (meters[id].isActive) {
-                dot.className = 'meter-status-dot active';
-            } else {
-                dot.className = 'meter-status-dot';
-            }
-        }
+  function switchPassengerTab(tab, btn) {
+    ['track','request','history','profile'].forEach(function(t) {
+      var el = document.getElementById('passenger-' + t + '-section');
+      if (el) el.style.display = t === tab ? 'block' : 'none';
+    });
+    if (btn) {
+      document.querySelectorAll('#passenger-app .app-nav .tab-btn').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
     }
+  }
+  window.switchPassengerTab = switchPassengerTab;
 
-    function togglePauseCurrentMeter() {
-        const m = meters[activeMeterId];
-        if (!m.isActive) return;
+  function switchActiveMeterUI(id) {
+    activeMeterId = id;
+    document.querySelectorAll('.meter-tab').forEach(function(t) { t.classList.remove('active'); });
+    document.getElementById('meterTab_' + id).classList.add('active');
+    var m = meters[activeMeterId];
+    document.getElementById('tripType').value = m.tripType;
+    document.getElementById('kmPriceInput').value = m.kmPrice;
+    document.getElementById('waitPriceInput').value = m.waitPrice;
+    document.getElementById('durationPriceInput').value = m.durationPrice;
+    onTripTypeChanged();
+    renderMeterDataToUI();
+    redrawActiveRouteLine();
+  }
+  window.switchActiveMeterUI = switchActiveMeterUI;
 
-        if (!m.isPaused) {
-            m.isPaused = true;
-            m.lastPauseTimestamp = Date.now();
+  function onTripTypeChanged() {
+    var type = document.getElementById('tripType').value;
+    var btnBtn = document.getElementById('dynamicActionBtn');
+    if (type === 'afrad') {
+      btnBtn.innerText = '\u2699\uFE0F \u0625\u062C\u0631\u0627\u0621 \u0639\u0644\u0649 \u0627\u0644\u0631\u0643\u0627\u0628';
+      btnBtn.style.backgroundColor = 'var(--accent)';
+      btnBtn.style.color = 'var(--meter-bg)';
+    } else {
+      btnBtn.innerText = '\uD83D\uDC65 \u062A\u062D\u0648\u064A\u0644 \u0644\u0623\u0641\u0631\u0627\u062F (\u0645\u0634\u062A\u0631\u0643)';
+      btnBtn.style.backgroundColor = '#818cf8';
+      btnBtn.style.color = 'white';
+    }
+    if (!meters[activeMeterId].isActive) { meters[activeMeterId].tripType = type; saveDataToStorage(); }
+  }
+  window.onTripTypeChanged = onTripTypeChanged;
+
+  function updateDotsUI() {
+    for (var id = 1; id <= 2; id++) {
+      var dot = document.getElementById('dot_' + id);
+      if (!dot) continue;
+      if (meters[id].isPaused) dot.className = 'meter-status-dot paused';
+      else if (meters[id].isActive) dot.className = 'meter-status-dot active';
+      else dot.className = 'meter-status-dot';
+    }
+  }
+
+  function renderMeterDataToUI() {
+    var m = meters[activeMeterId];
+    document.getElementById('totalFareDisplay').innerText = (m.finalFare || 0).toFixed(2) + ' \u062C';
+    document.getElementById('distDisplay').innerText = (m.totalDistance || 0).toFixed(2);
+    document.getElementById('durationDisplay').innerText = (m.totalDurationMinutes || 0).toFixed(0);
+    document.getElementById('waitDisplay').innerText = ((m.totalWaitSeconds || 0) / 60).toFixed(0);
+    document.getElementById('currentTypeDisplay').innerText = m.tripType === 'makhsoos' ? '\u0645\u062E\u0635\u0648\u0635' : '\u0623\u0641\u0631\u0627\u062F \u0645\u0634\u062A\u0631\u0643';
+    document.getElementById('passengersBadge').innerText = '\uD83D\uDC65 \u0631\u0643\u0627\u0628: ' + (m.passengerCount || 0);
+    document.getElementById('waitingBadge').style.display = (m.isWaitingMode && !m.isPaused) ? 'inline-block' : 'none';
+    document.getElementById('pausedBadge').style.display = m.isPaused ? 'inline-block' : 'none';
+    var pauseBtn = document.getElementById('pauseBtn');
+    if (m.isActive) {
+      document.getElementById('startBtn').disabled = true;
+      document.getElementById('stopBtn').disabled = false;
+      document.getElementById('dynamicActionBtn').disabled = m.isPaused;
+      pauseBtn.disabled = false;
+      pauseBtn.innerText = m.isPaused ? '\u25B6\uFE0F \u0627\u0633\u062A\u0626\u0646\u0627\u0641 \u0627\u0644\u0639\u062F\u0627\u062F' : '\uD83D\uDED1 \u0625\u064A\u0642\u0627\u0641 \u0645\u0624\u0642\u062A';
+      pauseBtn.style.backgroundColor = m.isPaused ? 'var(--success)' : 'var(--accent)';
+      pauseBtn.style.color = m.isPaused ? 'white' : 'var(--meter-bg)';
+      document.getElementById('globalStatusText').innerText = m.isPaused ? '\u0639\u062F\u0627\u062F ' + m.id + ' \u0645\u0648\u0642\u0648\u0641 \u0645\u0624\u0642\u062A\u0627' : '\u0639\u062F\u0627\u062F ' + m.id + ' \u0634\u063A\u0627\u0644 | \u0643\u0648\u062F: ' + (m.shareCode || '');
+    } else {
+      document.getElementById('startBtn').disabled = false;
+      document.getElementById('stopBtn').disabled = true;
+      document.getElementById('dynamicActionBtn').disabled = true;
+      pauseBtn.disabled = true;
+      pauseBtn.innerText = '\uD83D\uDED1 \u0625\u064A\u0642\u0627\u0641 \u0645\u0624\u0642\u062A';
+      pauseBtn.style.backgroundColor = 'var(--meter-card)';
+      pauseBtn.style.color = 'var(--meter-muted)';
+      document.getElementById('globalStatusText').innerText = '\u0639\u062F\u0627\u062F ' + m.id + ' \u062C\u0627\u0647\u0632';
+    }
+  }
+  function startCurrentMeter() {
+    var m = meters[activeMeterId];
+    if (m.isActive) return;
+    var selectedType = document.getElementById('tripType').value;
+    var initialPassengers = 1;
+    if (selectedType === 'afrad') {
+      var seats = prompt('المشوار أفراد، كم عدد المقاعد المحجوزة الآن؟', '1');
+      if (seats === null) return;
+      var parsedSeats = parseInt(seats);
+      if (parsedSeats >= 1 && parsedSeats <= 20) { initialPassengers = parsedSeats; }
+      else { alert('يرجى إدخال عدد مقاعد صحيح'); return; }
+    }
+    m.isActive = true; m.isPaused = false; m.startTime = Date.now(); m.pausedTimeTotal = 0;
+    m.tripType = selectedType;
+    m.kmPrice = parseFloat(document.getElementById('kmPriceInput').value) || 5;
+    m.waitPrice = parseFloat(document.getElementById('waitPriceInput').value) || 1;
+    m.durationPrice = parseFloat(document.getElementById('durationPriceInput').value) || 0.50;
+    m.shareCode = Math.floor(100000 + Math.random() * 900000).toString();
+    m.totalDistance = 0; m.totalWaitSeconds = 0;
+    m.passengerCount = initialPassengers;
+    m.lastLat = null; m.lastLng = null; m.lastLocationTime = null;
+    m.pathCoords = [];
+    if (selectedType === 'afrad') {
+      m.passengersData = [];
+      for (var i = 1; i <= initialPassengers; i++) {
+        m.passengersData.push({ id: i, name: 'راكب رقم ' + i, startDistance: 0, startDuration: 0, startWait: 0, isInside: true, isInitial: true, individualFare: 0 });
+      }
+    }
+    showToast('تم تشغيل عداد رقم ' + m.id + ' - كود المشاركة: ' + m.shareCode);
+    updateDotsUI(); renderMeterDataToUI(); redrawActiveRouteLine(); saveDataToStorage();
+  }
+  window.startCurrentMeter = startCurrentMeter;
+
+  function stopCurrentMeter() {
+    var m = meters[activeMeterId];
+    if (!m.isActive) return;
+    if (m.isPaused) { m.isPaused = false; if (m.lastPauseTimestamp) m.pausedTimeTotal += (Date.now() - m.lastPauseTimestamp); }
+    if (m.tripType === 'afrad') {
+      m.passengersData.forEach(function(p) {
+        if (p.isInside) {
+          p.isInside = false;
+          var pDist = m.totalDistance - p.startDistance;
+          if (p.isInitial) {
+            var pDuration = m.totalDurationMinutes - (p.startDuration || 0);
+            var pWait = (m.totalWaitSeconds / 60) - (p.startWait || 0);
+            p.individualFare = m.bandira + (pDist * m.kmPrice) + (pDuration * m.durationPrice) + (pWait * m.waitPrice);
+          } else { p.individualFare = pDist * m.kmPrice; }
+        }
+      });
+    }
+    m.isActive = false;
+    calculateFare(m);
+    generateReceipt(m);
+    saveTripToHistory(m);
+    saveTripToSupabase(m);
+    meters[activeMeterId] = createEmptyMeterObject(activeMeterId);
+    updateDotsUI(); renderMeterDataToUI(); redrawActiveRouteLine(); saveDataToStorage();
+  }
+  window.stopCurrentMeter = stopCurrentMeter;
+
+  function togglePauseCurrentMeter() {
+    var m = meters[activeMeterId];
+    if (!m.isActive) return;
+    if (!m.isPaused) { m.isPaused = true; m.lastPauseTimestamp = Date.now(); m.isWaitingMode = false; showToast('تم إيقاف العداد مؤقتاً'); }
+    else { m.isPaused = false; if (m.lastPauseTimestamp) m.pausedTimeTotal += (Date.now() - m.lastPauseTimestamp); m.lastLocationTime = Date.now(); showToast('تم استئناف العداد'); }
+    updateDotsUI(); renderMeterDataToUI(); saveDataToStorage();
+  }
+  window.togglePauseCurrentMeter = togglePauseCurrentMeter;
+
+  function handleDynamicActionButton() {
+    var m = meters[activeMeterId];
+    if (!m.isActive || m.isPaused) return;
+    if (m.tripType === 'afrad') {
+      var action = prompt('اختر الإجراء:\n1 - ركوب فرد جديد\n2 - نزول ومحاسبة فرد', '1');
+      if (action === '1') {
+        var pNumber = m.passengersData.length + 1;
+        m.passengersData.push({ id: pNumber, name: 'راكب رقم ' + pNumber, startDistance: m.totalDistance, isInside: true, isInitial: false, individualFare: 0 });
+        m.passengerCount = m.passengersData.filter(function(p) { return p.isInside; }).length;
+        showToast('➕ تم إركاب فرد جديد: ' + pNumber);
+      } else if (action === '2') {
+        var activeList = m.passengersData.filter(function(p) { return p.isInside; });
+        if (!activeList.length) { showToast('لا يوجد ركاب داخل المركبة'); return; }
+        var promptText = 'اختر رقم الراكب النازل:\n';
+        activeList.forEach(function(p) { promptText += p.id + ' - ' + p.name + '\n'; });
+        var targetId = prompt(promptText);
+        var targetPassenger = m.passengersData.find(function(p) { return p.id == targetId && p.isInside; });
+        if (targetPassenger) {
+          targetPassenger.isInside = false;
+          m.passengerCount = m.passengersData.filter(function(p) { return p.isInside; }).length;
+          var pDist = m.totalDistance - targetPassenger.startDistance;
+          var pFare = targetPassenger.isInitial
+            ? m.bandira + (pDist * m.kmPrice) + (m.totalDurationMinutes * m.durationPrice) + ((m.totalWaitSeconds/60) * m.waitPrice)
+            : pDist * m.kmPrice;
+          targetPassenger.individualFare = pFare;
+          var body = document.getElementById('receiptBody');
+          body.innerHTML = '<div class="receipt-line"><span class="label">تصفية حساب</span><span class="value" style="color:var(--accent)">' + targetPassenger.name + '</span></div><div class="receipt-divider"></div><div class="receipt-line receipt-total"><span>المطلوب</span><span>' + pFare.toFixed(2) + ' ج</span></div>';
+          document.getElementById('receiptModal').style.display = 'flex';
+          showToast('🛑 تم تصفية حساب ' + targetPassenger.name);
+        }
+      }
+    } else {
+      if (confirm('هل تريد تحويل المخصوص إلى مشترك (أفراد)؟')) {
+        var newPrice = prompt('سعر الكيلو الجديد للمخصوص:', m.kmPrice);
+        if (newPrice !== null) {
+          m.kmPrice = parseFloat(newPrice) || m.kmPrice;
+          m.tripType = 'afrad'; m.passengerCount = 1;
+          m.passengersData = [{ id: 1, name: 'راكب 1 (المخصوص)', startDistance: m.totalDistance, startDuration: m.totalDurationMinutes, startWait: m.totalWaitSeconds/60, isInside: true, isInitial: true, individualFare: 0 }];
+          document.getElementById('tripType').value = 'afrad';
+          onTripTypeChanged();
+          showToast('🔄 تم تحويل المشوار');
+        }
+      }
+    }
+    calculateFare(m); renderMeterDataToUI(); saveDataToStorage();
+  }
+  window.handleDynamicActionButton = handleDynamicActionButton;
+
+  setInterval(function() {
+    var updated = false;
+    for (var id in meters) {
+      var m = meters[id];
+      if (m.isActive && m.startTime && !m.isPaused) {
+        m.totalDurationMinutes = ((Date.now() - m.startTime) - m.pausedTimeTotal) / 1000 / 60;
+        if (m.isWaitingMode) { m.totalWaitSeconds += 1; }
+        else if (m.lastLocationTime && (Date.now() - m.lastLocationTime > 5000)) { m.totalWaitSeconds += 1; m.isWaitingMode = true; }
+        calculateFare(m); updated = true;
+      }
+    }
+    if (updated) { renderMeterDataToUI(); saveDataToStorage(); }
+  }, 1000);
+
+  function initGlobalGPS() {
+    if (navigator.geolocation) {
+      globalWatchId = navigator.geolocation.watchPosition(handleGlobalLocation, handleGPSError, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
+    }
+  }
+  async function handleGlobalLocation(pos) {
+    var lat = pos.coords.latitude, lng = pos.coords.longitude;
+    var speedKmh = pos.coords.speed ? (pos.coords.speed * 3.6) : null;
+    var currentLatLng = L.latLng(lat, lng);
+    if (driverMap) {
+      currentMarker.setLatLng(currentLatLng);
+      if (meters[activeMeterId].isActive && !meters[activeMeterId].isPaused) driverMap.setView(currentLatLng, 16);
+    }
+    for (var id in meters) {
+      var m = meters[id];
+      if (!m.isActive || m.isPaused) continue;
+      var now = Date.now();
+      if (m.lastLat && m.lastLng) {
+        var lastLatLng = L.latLng(m.lastLat, m.lastLng);
+        var rawDistanceKm = lastLatLng.distanceTo(currentLatLng) / 1000;
+        if (rawDistanceKm >= GPS_FILTER.minDistance) {
+          var calculatedSpeed = rawDistanceKm / ((now - m.lastLocationTime) / 1000 / 3600);
+          var finalSpeed = speedKmh !== null ? speedKmh : calculatedSpeed;
+          if (finalSpeed > GPS_FILTER.waitingSpeedKmh) {
             m.isWaitingMode = false;
-            showToast("⚠️ تم إيقاف العداد مؤقتاً (وضع عطل/تموين)");
+            m.pathCoords.push({lat: lat, lng: lng});
+            if (m.pathCoords.length >= 2) {
+              try {
+                var lastPoint = m.pathCoords[m.pathCoords.length - 2];
+                var url = 'https://router.project-osrm.org/route/v1/driving/' + lastPoint.lng + ',' + lastPoint.lat + ';' + lng + ',' + lat + '?overview=false';
+                var response = await fetch(url);
+                var data = await response.json();
+                if (data.code === 'Ok' && data.routes && data.routes[0]) {
+                  var roadDistanceKm = data.routes[0].distance / 1000;
+                  m.totalDistance += roadDistanceKm < rawDistanceKm * 3 ? roadDistanceKm : rawDistanceKm;
+                } else { m.totalDistance += rawDistanceKm; }
+              } catch (e) { m.totalDistance += rawDistanceKm; }
+            } else { m.totalDistance += rawDistanceKm; }
+          } else { m.isWaitingMode = true; }
+          m.lastLat = lat; m.lastLng = lng; m.lastLocationTime = now;
         } else {
-            m.isPaused = false;
-            if (m.lastPauseTimestamp) {
-                m.pausedTimeTotal += (Date.now() - m.lastPauseTimestamp);
-            }
-            m.lastLocationTime = Date.now(); 
-            showToast("▶️ تم استئناف تشغيل العداد بنجاح");
+          if ((now - m.lastLocationTime)/1000 > 4 && (speedKmh === null || speedKmh < GPS_FILTER.waitingSpeedKmh)) m.isWaitingMode = true;
         }
-        updateDotsUI();
-        renderMeterDataToUI();
-        saveDataToStorage();
+      } else {
+        m.lastLat = lat; m.lastLng = lng; m.lastLocationTime = now;
+        m.isWaitingMode = false;
+        m.pathCoords.push({lat: lat, lng: lng});
+      }
+      calculateFare(m);
     }
+    redrawActiveRouteLine(); renderMeterDataToUI(); saveDataToStorage();
+  }
 
-    function handleDynamicActionButton() {
-        const m = meters[activeMeterId];
-        if(!m.isActive || m.isPaused) return;
+  function redrawActiveRouteLine() {
+    if (!pathLine || !driverMap) return;
+    var m = meters[activeMeterId];
+    if (m.pathCoords && m.pathCoords.length > 0) {
+      pathLine.setLatLngs(m.pathCoords.map(function(c) { return L.latLng(c.lat, c.lng); }));
+    } else { pathLine.setLatLngs([]); }
+  }
 
-        if (m.tripType === 'afrad') {
-            const action = prompt(`اختر الإجراء المطلوب للأفراد:\n1 - ركوب فرد جديد حياً في الطريق\n2 - نزول ومحاسبة فرد حالي وصل محطته`, "1");
-            
-            if (action === "1") {
-                let pNumber = m.passengersData.length + 1;
-                // تعديل هنا: الراكب الجديد يحسب له المسافة فقط بدون بنديرة أو وقت
-                m.passengersData.push({
-                    id: pNumber,
-                    name: `راكب رقم ${pNumber}`,
-                    startDistance: m.totalDistance,
-                    isInside: true,
-                    isInitial: false, // علامة للتمييز أنه ركب في الطريق
-                    individualFare: 0
-                });
-                m.passengerCount = m.passengersData.filter(p => p.isInside).length;
-                showToast(`➕ تم إركاب فرد جديد: راكب رقم ${pNumber}`);
-            } 
-            else if (action === "2") {
-                let activeList = m.passengersData.filter(p => p.isInside);
-                if (activeList.length === 0) {
-                    showToast("❌ لا يوجد ركاب داخل المركبة حالياً لمكاسبتهم");
-                    return;
-                }
-                
-                let promptText = `اختر رقم الراكب النازل لمحاسبته:\n`;
-                activeList.forEach(p => {
-                    promptText += `${p.id} - ${p.name}\n`;
-                });
-                
-                const targetId = prompt(promptText);
-                let targetPassenger = m.passengersData.find(p => p.id == targetId && p.isInside);
-                
-                if (targetPassenger) {
-                    targetPassenger.isInside = false;
-                    m.passengerCount = m.passengersData.filter(p => p.isInside).length;
-                    
-                    let pDist = m.totalDistance - targetPassenger.startDistance;
-                    let pFare = 0;
-                    
-                    if (targetPassenger.isInitial) {
-                        // الراكب الأساسي يحسب بالمعادلة كاملة (بنديرة + وقت + مسافة) لضمان حق السائق الأساسي
-                        let pDuration = m.totalDurationMinutes - (targetPassenger.startDuration || 0);
-                        let pWait = (m.totalWaitSeconds / 60) - (targetPassenger.startWait || 0);
-                        pFare = m.bandira + (pDist * m.kmPrice) + (pDuration * m.durationPrice) + (pWait * m.waitPrice);
-                    } else {
-                        // الراكب الإضافي يحسب مسافة فقط بناءً على طلبك
-                        pFare = pDist * m.kmPrice;
-                    }
-                    
-                    targetPassenger.individualFare = pFare;
-                    
-                    const body = document.getElementById('receiptBody');
-                    body.innerHTML = `
-                        <div class="receipt-line"><span class="label">تصفية حساب فردي</span><span class="value" style="color:var(--warning)">${targetPassenger.name}</span></div>
-                        <div class="receipt-line"><span class="label">المسافة الصافية المقطوعة</span><span class="value">${pDist.toFixed(2)} كم</span></div>
-                        <div class="receipt-divider"></div>
-                        <div class="receipt-line receipt-total"><span>المطلوب من الراكب</span><span>${pFare.toFixed(2)} ج</span></div>
-                    `;
-                    document.getElementById('receiptModal').style.display = 'flex';
-                    showToast(`🛑 نزل ${targetPassenger.name} وتم تصفية حسابه`);
-                } else {
-                    showToast("❌ اختيار غير صحيح");
-                }
-            }
-        } else {
-            if (confirm("هل تريد تحويل هذا المشوار المخصوص إلى مشترك (أفراد) لركوب زبائن آخرين بالطريق؟")) {
-                const newPrice = prompt("أدخل سعر الكيلومتر الجديد المخفض للزبون المخصوص الأول (جنيه/كم):", m.kmPrice);
-                if (newPrice !== null) {
-                    m.kmPrice = parseFloat(newPrice) || m.kmPrice;
-                    m.tripType = 'afrad'; 
-                    m.passengerCount = 1; 
-                    
-                    m.passengersData = [{
-                        id: 1,
-                        name: "راكب رقم 1 (المخصوص السابق)",
-                        startDistance: m.totalDistance,
-                        startDuration: m.totalDurationMinutes,
-                        startWait: m.totalWaitSeconds / 60,
-                        isInside: true,
-                        isInitial: true, // يعتبر راكب أساسي لأنه دفع البنديرة والوقت من البداية
-                        individualFare: 0
-                    }];
-                    
-                    document.getElementById('tripType').value = 'afrad';
-                    onTripTypeChanged();
-                    showToast(`🔄 تم تحويل المشوار وتعديل تسعيرة المخصوص إلى ${m.kmPrice} ج/كم`);
-                }
-            }
+  function calculateFare(m) {
+    if (m.tripType === 'makhsoos') {
+      var total = m.bandira + (m.totalDistance * m.kmPrice) + (m.totalDurationMinutes * m.durationPrice) + ((m.totalWaitSeconds / 60) * m.waitPrice);
+      m.finalFare = total < m.minFare ? m.minFare : total;
+    } else {
+      var totalRevenue = 0;
+      (m.passengersData || []).forEach(function(p) {
+        if (!p.isInside) { totalRevenue += (p.individualFare || 0); }
+        else {
+          var currentPDist = m.totalDistance - p.startDistance;
+          if (p.isInitial) {
+            totalRevenue += m.bandira + (currentPDist * m.kmPrice) + ((m.totalDurationMinutes - (p.startDuration || 0)) * m.durationPrice) + (((m.totalWaitSeconds/60) - (p.startWait || 0)) * m.waitPrice);
+          } else { totalRevenue += currentPDist * m.kmPrice; }
         }
-        calculateFare(m);
-        renderMeterDataToUI();
-        saveDataToStorage();
+      });
+      m.finalFare = totalRevenue;
     }
+  }
 
-    setInterval(() => {
-        let updated = false;
-        for (let id in meters) {
-            let m = meters[id];
-            if (m.isActive && m.startTime && !m.isPaused) {
-                let effectiveDurationMs = (Date.now() - m.startTime) - m.pausedTimeTotal;
-                m.totalDurationMinutes = effectiveDurationMs / 1000 / 60;
-                
-                if (m.isWaitingMode) {
-                    m.totalWaitSeconds += 1;
-                } else if (m.lastLocationTime && (Date.now() - m.lastLocationTime > 5000)) {
-                    m.totalWaitSeconds += 1;
-                    m.isWaitingMode = true;
-                }
-                
-                calculateFare(m);
-                updated = true;
-            }
-        }
-        if (updated) {
-            renderMeterDataToUI();
-            saveDataToStorage();
-        }
-    }, 1000);
-
-    function initGlobalGPS() {
-        if (navigator.geolocation) {
-            globalWatchId = navigator.geolocation.watchPosition(handleGlobalLocation, handleGPSError, {
-                enableHighAccuracy: true, maximumAge: 0, timeout: 10000
-            });
-        } else {
-            showToast("متصفحك لا يدعم نظام الـ GPS");
-        }
+  function resetCurrentMeterData() {
+    if (confirm('هل أنت متأكد من تصفير العداد بالكامل؟')) {
+      meters[activeMeterId] = createEmptyMeterObject(activeMeterId);
+      updateDotsUI(); renderMeterDataToUI(); redrawActiveRouteLine(); saveDataToStorage();
+      showToast('تم تصفير العداد');
     }
+  }
+  window.resetCurrentMeterData = resetCurrentMeterData;
 
-    async function handleGlobalLocation(pos) {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        const speedKmh = pos.coords.speed ? (pos.coords.speed * 3.6) : null; 
-        const currentLatLng = L.latLng(lat, lng);
-
-        if(map) {
-            currentMarker.setLatLng(currentLatLng);
-            if (meters[activeMeterId].isActive && !meters[activeMeterId].isPaused) {
-                map.setView(currentLatLng, 16);
-            }
-        }
-
-        for (let id in meters) {
-            let m = meters[id];
-            if (!m.isActive || m.isPaused) continue; 
-
-            const now = Date.now();
-
-            if (m.lastLat && m.lastLng) {
-                const lastLatLng = L.latLng(m.lastLat, m.lastLng);
-                const rawDistanceKm = lastLatLng.distanceTo(currentLatLng) / 1000;
-
-                if (rawDistanceKm >= GPS_FILTER.minDistance) {
-                    const timeElapsedHours = (now - m.lastLocationTime) / 1000 / 3600;
-                    const calculatedSpeed = rawDistanceKm / timeElapsedHours;
-                    const finalSpeed = speedKmh !== null ? speedKmh : calculatedSpeed;
-
-                    if (finalSpeed > GPS_FILTER.waitingSpeedKmh) {
-                        m.isWaitingMode = false;
-                        m.pathCoords.push({lat: lat, lng: lng});
-
-                        if (m.pathCoords.length >= 2) {
-                            try {
-                                const lastPoint = m.pathCoords[m.pathCoords.length - 2];
-                                const url = `https://router.project-osrm.org/route/v1/driving/${lastPoint.lng},${lastPoint.lat};${lng},${lat}?overview=false`;
-                                
-                                const response = await fetch(url);
-                                const data = await response.json();
-                                
-                                if (data.code === 'Ok' && data.routes && data.routes[0]) {
-                                    const roadDistanceKm = data.routes[0].distance / 1000;
-                                    
-                                    if (roadDistanceKm < rawDistanceKm * 3) {
-                                        m.totalDistance += roadDistanceKm;
-                                    } else {
-                                        m.totalDistance += rawDistanceKm;
-                                    }
-                                } else {
-                                    m.totalDistance += rawDistanceKm; 
-                                }
-                            } catch (error) {
-                                console.error("OSRM Error:", error);
-                                m.totalDistance += rawDistanceKm; 
-                            }
-                        } else {
-                            m.totalDistance += rawDistanceKm;
-                        }
-
-                    } else {
-                        m.isWaitingMode = true;
-                    }
-
-                    m.lastLat = lat; m.lastLng = lng; m.lastLocationTime = now;
-                } else {
-                    const timeDiff = (now - m.lastLocationTime) / 1000;
-                    if(timeDiff > 4 && (speedKmh === null || speedKmh < GPS_FILTER.waitingSpeedKmh)) {
-                        m.isWaitingMode = true;
-                    }
-                }
-            } else {
-                m.lastLat = lat; m.lastLng = lng; m.lastLocationTime = now;
-                m.isWaitingMode = false;
-                m.pathCoords.push({lat: lat, lng: lng});
-            }
-
-            calculateFare(m);
-        }
-
-        redrawActiveRouteLine();
-        renderMeterDataToUI();
-        saveDataToStorage();
+  function triggerManualDistance() {
+    var m = meters[activeMeterId];
+    var manual = prompt('المسافة المقطوعة يدوياً (كم):', (m.totalDistance || 0).toFixed(2));
+    if (manual !== null) {
+      m.totalDistance = parseFloat(manual) || 0;
+      calculateFare(m); renderMeterDataToUI(); saveDataToStorage();
+      showToast('تم تحديث المسافة');
     }
+  }
+  window.triggerManualDistance = triggerManualDistance;
 
-    function redrawActiveRouteLine() {
-        if (!pathLine || !map) return;
-        const m = meters[activeMeterId];
-        if (m.pathCoords && m.pathCoords.length > 0) {
-            const leafletLatLngs = m.pathCoords.map(coord => L.latLng(coord.lat, coord.lng));
-            pathLine.setLatLngs(leafletLatLngs);
-        } else {
-            pathLine.setLatLngs([]);
-        }
+  function generateReceipt(m) {
+    var body = document.getElementById('receiptBody');
+    var waitingMinutes = m.totalWaitSeconds / 60;
+    var itemsHTML = '';
+    if (m.tripType === 'makhsoos') {
+      var distCost = m.totalDistance * m.kmPrice;
+      itemsHTML = '<div class="receipt-line"><span class="label">فتحة العداد</span><span class="value">' + m.bandira.toFixed(2) + ' ج</span></div><div class="receipt-line"><span class="label">المسافة</span><span class="value">' + distCost.toFixed(2) + ' ج</span></div><div class="receipt-line"><span class="label">الزمن (' + m.totalDurationMinutes.toFixed(0) + ' د)</span><span class="value">' + (m.totalDurationMinutes * m.durationPrice).toFixed(2) + ' ج</span></div><div class="receipt-line"><span class="label">الانتظار</span><span class="value">' + (waitingMinutes * m.waitPrice).toFixed(2) + ' ج</span></div>';
+    } else {
+      itemsHTML = '<div style="font-weight:700;font-size:12px;margin-bottom:6px;color:var(--meter-primary);">تصفية الأفراد:</div>';
+      (m.passengersData || []).forEach(function(p) {
+        itemsHTML += '<div class="receipt-line"><span class="label">' + p.name + '</span><span class="value">' + (p.individualFare || 0).toFixed(2) + ' ج</span></div>';
+      });
     }
+    body.innerHTML = '<div class="receipt-line"><span class="label">كود المشاركة</span><span class="value">' + (m.shareCode || '-') + '</span></div><div class="receipt-divider"></div>' + itemsHTML + '<div class="receipt-divider"></div><div class="receipt-line receipt-total"><span>الإجمالي</span><span>' + (m.finalFare || 0).toFixed(2) + ' ج</span></div>';
+    document.getElementById('receiptModal').style.display = 'flex';
+  }
 
-    function calculateFare(m) {
-        let baseFare = m.bandira;
-        let distanceCost = 0;
-        
-        if (m.tripType === 'makhsoos') {
-            distanceCost = m.totalDistance * m.kmPrice;
-            let totalDurationCost = m.totalDurationMinutes * m.durationPrice;
-            let waitingMinutes = m.totalWaitSeconds / 60;
-            let waitingCost = waitingMinutes * m.waitPrice;
-            let total = baseFare + distanceCost + totalDurationCost + waitingCost;
-            if (total < m.minFare) total = m.minFare;
-            m.finalFare = total;
-        } else {
-            let totalRevenue = 0;
-            m.passengersData.forEach(p => {
-                if (!p.isInside) {
-                    totalRevenue += p.individualFare;
-                } else {
-                    let currentPDist = m.totalDistance - p.startDistance;
-                    let currentPFare = 0;
-                    
-                    if (p.isInitial) {
-                        // الركاب اللي بدأوا مع الرحلة (الأساسيين) يتم تطبيق المعادلة كاملة عليهم
-                        let currentPDuration = m.totalDurationMinutes - (p.startDuration || 0);
-                        let currentPWait = (m.totalWaitSeconds / 60) - (p.startWait || 0);
-                        currentPFare = m.bandira + (currentPDist * m.kmPrice) + (currentPDuration * m.durationPrice) + (currentPWait * m.waitPrice);
-                    } else {
-                        // الركاب المضافين من الطريق: مسافة صافية فقط مضروبة في السعر
-                        currentPFare = currentPDist * m.kmPrice;
-                    }
-                    totalRevenue += currentPFare;
-                }
-            });
-            m.finalFare = totalRevenue;
-        }
-    }
+  function closeReceipt() { document.getElementById('receiptModal').style.display = 'none'; }
+  window.closeReceipt = closeReceipt;
 
-    function renderMeterDataToUI() {
-        const m = meters[activeMeterId];
-        
-        document.getElementById('totalFareDisplay').innerText = m.finalFare.toFixed(2) + " ج";
-        document.getElementById('distDisplay').innerText = m.totalDistance.toFixed(2);
-        document.getElementById('durationDisplay').innerText = m.totalDurationMinutes.toFixed(0);
-        document.getElementById('waitDisplay').innerText = (m.totalWaitSeconds / 60).toFixed(0);
-        
-        document.getElementById('currentTypeDisplay').innerText = m.tripType === 'makhsoos' ? 'مخصوص' : 'أفراد مشترك';
-        document.getElementById('passengersBadge').innerText = `👥 ركاب: ${m.passengerCount}`;
-        
-        document.getElementById('waitingBadge').style.display = (m.isWaitingMode && !m.isPaused) ? 'inline-block' : 'none';
-        document.getElementById('pausedBadge').style.display = m.isPaused ? 'inline-block' : 'none';
+  function shareWhatsApp() {
+    var text = '🚖 فاتورة رحلة من "توقع أجرتك"\nالإجمالي: ' + document.getElementById('totalFareDisplay').innerText;
+    window.open('https://wa.me/?text=' + encodeURIComponent(text));
+  }
+  window.shareWhatsApp = shareWhatsApp;
 
-        const pauseBtn = document.getElementById('pauseBtn');
-        if (m.isActive) {
-            document.getElementById('startBtn').disabled = true;
-            document.getElementById('stopBtn').disabled = false;
-            document.getElementById('dynamicActionBtn').disabled = m.isPaused;
-            pauseBtn.disabled = false;
-            pauseBtn.innerText = m.isPaused ? "▶️ استئناف العداد الحالي" : "🛑 إيقاف مؤقت (عطل / تموين)";
-            pauseBtn.style.backgroundColor = m.isPaused ? "var(--success)" : "var(--warning)";
-            pauseBtn.style.color = m.isPaused ? "white" : "var(--bg)";
-            
-            document.getElementById('globalStatusText').innerText = m.isPaused ? `عداد رقم [${m.id}] موقوف مؤقتاً حالياً` : `عداد رقم [${m.id}] شغال حالياً | كود: ${m.shareCode}`;
-        } else {
-            document.getElementById('startBtn').disabled = false;
-            document.getElementById('stopBtn').disabled = true;
-            document.getElementById('dynamicActionBtn').disabled = true;
-            pauseBtn.disabled = true;
-            pauseBtn.innerText = "🛑 إيقاف مؤقت (عطل / تموين)";
-            pauseBtn.style.backgroundColor = "var(--card)";
-            pauseBtn.style.color = "var(--muted)";
-            document.getElementById('globalStatusText').innerText = `عداد رقم [${m.id}] جاهز ومستعد للبدء`;
-        }
-    }
+  // Storage
+  function saveDataToStorage() { try { localStorage.setItem('smart_meter_data', JSON.stringify(meters)); } catch(e) {} }
+  function loadDataFromStorage() {
+    try {
+      var saved = localStorage.getItem('smart_meter_data');
+      if (saved) { var parsed = JSON.parse(saved); for (var id in parsed) { meters[id] = parsed[id]; } }
+    } catch(e) { console.error(e); }
+  }
 
-    function startCurrentMeter() {
-        const m = meters[activeMeterId];
-        if (m.isActive) return;
+  function saveTripToHistory(m) {
+    try {
+      var history = JSON.parse(localStorage.getItem('smart_meter_history')) || [];
+      history.unshift({ id: m.shareCode || Math.floor(100000 + Math.random() * 900000).toString(), meterId: m.id, date: new Date().toLocaleString('ar-EG'), tripType: m.tripType, distance: m.totalDistance, duration: m.totalDurationMinutes, wait: m.totalWaitSeconds / 60, fare: m.finalFare, savedPath: m.pathCoords });
+      localStorage.setItem('smart_meter_history', JSON.stringify(history));
+    } catch(e) {}
+  }
 
-        const selectedType = document.getElementById('tripType').value;
-        let initialPassengers = 1;
-
-        if (selectedType === 'afrad') {
-            const seats = prompt("المشوار أفراد، كم عدد المقاعد المحجوزة والممتلئة الآن عند البداية؟", "1");
-            if (seats === null) return; 
-            const parsedSeats = parseInt(seats);
-            if (parsedSeats >= 1 && parsedSeats <= 20) {
-                initialPassengers = parsedSeats;
-            } else {
-                alert("يرجى إدخل عدد مقاعد صحيح لبدء العداد.");
-                return;
-            }
-        }
-
-        m.isActive = true;
-        m.isPaused = false;
-        m.startTime = Date.now();
-        m.pausedTimeTotal = 0;
-        m.tripType = selectedType;
-        
-        m.kmPrice = parseFloat(document.getElementById('kmPriceInput').value) || 5;
-        m.waitPrice = parseFloat(document.getElementById('waitPriceInput').value) || 1;
-        m.durationPrice = parseFloat(document.getElementById('durationPriceInput').value) || 0.50;
-        m.shareCode = Math.floor(100000 + Math.random() * 900000).toString();
-        
-        m.totalDistance = 0;
-        m.totalWaitSeconds = 0;
-        m.passengerCount = initialPassengers; 
-        m.lastLat = null; m.lastLng = null; m.lastLocationTime = null;
-        m.pathCoords = []; 
-
-        if (selectedType === 'afrad') {
-            m.passengersData = [];
-            for(let i = 1; i <= initialPassengers; i++) {
-                m.passengersData.push({
-                    id: i,
-                    name: `راكب رقم ${i}`,
-                    startDistance: 0,
-                    startDuration: 0,
-                    startWait: 0,
-                    isInside: true,
-                    isInitial: true, // ركاب البداية يتم محاسبتهم بالمعادلة كاملة
-                    individualFare: 0
-                });
-            }
-        }
-
-        showToast(`تم تشغيل عداد رقم ${m.id} بنجاح`);
-        updateDotsUI();
-        renderMeterDataToUI();
-        redrawActiveRouteLine();
-        saveDataToStorage();
-    }
-
-    function stopCurrentMeter() {
-        const m = meters[activeMeterId];
-        if (!m.isActive) return;
-
-        if (m.isPaused) {
-            m.isPaused = false;
-            if (m.lastPauseTimestamp) m.pausedTimeTotal += (Date.now() - m.lastPauseTimestamp);
-        }
-
-        if (m.tripType === 'afrad') {
-            m.passengersData.forEach(p => {
-                if (p.isInside) {
-                    p.isInside = false;
-                    let pDist = m.totalDistance - p.startDistance;
-                    
-                    if (p.isInitial) {
-                        let pDuration = m.totalDurationMinutes - (p.startDuration || 0);
-                        let pWait = (m.totalWaitSeconds / 60) - (p.startWait || 0);
-                        p.individualFare = m.bandira + (pDist * m.kmPrice) + (pDuration * m.durationPrice) + (pWait * m.waitPrice);
-                    } else {
-                        // الركاب المتبقين الذين ركبوا بالطريق يحسب لهم مسافة فقط عند الإغلاق التام
-                        p.individualFare = pDist * m.kmPrice;
-                    }
-                }
-            });
-        }
-
-        m.isActive = false;
-        calculateFare(m);
-        saveTripToHistory(m);
-        generateReceipt(m);
-
-        meters[activeMeterId] = createEmptyMeterObject(activeMeterId);
-
-        updateDotsUI();
-        renderMeterDataToUI();
-        redrawActiveRouteLine();
-        saveDataToStorage();
-    }
-
-    function resetCurrentMeterData() {
-        if(confirm("هل أنت متأكد من تصفير العداد بالكامل؟")) {
-            meters[activeMeterId] = createEmptyMeterObject(activeMeterId);
-            updateDotsUI();
-            renderMeterDataToUI();
-            redrawActiveRouteLine();
-            saveDataToStorage();
-            showToast("تم تصفير العداد بنجاح");
-        }
-    }
-
-    function triggerManualDistance() {
-        const m = meters[activeMeterId];
-        const manual = prompt("إشارة الـ GPS ضعيفة، أدخل المسافة المقطوعة يدوياً (بالكيلومتر):", m.totalDistance.toFixed(2));
-        if (manual !== null) {
-            m.totalDistance = parseFloat(manual) || 0;
-            calculateFare(m);
-            renderMeterDataToUI();
-            saveDataToStorage();
-            showToast("تم تحديث المسافة المسجلة يدوياً");
-        }
-    }
-
-    function generateReceipt(m) {
-        const body = document.getElementById('receiptBody');
-        const waitingMinutes = m.totalWaitSeconds / 60;
-        const totalDurationCost = m.totalDurationMinutes * m.durationPrice;
-        const waitCost = waitingMinutes * m.waitPrice;
-
-        let itemsDetailsHTML = '';
-        if (m.tripType === 'makhsoos') {
-            const distCost = m.totalDistance * m.kmPrice;
-            itemsDetailsHTML = `
-                <div class="receipt-line"><span class="label">فتحة العداد الثابتة</span><span class="value">${m.bandira.toFixed(2)} ج</span></div>
-                <div class="receipt-line"><span class="label">حساب المسافة الكلي</span><span class="value">${distCost.toFixed(2)} ج</span></div>
-                <div class="receipt-line"><span class="label">زمن الرحلة الكلي (${m.totalDurationMinutes.toFixed(0)} د)</span><span class="value">${totalDurationCost.toFixed(2)} ج</span></div>
-                <div class="receipt-line"><span class="label">حساب الانتظار والتوقف</span><span class="value">${waitCost.toFixed(2)} ج</span></div>
-            `;
-        } else {
-            itemsDetailsHTML = `<div style="font-weight:700; font-size:12px; margin-bottom:6px; color:var(--primary);">تصفية حساب أفراد المشترك التفصيلية:</div>`;
-            m.passengersData.forEach(p => {
-                itemsDetailsHTML += `<div class="receipt-line"><span class="label">👈 ${p.name}</span><span class="value">${p.individualFare.toFixed(2)} ج</span></div>`;
-            });
-        }
-
-        body.innerHTML = `
-            <div class="receipt-line"><span class="label">رقم العداد</span><span class="value">${m.id}</span></div>
-            <div class="receipt-line"><span class="label">كود المشاركة</span><span class="value">${m.shareCode}</span></div>
-            <div class="receipt-line"><span class="label">نوع المشوار النهائي</span><span class="value">${m.tripType === 'makhsoos' ? 'مخصوص' : 'أفراد منفصل'}</span></div>
-            <div class="receipt-divider"></div>
-            ${itemsDetailsHTML}
-            <div class="receipt-divider"></div>
-            <div class="receipt-line receipt-total"><span>إجمالي إيراد السواق الكلي</span><span>${m.finalFare.toFixed(2)} ج</span></div>
-        `;
-        document.getElementById('receiptModal').style.display = 'flex';
-    }
-
-    function shareWhatsApp() {
-        const text = `🚖 فاتورة رحلة من تطبيق "توقع أجرتك"\nالإجمالي المطلوب: ${document.getElementById('totalFareDisplay').innerText}\nشكراً لاستخدامك العداد الذكي المطور!`;
-        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`);
-    }
-
-    function closeReceipt() {
-        document.getElementById('receiptModal').style.display = 'none';
-    }
-
-    function saveDataToStorage() {
-        localStorage.setItem('smart_meter_data', JSON.stringify(meters));
-    }
-
-    function loadDataFromStorage() {
-        const saved = localStorage.getItem('smart_meter_data');
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                for(let id in parsed) { meters[id] = parsed[id]; }
-            } catch(e) { console.error(e); }
-        }
-    }
-
-    function saveTripToHistory(m) {
-        let history = JSON.parse(localStorage.getItem('smart_meter_history')) || [];
-        const tripRecord = {
-            id: m.shareCode || Math.floor(100000 + Math.random() * 900000).toString(),
-            meterId: m.id,
-            date: new Date().toLocaleString('ar-EG'),
-            tripType: m.tripType,
-            distance: m.totalDistance,
-            duration: m.totalDurationMinutes,
-            wait: m.totalWaitSeconds / 60,
-            fare: m.finalFare,
-            savedPath: m.pathCoords 
-        };
-        history.unshift(tripRecord);
-        localStorage.setItem('smart_meter_history', JSON.stringify(history));
-    }
-
-    function renderHistory() {
-        const historyList = document.getElementById('historyList');
-        const history = JSON.parse(localStorage.getItem('smart_meter_history')) || [];
-
-        if (history.length === 0) {
-            historyList.innerHTML = `<div class="empty-state">لا يوجد رحلات مسجلة في السجل حتى الآن.</div>`;
-            return;
-        }
-
-        historyList.innerHTML = history.map((item, index) => `
-            <div class="history-item">
-                <div class="history-header">
-                    <span>🗓️ ${item.date}</span>
-                    <span style="color: var(--primary)">كود: ${item.id}</span>
-                </div>
-                <div class="history-details">
-                    <div>العداد المستخدم: عداد ${item.meterId}</div>
-                    <div>نوع الرحلة: ${item.tripType === 'makhsoos' ? 'مخصوص' : 'أفراد'}</div>
-                    <div>المسافة المقطوعة: ${item.distance.toFixed(2)} كم</div>
-                    <div>مدة المشوار الكلية: ${item.duration.toFixed(0)} دقيقة</div>
-                    <div>زمن الانتظار: ${item.wait.toFixed(0)} دقيقة</div>
-                </div>
-                <div class="history-fare">
-                     الإجمالي: ${item.fare.toFixed(2)} ج
-                </div>
-                <div id="histMap_${index}" class="history-map"></div>
-            </div>
-        `).join('');
-
-        history.forEach((item, index) => {
-            const mapId = `histMap_${index}`;
-            let centerCoords = [30.0444, 31.2357]; 
-            
-            if (item.savedPath && item.savedPath.length > 0) {
-                centerCoords = [item.savedPath[0].lat, item.savedPath[0].lng];
-            }
-
-            let hMap = L.map(mapId, {
-                zoomControl: false,
-                dragging: true,
-                scrollWheelZoom: false,
-                touchZoom: true
-            }).setView(centerCoords, 14);
-
+  function renderDriverHistory() {
+    var list = document.getElementById('driverHistoryList');
+    try {
+      var history = JSON.parse(localStorage.getItem('smart_meter_history')) || [];
+      if (!history.length) { list.innerHTML = '<div class="empty-state">لا توجد رحلات مسجلة</div>'; return; }
+      list.innerHTML = history.map(function(item, index) {
+        return '<div class="history-item"><div class="history-header"><span>🗓️ ' + item.date + '</span><span style="color:var(--meter-primary)">' + item.id + '</span></div><div class="history-details"><div>عداد ' + item.meterId + '</div><div>' + (item.tripType === 'makhsoos' ? 'مخصوص' : 'أفراد') + '</div><div>' + (item.distance || 0).toFixed(2) + ' كم</div><div>' + (item.duration || 0).toFixed(0) + ' دقيقة</div></div><div class="history-fare">الإجمالي: ' + (item.fare || 0).toFixed(2) + ' ج</div><div id="histMap_' + index + '" class="history-map"></div></div>';
+      }).join('');
+      setTimeout(function() {
+        history.forEach(function(item, index) {
+          var mapId = 'histMap_' + index;
+          var center = [30.0444, 31.2357];
+          if (item.savedPath && item.savedPath.length > 0) center = [item.savedPath[0].lat, item.savedPath[0].lng];
+          try {
+            var hMap = L.map(mapId, { zoomControl: false, dragging: true, scrollWheelZoom: false, touchZoom: true }).setView(center, 14);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(hMap);
-
             if (item.savedPath && item.savedPath.length > 0) {
-                const points = item.savedPath.map(p => [p.lat, p.lng]);
-                L.polyline(points, {color: '#e11d48', weight: 4, dashArray: '5, 5'}).addTo(hMap);
-                L.circleMarker(points[0], {radius: 6, color: '#10b981', fillColor: '#10b981', fillOpacity: 1}).addTo(hMap);
-                L.circleMarker(points[points.length - 1], {radius: 6, color: '#ef4444', fillColor: '#ef4444', fillOpacity: 1}).addTo(hMap);
-                
-                try {
-                    hMap.fitBounds(L.polyline(points).getBounds(), {padding: [15, 15]});
-                } catch(e) { console.error(e); }
+              var points = item.savedPath.map(function(p) { return [p.lat, p.lng]; });
+              L.polyline(points, {color: '#e11d48', weight: 3, dashArray: '4, 4'}).addTo(hMap);
+              L.circleMarker(points[0], {radius: 5, color: '#10b981', fillColor: '#10b981', fillOpacity: 1}).addTo(hMap);
+              L.circleMarker(points[points.length-1], {radius: 5, color: '#ef4444', fillColor: '#ef4444', fillOpacity: 1}).addTo(hMap);
+              try { hMap.fitBounds(L.polyline(points).getBounds(), {padding: [10, 10]}); } catch(e) {}
             }
+          } catch(e) { console.error(e); }
         });
+      }, 200);
+    } catch(e) { list.innerHTML = '<div class="empty-state">خطأ في تحميل السجل</div>'; }
+  }
+  window.renderDriverHistory = renderDriverHistory;
+
+  function clearDriverHistory() {
+    if (confirm('هل أنت متأكد من حذف السجل بالكامل؟')) { localStorage.removeItem('smart_meter_history'); renderDriverHistory(); showToast('تم مسح السجل'); }
+  }
+  window.clearDriverHistory = clearDriverHistory;
+
+  async function saveTripToSupabase(m) {
+    if (!supabase || !currentUser) return;
+    try {
+      await supabase.from('trips').insert({ driver_id: currentUser.id, status: 'completed', classification: m.tripType === 'makhsoos' ? 'private' : 'shared', distance_km: m.totalDistance, duration_min: m.totalDurationMinutes, wait_minutes: m.totalWaitSeconds / 60, total_fare: m.finalFare, meter_start_fee: m.bandira, km_price_used: m.kmPrice, wait_price_used: m.waitPrice, join_code: m.shareCode, passenger_count: m.passengerCount, passenger_breakdown: JSON.stringify(m.passengersData || []) });
+    } catch (e) { console.error('Save trip error:', e); }
+  }
+  // ======================== PASSENGER ========================
+  var trackInterval = null;
+  var trackMap = null;
+
+  window.trackTrip = async function() {
+    var code = document.getElementById('track-code').value.trim();
+    if (!code || code.length < 4) { showToast('يرجى إدخال كود صحيح'); return; }
+    if (!supabase) { showToast('خدمة التتبع غير متاحة'); return; }
+    var statusEl = document.getElementById('track-status');
+    statusEl.innerHTML = '<div class="spinner"></div><p style="color:var(--text-muted);font-size:13px;">جاري البحث...</p>';
+    try {
+      var { data: trips, error } = await supabase.from('trips').select('*, driver_id').eq('join_code', code).order('created_at', { ascending: false }).limit(1);
+      if (error || !trips || !trips.length) { statusEl.innerHTML = '<p style="color:var(--error);font-size:14px;">❌ لا توجد رحلة بهذا الكود</p>'; return; }
+      var trip = trips[0];
+      var driverName = 'سائق';
+      if (trip.driver_id) {
+        var { data: driver } = await supabase.from('profiles').select('full_name').eq('id', trip.driver_id).single();
+        if (driver) driverName = driver.full_name || 'سائق';
+      }
+      document.getElementById('track-fare-display').textContent = (trip.total_fare || 0).toFixed(2) + ' ج';
+      document.getElementById('track-status-val').textContent = trip.status === 'started' ? 'جارية 🟢' : trip.status === 'completed' ? 'مكتملة ✅' : trip.status;
+      document.getElementById('track-driver-name').textContent = driverName;
+      document.getElementById('track-distance').textContent = (trip.distance_km || 0).toFixed(2) + ' كم';
+      document.getElementById('track-duration').textContent = (trip.duration_min || 0).toFixed(0) + ' د';
+      document.getElementById('track-info').style.display = 'block';
+      document.getElementById('track-map-card').style.display = 'block';
+      statusEl.innerHTML = '<p style="color:var(--success);font-size:14px;">✅ تم العثور على الرحلة</p>';
+      if (trackMap) { trackMap.remove(); trackMap = null; }
+      try {
+        trackMap = L.map('track-map').setView([30.0444, 31.2357], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(trackMap);
+        setTimeout(function() { if (trackMap) trackMap.invalidateSize(); }, 300);
+      } catch(e) { console.error(e); }
+      if (trip.status === 'started') {
+        if (trackInterval) clearInterval(trackInterval);
+      } else { if (trackInterval) { clearInterval(trackInterval); trackInterval = null; } }
+    } catch (e) { console.error(e); document.getElementById('track-status').innerHTML = '<p style="color:var(--error);font-size:14px;">❌ حدث خطأ</p>'; }
+  };
+
+  window.requestRide = async function() {
+    if (!supabase || !currentUser) { showToast('يجب تسجيل الدخول أولاً'); return; }
+    var pickup = document.getElementById('request-pickup').value.trim();
+    var type = document.getElementById('request-type').value;
+    var passengers = parseInt(document.getElementById('request-passengers').value) || 1;
+    if (!pickup) { showAlert('request-alert', 'يرجى إدخال موقع pickup'); return; }
+    document.getElementById('request-btn').disabled = true;
+    document.getElementById('request-loading').classList.remove('hidden-el');
+    try {
+      var { error } = await supabase.from('ride_requests').insert({ passenger_id: currentUser.id, passenger_count: passengers, classification: type === 'private' ? 'private' : 'shared', status: 'pending', adult_count: passengers, child_count: 0 });
+      if (error) { showAlert('request-alert', error.message); document.getElementById('request-btn').disabled = false; document.getElementById('request-loading').classList.add('hidden-el'); return; }
+      showAlert('request-alert', 'تم إرسال طلب الرحلة! سيتم إشعار السائقين القريبين', 'success');
+    } catch (e) { showAlert('request-alert', e.message); }
+    document.getElementById('request-btn').disabled = false;
+    document.getElementById('request-loading').classList.add('hidden-el');
+  };
+
+  window.getCurrentLocation = function() {
+    if (!navigator.geolocation) { showToast('GPS غير متاح'); return; }
+    navigator.geolocation.getCurrentPosition(function(pos) {
+      document.getElementById('request-pickup').value = pos.coords.latitude.toFixed(5) + ', ' + pos.coords.longitude.toFixed(5);
+      showToast('تم تحديد الموقع الحالي');
+    }, function() { showToast('فشل تحديد الموقع'); });
+  };
+
+  async function loadPassengerHistory() {
+    if (!supabase || !currentUser) return;
+    var list = document.getElementById('passengerHistoryList');
+    try {
+      var { data: trips, error } = await supabase.from('trips').select('*').eq('passenger_id', currentUser.id).order('created_at', { ascending: false }).limit(20);
+      if (error || !trips || !trips.length) { list.innerHTML = '<div class="empty-state">لا توجد رحلات سابقة</div>'; return; }
+      list.innerHTML = trips.map(function(t) {
+        return '<div class="history-item"><div class="history-header"><span>🗓️ ' + new Date(t.created_at).toLocaleDateString('ar-EG') + '</span><span style="color:var(--meter-primary)">' + (t.join_code || '-') + '</span></div><div class="history-details"><div>' + (t.classification === 'private' ? 'مخصوص' : 'أفراد') + '</div><div>' + (t.distance_km || 0).toFixed(2) + ' كم</div><div>' + (t.duration_min || 0).toFixed(0) + ' د</div><div>' + (t.passenger_count || 1) + ' راكب</div></div><div class="history-fare">' + (t.total_fare || 0).toFixed(2) + ' ج</div></div>';
+      }).join('');
+    } catch (e) { list.innerHTML = '<div class="empty-state">خطأ في التحميل</div>'; }
+  }
+  window.loadPassengerHistory = loadPassengerHistory;
+
+  function handleGPSError(err) { console.warn('GPS error:', err.message); }
+
+  // ======================== PASSWORD STRENGTH ========================
+  document.addEventListener('DOMContentLoaded', function() {
+    var np = document.getElementById('new-password');
+    var cp = document.getElementById('confirm-password');
+    var pe = document.getElementById('password-error');
+    var sb = document.getElementById('password-strength');
+    if (np) {
+      np.addEventListener('input', function() {
+        var len = this.value.length;
+        if (len === 0) { sb.style.width = '0'; sb.style.background = ''; return; }
+        sb.style.width = '100%';
+        if (len < 6) sb.style.background = '#ef4444';
+        else if (len < 10) sb.style.background = '#f59e0b';
+        else sb.style.background = '#22c55e';
+      });
+      np.addEventListener('keydown', function(e) { if (e.key === 'Enter' && cp) cp.focus(); });
+    }
+    if (cp) {
+      cp.addEventListener('input', function() {
+        if (this.value.length > 0 && this.value !== np.value) { pe.textContent = 'كلمة السر غير متطابقة'; pe.style.display = 'block'; }
+        else { pe.style.display = 'none'; }
+      });
+      cp.addEventListener('keydown', function(e) { if (e.key === 'Enter') handlePasswordReset(); });
     }
 
-    function clearAllHistory() {
-        if (confirm("هل أنت متأكد من رغبتك في حذف سجل الفواتير بالكامل؟")) {
-            localStorage.removeItem('smart_meter_history');
-            renderHistory();
-            showToast("تم مسح السجل بالكامل بنجاح");
+    // Register form password strength
+    var rp = document.getElementById('reg-password');
+    var rc = document.getElementById('reg-confirm');
+    var rs = document.getElementById('reg-password-strength');
+    var re = document.getElementById('reg-password-error');
+    if (rp) {
+      rp.addEventListener('input', function() {
+        var len = this.value.length;
+        if (len === 0) { rs.style.width = '0'; rs.style.background = ''; return; }
+        rs.style.width = '100%';
+        if (len < 6) rs.style.background = '#ef4444';
+        else if (len < 10) rs.style.background = '#f59e0b';
+        else rs.style.background = '#22c55e';
+      });
+    }
+    if (rc) {
+      rc.addEventListener('input', function() {
+        if (this.value.length > 0 && this.value !== rp.value) { re.textContent = 'كلمة السر غير متطابقة'; re.style.display = 'block'; }
+        else { re.style.display = 'none'; }
+      });
+    }
+  });
+
+  // ======================== INIT ========================
+  var sessionInitialized = false;
+  async function init() {
+    // Check auth redirect first
+    var handled = await handleAuthRedirect();
+    if (handled) return;
+    // Listen for auth state changes
+    if (supabase) {
+      supabase.auth.onAuthStateChanged(function(event, session) {
+        if (event === 'INITIAL_SESSION') {
+          if (session && !sessionInitialized) { sessionInitialized = true; currentUser = session.user; initSession(); }
         }
+        if (event === 'SIGNED_IN' && session) {
+          sessionInitialized = true;
+          currentUser = session.user;
+          initSession();
+        }
+        if (event === 'SIGNED_OUT') {
+          sessionInitialized = false;
+          currentUser = null; currentProfile = null;
+          showLandingPage();
+        }
+      });
     }
+    // Try to get existing session
+    initSession();
+  }
 
-    function showToast(msg) {
-        const t = document.getElementById('toast');
-        t.innerText = msg; t.style.display = 'block';
-        setTimeout(() => t.style.display = 'none', 3000);
-    }
-
-    function handleGPSError(err) { console.warn("إشارة الـ GPS غير مستقرة: " + err.message); }
+  init();
+})();
 </script>
 </body>
 </html>
