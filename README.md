@@ -6,10 +6,11 @@
 The app includes Supabase production hardening assets:
 
 - `supabase/migrations/20260627000000_harden_trip_security.sql` adds trip audit tables, live location tables, driver applications, indexes, and RLS policies.
-- `supabase/functions/trip-events/index.ts` centralizes start/sync/complete trip writes through a Supabase Edge Function instead of writing trip state directly from the browser.
+- `supabase/functions/trip-events/index.ts` centralizes start/sync/complete trip writes through a Supabase Edge Function instead of writing trip state directly from the browser, and recalculates the fare server-side from the submitted meter state.
+- `supabase/functions/track-trip/index.ts` exposes limited trip tracking data and live route points by tracking code without opening broad table reads.
 
 Deploy order:
 
 1. Apply the migration in Supabase SQL editor or via the Supabase CLI.
-2. Deploy the Edge Function named `trip-events`.
+2. Deploy the Edge Functions named `trip-events` and `track-trip`.
 3. Ensure the Edge Function has access to `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.

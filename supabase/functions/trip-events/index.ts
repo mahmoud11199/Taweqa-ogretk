@@ -21,6 +21,50 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
+function parsePassengers(value: unknown): Array<Record<string, unknown>> {
+  return Array.isArray(value) ? value as Array<Record<string, unknown>> : [];
+}
+
+function calculateServerFare(meter: Record<string, unknown>): number {
+  const tripType = meter.tripType === 'makhsoos' ? 'makhsoos' : 'afrad';
+  const bandira = clampNumber(meter.bandira, 0, 1000, 5);
+  const minFare = clampNumber(meter.minFare, 0, 1000, 10);
+  const totalDistance = clampNumber(meter.totalDistance, 0, 1000, 0);
+  const totalDurationMinutes = clampNumber(meter.totalDurationMinutes, 0, 1440, 0);
+  const totalWaitMinutes = clampNumber(Number(meter.totalWaitSeconds) / 60, 0, 1440, 0);
+  const kmPrice = clampNumber(meter.kmPrice, 1, 50, 5);
+  const durationPrice = clampNumber(meter.durationPrice, 0, 10, 0.5);
+  const waitPrice = clampNumber(meter.waitPrice, 0, 20, 1);
+
+  if (tripType === 'makhsoos') {
+    const total = bandira + (totalDistance * kmPrice) +
+      (totalDurationMinutes * durationPrice) + (totalWaitMinutes * waitPrice);
+    return clampNumber(Math.max(minFare, total), 0, 100000, 0);
+  }
+
+  const passengers = parsePassengers(meter.passengersData);
+  const totalRevenue = passengers.reduce((sum, passenger) => {
+    const startDistance = clampNumber(passenger.startDistance, 0, 1000, 0);
+    const passengerDistance = Math.max(0, totalDistance - startDistance);
+    const isInside = passenger.isInside !== false;
+    const isInitial = passenger.isInitial !== false;
+    if (!isInside) return sum + clampNumber(passenger.individualFare, 0, 100000, 0);
+    if (!isInitial) return sum + (passengerDistance * kmPrice);
+
+    const passengerDuration = Math.max(
+      0,
+      totalDurationMinutes - clampNumber(passenger.startDuration, 0, 1440, 0),
+    );
+    const passengerWait = Math.max(
+      0,
+      totalWaitMinutes - clampNumber(passenger.startWait, 0, 1440, 0),
+    );
+    return sum + bandira + (passengerDistance * kmPrice) +
+      (passengerDuration * durationPrice) + (passengerWait * waitPrice);
+  }, 0);
+  return clampNumber(totalRevenue, 0, 100000, 0);
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
@@ -54,6 +98,7 @@ Deno.serve(async (req) => {
   const userId = authData.user.id;
   const meter = body.meter;
   const status = body.action === 'complete' ? 'completed' : 'started';
+  const serverFare = calculateServerFare(meter);
   const payload = {
     driver_id: userId,
     status,
@@ -61,7 +106,7 @@ Deno.serve(async (req) => {
     distance_km: clampNumber(meter.totalDistance, 0, 1000, 0),
     duration_min: clampNumber(meter.totalDurationMinutes, 0, 1440, 0),
     wait_minutes: clampNumber(Number(meter.totalWaitSeconds) / 60, 0, 1440, 0),
-    total_fare: clampNumber(meter.finalFare, 0, 100000, 0),
+    total_fare: serverFare,
     meter_start_fee: clampNumber(meter.bandira, 0, 1000, 5),
     km_price_used: clampNumber(meter.kmPrice, 1, 50, 5),
     wait_price_used: clampNumber(meter.waitPrice, 0, 20, 1),
@@ -96,7 +141,7 @@ Deno.serve(async (req) => {
     trip_id: String(tripId),
     actor_id: userId,
     event_type: body.action === 'complete' ? 'completed' : body.action === 'start' ? 'started' : 'location',
-    payload: { meter, location: body.location || null },
+    payload: { meter, serverFare, location: body.location || null },
   });
 
   if (body.location?.lat != null && body.location?.lng != null) {
