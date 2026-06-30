@@ -262,6 +262,31 @@
     .receipt-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px 16px; }
     .receipt-actions .btn { justify-content: center; }
     .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--success); color: white; padding: 10px 18px; border-radius: 12px; font-weight: 700; z-index: 1000; display: none; font-size: 13px; white-space: nowrap; }
+    .request-card { background: var(--meter-card); border: 1px solid var(--meter-border); border-radius: 14px; padding: 14px; margin-bottom: 10px; }
+    .request-card .req-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .request-card .req-header .req-type { font-size: 11px; background: var(--primary); padding: 3px 10px; border-radius: 20px; font-weight: 700; }
+    .request-card .req-info { font-size: 13px; color: var(--meter-muted); margin-bottom: 6px; }
+    .request-card .req-info strong { color: var(--text); }
+    .request-card .req-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .request-card .req-actions .btn { flex: 1; justify-content: center; padding: 8px 14px; font-size: 13px; }
+    .req-status-card { background: var(--meter-card); border-radius: 14px; padding: 20px; text-align: center; border: 1px solid var(--meter-border); }
+    .req-status-card .req-status-icon { font-size: 48px; margin-bottom: 10px; }
+    .req-status-card .req-status-text { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+    .req-status-card .req-status-sub { font-size: 13px; color: var(--meter-muted); }
+    .req-status-card .req-status-detail { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--meter-border); text-align: right; }
+    .req-status-card .req-status-detail .row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+    .req-status-card .req-status-detail .row .lbl { color: var(--meter-muted); }
+    .req-status-card .req-status-detail .row .val { font-weight: 700; }
+    .req-badge { font-size: 12px; padding: 4px 12px; border-radius: 20px; font-weight: 700; }
+    .req-badge.pending { background: #f59e0b33; color: #f59e0b; }
+    .req-badge.accepted { background: #22c55e33; color: #22c55e; }
+    .req-badge.rejected { background: #ef444433; color: #ef4444; }
+    .req-badge.cancelled { background: #6b728033; color: #9ca3af; }
+    .driver-request-item { background: var(--meter-card); border-radius: 14px; padding: 14px; margin-bottom: 10px; border: 1px solid var(--meter-border); }
+    .driver-request-item .top { display: flex; justify-content: space-between; align-items: start; margin-bottom: 6px; }
+    .driver-request-item .top .name { font-weight: 700; font-size: 15px; }
+    .driver-request-item .info { font-size: 12px; color: var(--meter-muted); margin-bottom: 4px; }
+    .driver-request-item .info i { width: 16px; color: var(--meter-primary); }
     #loading-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
     #loading-screen.hidden { display: none; }
     @media (max-width: 900px) { .hero h1 { font-size: 34px; } .hero { padding: 60px 20px 40px; } .stats-grid { grid-template-columns: repeat(2, 1fr); } .stat-card .stat-value { font-size: 26px; } }
@@ -403,6 +428,7 @@
   </nav>
   <div class="app-nav">
     <button class="tab-btn active" onclick="switchDriverTab('meter', this)"><span class="tab-icon">&#x1F4DF;</span>العداد</button>
+    <button class="tab-btn" onclick="switchDriverTab('requests', this);setTimeout(loadDriverRequests,100)"><span class="tab-icon">&#x1F4E8;</span>الطلبات</button>
     <button class="tab-btn" onclick="switchDriverTab('history', this);setTimeout(renderDriverHistory,100)"><span class="tab-icon">&#x1F4DC;</span>السجل</button>
     <button class="tab-btn" onclick="switchDriverTab('profile', this)"><span class="tab-icon">&#x1F464;</span>حسابي</button>
   </div>
@@ -444,6 +470,11 @@
       </div>
     </div>
     <div class="card"><div id="map"></div></div>
+  </div>
+
+  <div id="driver-requests-section" style="display:none">
+    <div class="meter-header"><h1>طلبات الركاب</h1><p>طلبات رحلات جديدة من الركاب</p></div>
+    <div class="card"><div id="driverRequestsList"><div class="empty-state">لا توجد طلبات حالياً</div></div></div>
   </div>
 
   <div id="driver-history-section" style="display:none">
@@ -510,6 +541,34 @@
         <div class="field"><label>عدد الركاب</label><input type="number" id="request-passengers" value="1" min="1" max="10"></div>
         <button class="btn btn-accent" id="request-btn" onclick="requestRide()" style="width:100%;justify-content:center;"><i class="fas fa-paper-plane"></i> إرسال طلب رحلة</button>
         <div id="request-loading" class="hidden-el" style="text-align:center;"><div class="loader-dots"><span></span><span></span><span></span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="passenger-request-status-section" style="display:none">
+    <div class="meter-header"><h1>حالة الطلب</h1><p>تابع حالة طلب الرحلة</p></div>
+    <div class="card">
+      <div class="req-status-card" id="requestStatusCard">
+        <div class="req-status-icon" id="reqStatusIcon">&#x23F3;</div>
+        <div class="req-status-text" id="reqStatusText">جاري البحث عن سائق...</div>
+        <div class="req-status-sub" id="reqStatusSub">سيتم إشعارك عند قبول طلبك</div>
+        <div class="req-status-detail" id="reqStatusDetail">
+          <div class="row"><span class="lbl">نوع الرحلة</span><span class="val" id="reqTypeDisplay">-</span></div>
+          <div class="row"><span class="lbl">عدد الركاب</span><span class="val" id="reqPassengersDisplay">-</span></div>
+          <div class="row"><span class="lbl">الموقع</span><span class="val" id="reqPickupDisplay">-</span></div>
+        </div>
+        <button class="btn btn-danger btn-sm" style="margin-top:14px;width:100%;justify-content:center;display:none;" id="cancelRequestBtn" onclick="cancelPassengerRequest()"><i class="fas fa-times"></i> إلغاء الطلب</button>
+      </div>
+      <div id="requestAcceptedContent" style="display:none;text-align:center;">
+        <div style="font-size:56px;margin:10px 0;">&#x1F389;</div>
+        <h3 style="margin-bottom:6px;">تم قبول طلبك!</h3>
+        <p style="color:var(--meter-muted);font-size:14px;margin-bottom:14px;">السائق في طريقه إليك</p>
+        <div class="req-status-detail" style="text-align:right;">
+          <div class="row"><span class="lbl">اسم السائق</span><span class="val" id="acceptedDriverName">-</span></div>
+          <div class="row"><span class="lbl">كود التتبع</span><span class="val" id="acceptedTripCode">-</span></div>
+          <div class="row"><span class="lbl">حالة الرحلة</span><span class="val" id="acceptedTripStatus">-</span></div>
+        </div>
+        <button class="btn btn-primary" style="margin-top:14px;width:100%;justify-content:center;" onclick="switchPassengerTab('track', document.querySelector('#passenger-app .tab-btn'))"><i class="fas fa-map-marker-alt"></i> تتبع الرحلة</button>
       </div>
     </div>
   </div>
@@ -927,7 +986,7 @@
   }
 
   function switchDriverTab(tab, btn) {
-    ['meter','history','profile'].forEach(function(t) {
+    ['meter','requests','history','profile'].forEach(function(t) {
       var el = document.getElementById('driver-' + t + '-section');
       if (el) el.style.display = t === tab ? 'block' : 'none';
     });
@@ -940,7 +999,7 @@
   window.switchDriverTab = switchDriverTab;
 
   function switchPassengerTab(tab, btn) {
-    ['track','request','history','profile'].forEach(function(t) {
+    ['track','request','request-status','history','profile'].forEach(function(t) {
       var el = document.getElementById('passenger-' + t + '-section');
       if (el) el.style.display = t === tab ? 'block' : 'none';
     });
@@ -1475,18 +1534,128 @@
   window.requestRide = async function() {
     if (!supabase || !currentUser) { showToast('يجب تسجيل الدخول أولاً'); return; }
     var pickup = document.getElementById('request-pickup').value.trim();
+    var destination = document.getElementById('request-destination').value.trim();
     var type = document.getElementById('request-type').value;
-	    var passengers = Math.round(clampNumber(document.getElementById('request-passengers').value, 1, 10, 1));
+    var passengers = Math.round(clampNumber(document.getElementById('request-passengers').value, 1, 10, 1));
     if (!pickup) { showAlert('request-alert', 'يرجى إدخال موقع pickup'); return; }
     document.getElementById('request-btn').disabled = true;
     document.getElementById('request-loading').classList.remove('hidden-el');
     try {
-      var { error } = await supabase.from('ride_requests').insert({ passenger_id: currentUser.id, passenger_count: passengers, classification: type === 'private' ? 'private' : 'shared', status: 'pending', adult_count: passengers, child_count: 0 });
+      var payload = { passenger_id: currentUser.id, passenger_count: passengers, classification: type === 'private' ? 'private' : 'shared', status: 'pending', adult_count: passengers, child_count: 0, pickup_address: pickup };
+      if (destination) payload.destination_address = destination;
+      if (navigator.geolocation) {
+        try {
+          var pos = await new Promise(function(res, rej) { navigator.geolocation.getCurrentPosition(res, rej, { timeout: 5000 }); });
+          payload.pickup_lat = pos.coords.latitude;
+          payload.pickup_lng = pos.coords.longitude;
+        } catch (e) {}
+      }
+      var { data, error } = await supabase.from('ride_requests').insert(payload).select('id').single();
       if (error) { showAlert('request-alert', error.message); document.getElementById('request-btn').disabled = false; document.getElementById('request-loading').classList.add('hidden-el'); return; }
-      showAlert('request-alert', 'تم إرسال طلب الرحلة! سيتم إشعار السائقين القريبين', 'success');
+      showAlert('request-alert', 'تم إرسال الطلب! جاري البحث عن سائق...', 'success');
+      currentPassengerRequestId = data.id;
+      showPassengerRequestStatus(data.id, payload);
     } catch (e) { showAlert('request-alert', e.message); }
     document.getElementById('request-btn').disabled = false;
     document.getElementById('request-loading').classList.add('hidden-el');
+  };
+
+  var currentPassengerRequestId = null;
+  var passengerRequestPollTimer = null;
+
+  function showPassengerRequestStatus(requestId, payload) {
+    document.getElementById('reqTypeDisplay').textContent = payload.classification === 'private' ? 'مخصوص' : 'أفراد';
+    document.getElementById('reqPassengersDisplay').textContent = payload.passenger_count + ' راكب';
+    document.getElementById('reqPickupDisplay').textContent = payload.pickup_address || '-';
+    document.getElementById('reqStatusIcon').textContent = '\u23F3';
+    document.getElementById('reqStatusText').textContent = 'جاري البحث عن سائق...';
+    document.getElementById('reqStatusSub').textContent = 'سيتم إشعارك عند قبول طلبك';
+    document.getElementById('requestAcceptedContent').style.display = 'none';
+    document.getElementById('requestStatusCard').style.display = 'block';
+    document.getElementById('cancelRequestBtn').style.display = 'block';
+    switchPassengerTab('request-status', document.querySelector('#passenger-app .tab-btn'));
+    if (passengerRequestPollTimer) clearInterval(passengerRequestPollTimer);
+    passengerRequestPollTimer = setInterval(function() { pollPassengerRequest(requestId); }, 3000);
+  }
+
+  async function pollPassengerRequest(requestId) {
+    if (!supabase || !requestId) return;
+    try {
+      var { data, error } = await supabase.from('ride_requests').select('id, status, driver_id, responded_at').eq('id', requestId).single();
+      if (error || !data) { clearInterval(passengerRequestPollTimer); return; }
+      if (data.status === 'accepted') {
+        clearInterval(passengerRequestPollTimer);
+        document.getElementById('reqStatusIcon').textContent = '\u2705';
+        document.getElementById('reqStatusText').textContent = 'تم قبول طلبك!';
+        document.getElementById('reqStatusSub').textContent = 'السائق في طريقه إليك';
+        document.getElementById('cancelRequestBtn').style.display = 'none';
+        document.getElementById('requestAcceptedContent').style.display = 'block';
+        document.getElementById('requestStatusCard').style.display = 'none';
+        if (data.driver_id) {
+          var { data: driverData } = await supabase.from('profiles').select('full_name').eq('id', data.driver_id).single();
+          document.getElementById('acceptedDriverName').textContent = driverData?.full_name || 'سائق';
+        }
+        var { data: tripData } = await supabase.from('trips').select('join_code, status').eq('passenger_id', currentUser.id).order('created_at', { ascending: false }).limit(1).single();
+        if (tripData) {
+          document.getElementById('acceptedTripCode').textContent = tripData.join_code || '-';
+          document.getElementById('acceptedTripStatus').textContent = tripData.status === 'started' ? 'جارية' : tripData.status;
+        }
+      } else if (data.status === 'rejected' || data.status === 'cancelled') {
+        clearInterval(passengerRequestPollTimer);
+        document.getElementById('reqStatusIcon').textContent = '\u274C';
+        document.getElementById('reqStatusText').textContent = 'تم رفض الطلب';
+        document.getElementById('reqStatusSub').textContent = 'يمكنك إرسال طلب جديد';
+        document.getElementById('cancelRequestBtn').style.display = 'none';
+      }
+    } catch (e) { console.error(e); }
+  }
+
+  window.cancelPassengerRequest = async function() {
+    if (!supabase || !currentPassengerRequestId) return;
+    if (!confirm('هل أنت متأكد من إلغاء الطلب؟')) return;
+    try {
+      await supabase.from('ride_requests').update({ status: 'cancelled' }).eq('id', currentPassengerRequestId);
+      clearInterval(passengerRequestPollTimer);
+      showToast('تم إلغاء الطلب');
+      switchPassengerTab('request', document.querySelector('#passenger-app .tab-btn'));
+    } catch (e) { showToast('فشل الإلغاء'); }
+  };
+
+  window.loadDriverRequests = async function() {
+    if (!supabase || !currentUser) return;
+    var list = document.getElementById('driverRequestsList');
+    try {
+      var { data: requests, error } = await supabase.from('ride_requests').select('id, passenger_id, passenger_count, classification, status, pickup_address, destination_address, pickup_lat, pickup_lng, adult_count, child_count, created_at').eq('status', 'pending').is('driver_id', null).order('created_at', { ascending: false }).limit(20);
+      if (error || !requests || !requests.length) { list.innerHTML = '<div class="empty-state">لا توجد طلبات حالياً</div>'; return; }
+      list.innerHTML = requests.map(function(r) {
+        var typeText = r.classification === 'private' ? 'مخصوص' : 'أفراد';
+        return '<div class="driver-request-item"><div class="top"><span class="name"><i class="fas fa-user"></i> راكب</span><span class="req-badge pending">قيد الانتظار</span></div><div class="info"><i class="fas fa-tag"></i> ' + typeText + ' | <i class="fas fa-users"></i> ' + (r.passenger_count || 1) + ' راكب</div><div class="info"><i class="fas fa-map-pin"></i> ' + escapeHTML(r.pickup_address || 'بدون موقع') + '</div>' + (r.destination_address ? '<div class="info"><i class="fas fa-flag"></i> ' + escapeHTML(r.destination_address) + '</div>' : '') + '<div class="info"><i class="fas fa-clock"></i> ' + new Date(r.created_at).toLocaleString('ar-EG') + '</div><div class="req-actions"><button class="btn btn-success btn-sm" onclick="acceptRequest(\'' + r.id + '\')"><i class="fas fa-check"></i> قبول</button><button class="btn btn-danger btn-sm" onclick="rejectRequest(\'' + r.id + '\')"><i class="fas fa-times"></i> رفض</button></div></div>';
+      }).join('');
+    } catch (e) { list.innerHTML = '<div class="empty-state">خطأ في تحميل الطلبات</div>'; console.error(e); }
+  };
+
+  window.acceptRequest = async function(requestId) {
+    if (!supabase || !currentUser) return;
+    if (!confirm('قبول هذا الطلب؟ سيتم إنشاء رحلة جديدة.')) return;
+    try {
+      var joinCode = String(Math.floor(100000 + Math.random() * 900000));
+      var { data: requestData, error: reqError } = await supabase.from('ride_requests').update({ driver_id: currentUser.id, status: 'accepted', responded_at: new Date().toISOString() }).eq('id', requestId).eq('status', 'pending').select('passenger_id, passenger_count, classification, pickup_address, destination_address').single();
+      if (reqError) { showToast('فشل قبول الطلب: ' + reqError.message); return; }
+      var { error: tripError } = await supabase.from('trips').insert({ driver_id: currentUser.id, passenger_id: requestData.passenger_id, status: 'started', classification: requestData.classification === 'private' ? 'private' : 'shared', passenger_count: requestData.passenger_count || 1, adult_count: requestData.passenger_count || 1, join_code: joinCode, start_address: requestData.pickup_address || '', end_address: requestData.destination_address || '' });
+      if (tripError) { showToast('فشل إنشاء الرحلة: ' + tripError.message); return; }
+      showToast('تم قبول الطلب! كود التتبع: ' + joinCode);
+      loadDriverRequests();
+    } catch (e) { showToast('حدث خطأ'); console.error(e); }
+  };
+
+  window.rejectRequest = async function(requestId) {
+    if (!supabase) return;
+    if (!confirm('رفض هذا الطلب؟')) return;
+    try {
+      await supabase.from('ride_requests').update({ status: 'rejected', responded_at: new Date().toISOString() }).eq('id', requestId).eq('status', 'pending');
+      showToast('تم رفض الطلب');
+      loadDriverRequests();
+    } catch (e) { showToast('فشل'); }
   };
 
   window.getCurrentLocation = function() {
