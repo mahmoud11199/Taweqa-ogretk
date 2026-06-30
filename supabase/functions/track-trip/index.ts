@@ -33,16 +33,18 @@ Deno.serve(async (req) => {
   );
   if (authError || !authData.user) return jsonResponse({ error: 'Unauthorized' }, 401);
 
-  const body = await req.json().catch(() => null) as { code?: string } | null;
-  const code = String(body?.code || '').replace(/\D/g, '').slice(0, 6);
-  if (code.length < 4) return jsonResponse({ error: 'Invalid tracking code' }, 400);
+  const body = await req.json().catch(() => null) as { code?: string; trip_id?: string } | null;
+  let query = admin.from('trips').select('id, status, driver_id, total_fare, distance_km, duration_min, wait_minutes, classification, passenger_count, join_code, created_at, last_lat, last_lng');
 
-  const { data: trips, error: tripError } = await admin
-    .from('trips')
-    .select('id, status, driver_id, total_fare, distance_km, duration_min, wait_minutes, classification, passenger_count, join_code, created_at, last_lat, last_lng')
-    .eq('join_code', code)
-    .order('created_at', { ascending: false })
-    .limit(1);
+  if (body?.trip_id) {
+    query = query.eq('id', body.trip_id);
+  } else {
+    const code = String(body?.code || '').replace(/\D/g, '').slice(0, 6);
+    if (code.length < 4) return jsonResponse({ error: 'Invalid tracking code' }, 400);
+    query = query.eq('join_code', code);
+  }
+
+  const { data: trips, error: tripError } = await query.order('created_at', { ascending: false }).limit(1);
 
   if (tripError) return jsonResponse({ error: tripError.message }, 400);
   if (!trips?.length) return jsonResponse({ error: 'Trip not found' }, 404);

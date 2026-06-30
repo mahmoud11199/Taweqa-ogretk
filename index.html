@@ -512,10 +512,11 @@
   </div>
 
   <div id="passenger-track-section">
-    <div class="meter-header"><h1>تتبع رحلة</h1><p>أدخل كود المشاركة من السائق لتتبع الرحلة</p></div>
+    <div class="meter-header"><h1>تتبع رحلة</h1><p>أدخل كود الرحلة (6 أرقام) لتتبعها مباشرة</p></div>
+    <div id="auto-track-banner" style="display:none;background:var(--meter-card);border:1px solid var(--success);border-radius:12px;padding:10px 14px;margin-bottom:12px;align-items:center;gap:10px;"></div>
     <div class="card">
       <div class="track-input-group">
-        <input type="text" id="track-code" placeholder="أدخل كود المشاركة (6 أرقام)" maxlength="6" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+        <input type="text" id="track-code" placeholder="كود الرحلة (6 أرقام) أو معرف الرحلة" maxlength="40" oninput="if(this.value.length<20)this.value=this.value.replace(/[^0-9]/g,'')">
         <button class="btn btn-primary" onclick="trackTrip()" style="white-space:nowrap;padding:12px 20px;"><i class="fas fa-search"></i></button>
       </div>
       <div id="track-status" style="text-align:center;color:var(--text-muted);font-size:13px;">أدخل الكود واضغط بحث</div>
@@ -568,7 +569,7 @@
           <div class="row"><span class="lbl">كود التتبع</span><span class="val" id="acceptedTripCode">-</span></div>
           <div class="row"><span class="lbl">حالة الرحلة</span><span class="val" id="acceptedTripStatus">-</span></div>
         </div>
-        <button class="btn btn-primary" style="margin-top:14px;width:100%;justify-content:center;" onclick="switchPassengerTab('track', document.querySelector('#passenger-app .tab-btn'))"><i class="fas fa-map-marker-alt"></i> تتبع الرحلة</button>
+        <button class="btn btn-primary" style="margin-top:14px;width:100%;justify-content:center;" onclick="startTrackingFromRequest()"><i class="fas fa-map-marker-alt"></i> تتبع الرحلة</button>
       </div>
     </div>
   </div>
@@ -1012,6 +1013,7 @@
       document.querySelectorAll('#passenger-app .app-nav .tab-btn').forEach(function(b) { b.classList.remove('active'); });
       btn.classList.add('active');
     }
+    if (tab === 'track') { setTimeout(autoLoadActiveTrip, 200); }
   }
   window.switchPassengerTab = switchPassengerTab;
 
@@ -1495,46 +1497,71 @@
   var trackInterval = null;
   var trackMap = null;
 
-  window.trackTrip = async function() {
-    var code = document.getElementById('track-code').value.trim();
-    if (!code || code.length < 4) { showToast('يرجى إدخال كود صحيح'); return; }
+  window.trackTrip = async function(optCode) {
+    var code = optCode || document.getElementById('track-code').value.trim();
+    if (!code || (code.length < 4 && code.length < 20)) { showToast('يرجى إدخال كود صحيح'); return; }
     if (!supabase) { showToast('خدمة التتبع غير متاحة'); return; }
     var statusEl = document.getElementById('track-status');
     statusEl.innerHTML = '<div class="spinner"></div><p style="color:var(--text-muted);font-size:13px;">جاري البحث...</p>';
-	    try {
-	      var { data, error } = await supabase.functions.invoke('track-trip', { body: { code: code } });
-	      if (error || !data || !data.trip) { statusEl.innerHTML = '<p style="color:var(--error);font-size:14px;">❌ لا توجد رحلة بهذا الكود</p>'; return; }
-	      var trip = data.trip;
-	      var locations = data.locations || [];
-	      document.getElementById('track-fare-display').textContent = (trip.total_fare || 0).toFixed(2) + ' ج';
-	      document.getElementById('track-status-val').textContent = trip.status === 'started' ? 'جارية 🟢' : trip.status === 'completed' ? 'مكتملة ✅' : trip.status;
-	      document.getElementById('track-driver-name').textContent = trip.driver_name || 'سائق';
-	      document.getElementById('track-distance').textContent = (trip.distance_km || 0).toFixed(2) + ' كم';
-	      document.getElementById('track-duration').textContent = (trip.duration_min || 0).toFixed(0) + ' د';
+    var body = code.length > 10 ? { trip_id: code } : { code: code };
+    try {
+      var { data, error } = await supabase.functions.invoke('track-trip', { body: body });
+      if (error || !data || !data.trip) { statusEl.innerHTML = '<p style="color:var(--error);font-size:14px;">❌ لا توجد رحلة بهذا الكود</p>'; return; }
+      var trip = data.trip;
+      var locations = data.locations || [];
+      document.getElementById('track-fare-display').textContent = (trip.total_fare || 0).toFixed(2) + ' ج';
+      document.getElementById('track-status-val').textContent = trip.status === 'started' ? 'جارية 🟢' : trip.status === 'completed' ? 'مكتملة ✅' : trip.status;
+      document.getElementById('track-driver-name').textContent = trip.driver_name || 'سائق';
+      document.getElementById('track-distance').textContent = (trip.distance_km || 0).toFixed(2) + ' كم';
+      document.getElementById('track-duration').textContent = (trip.duration_min || 0).toFixed(0) + ' د';
       document.getElementById('track-info').style.display = 'block';
       document.getElementById('track-map-card').style.display = 'block';
+      document.getElementById('track-code').value = trip.join_code || code;
       statusEl.innerHTML = '<p style="color:var(--success);font-size:14px;">✅ تم العثور على الرحلة</p>';
       if (trackMap) { trackMap.remove(); trackMap = null; }
       try {
-	        trackMap = L.map('track-map').setView([30.0444, 31.2357], 14);
-	        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(trackMap);
-	        if (locations.length) {
-	          var points = locations.map(function(p) { return [p.lat, p.lng]; });
-	          L.polyline(points, {color: '#22d3ee', weight: 4}).addTo(trackMap);
-	          L.circleMarker(points[points.length - 1], {radius: 6, color: '#22c55e', fillColor: '#22c55e', fillOpacity: 1}).addTo(trackMap);
-	          try { trackMap.fitBounds(L.polyline(points).getBounds(), {padding: [20, 20]}); } catch(e) {}
-	        } else if (trip.last_lat && trip.last_lng) {
-	          trackMap.setView([trip.last_lat, trip.last_lng], 15);
-	          L.marker([trip.last_lat, trip.last_lng]).addTo(trackMap);
-	        }
-	        setTimeout(function() { if (trackMap) trackMap.invalidateSize(); }, 300);
-	      } catch(e) { console.error(e); }
-	      if (trip.status === 'started') {
-	        if (trackInterval) clearInterval(trackInterval);
-	        trackInterval = setInterval(window.trackTrip, 5000);
-	      } else { if (trackInterval) { clearInterval(trackInterval); trackInterval = null; } }
+        trackMap = L.map('track-map').setView([30.0444, 31.2357], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(trackMap);
+        if (locations.length) {
+          var points = locations.map(function(p) { return [p.lat, p.lng]; });
+          L.polyline(points, {color: '#22d3ee', weight: 4}).addTo(trackMap);
+          L.circleMarker(points[points.length - 1], {radius: 6, color: '#22c55e', fillColor: '#22c55e', fillOpacity: 1}).addTo(trackMap);
+          try { trackMap.fitBounds(L.polyline(points).getBounds(), {padding: [20, 20]}); } catch(e) {}
+        } else if (trip.last_lat && trip.last_lng) {
+          trackMap.setView([trip.last_lat, trip.last_lng], 15);
+          L.marker([trip.last_lat, trip.last_lng]).addTo(trackMap);
+        }
+        setTimeout(function() { if (trackMap) trackMap.invalidateSize(); }, 300);
+      } catch(e) { console.error(e); }
+      if (trip.status === 'started') {
+        if (trackInterval) clearInterval(trackInterval);
+        trackInterval = setInterval(function() { trackTrip(code); }, 5000);
+      } else { if (trackInterval) { clearInterval(trackInterval); trackInterval = null; } }
     } catch (e) { console.error(e); document.getElementById('track-status').innerHTML = '<p style="color:var(--error);font-size:14px;">❌ حدث خطأ</p>'; }
   };
+
+  window.startTrackingFromRequest = function() {
+    var code = document.getElementById('acceptedTripCode').textContent;
+    if (code && code !== '-') {
+      switchPassengerTab('track', document.querySelector('#passenger-app .tab-btn'));
+      document.getElementById('track-code').value = code;
+      setTimeout(function() { trackTrip(code); }, 300);
+    } else {
+      switchPassengerTab('track', document.querySelector('#passenger-app .tab-btn'));
+    }
+  };
+
+  async function autoLoadActiveTrip() {
+    if (!supabase || !currentUser) return;
+    try {
+      var { data: trip } = await supabase.from('trips').select('join_code, id, status').eq('passenger_id', currentUser.id).eq('status', 'started').order('created_at', { ascending: false }).limit(1).maybeSingle();
+      if (trip && trip.join_code) {
+        document.getElementById('track-code').value = trip.join_code;
+        document.getElementById('auto-track-banner').style.display = 'flex';
+        document.getElementById('auto-track-banner').innerHTML = '<span style="flex:1"><i class="fas fa-circle" style="color:var(--success);font-size:10px;animation:pulse 1.5s infinite;"></i> لديك رحلة نشطة - <strong>' + escapeHTML(trip.join_code) + '</strong></span><button class="btn btn-sm btn-primary" onclick="trackTrip(\'' + trip.join_code + '\')" style="padding:6px 16px;font-size:12px;"><i class="fas fa-eye"></i> تتبع</button>';
+      }
+    } catch (e) { console.error(e); }
+  }
 
   window.requestRide = async function() {
     if (!supabase || !currentUser) { showToast('يجب تسجيل الدخول أولاً'); return; }
