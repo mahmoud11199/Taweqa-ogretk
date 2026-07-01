@@ -64,8 +64,12 @@ Deno.serve(async (req) => {
     .limit(200);
 
   return jsonResponse({
+    trip_id: trip.id,
+    driver_id: trip.driver_id,
     trip: {
+      id: trip.id,
       status: trip.status,
+      driver_id: trip.driver_id,
       driver_name: driver?.full_name || 'سائق',
       total_fare: trip.total_fare,
       distance_km: trip.distance_km,

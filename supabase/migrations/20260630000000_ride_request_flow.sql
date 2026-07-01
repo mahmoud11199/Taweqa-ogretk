@@ -32,3 +32,16 @@ using (
   )
 )
 with check (driver_id = auth.uid());
+
+-- Rating system: passengers rate drivers after trip completion
+drop policy if exists "Passengers can insert ratings" on public.ratings;
+create policy "Passengers can insert ratings"
+on public.ratings for insert
+to authenticated
+with check (passenger_id = auth.uid());
+
+drop policy if exists "Drivers can view own ratings" on public.ratings;
+create policy "Drivers can view own ratings"
+on public.ratings for select
+to authenticated
+using (driver_id = auth.uid() or passenger_id = auth.uid());
