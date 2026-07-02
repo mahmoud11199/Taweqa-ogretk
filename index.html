@@ -449,7 +449,7 @@
   <nav class="navbar" style="padding:10px 14px;margin:0 -12px;border-radius:0">
     <div class="logo"><i class="fas fa-motorcycle"></i><span>السائق</span></div>
     <div style="display:flex;gap:8px;align-items:center">
-      <span id="driver-status-badge" style="font-size:12px;background:var(--success);color:var(--bg-deep);padding:4px 12px;border-radius:20px;font-weight:700;">متصل</span>
+      <span id="driver-status-badge" onclick="toggleDriverAvailability()" style="font-size:12px;background:var(--success);color:var(--bg-deep);padding:4px 12px;border-radius:20px;font-weight:700;cursor:pointer;">🟢 متصل</span>
       <button class="btn btn-sm btn-outline nav-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i></button>
     </div>
   </nav>
@@ -939,6 +939,16 @@
     driverRequestPollTimer = setInterval(function() {
       loadDriverRequests();
     }, 8000);
+    // Load initial availability status
+    loadDriverAvailability();
+  }
+
+  async function loadDriverAvailability() {
+    if (!supabase || !currentUser) return;
+    try {
+      var { data: drv } = await supabase.from('drivers').select('is_available').eq('id', currentUser.id).single();
+      if (drv) setDriverAvailableUI(drv.is_available);
+    } catch(e) { console.error(e); }
   }
 
   function showPassengerDashboard() {
@@ -1293,6 +1303,7 @@
         m.passengersData.push({ id: i, name: 'راكب رقم ' + i, startDistance: 0, startDuration: 0, startWait: 0, isInside: true, isInitial: true, individualFare: 0 });
       }
     }
+    setDriverAvailable(false);
 	    await createStartedTripInSupabase(m);
 	    showToast('تم تشغيل عداد رقم ' + m.id + ' - كود المشاركة: ' + m.shareCode);
     updateDotsUI(); renderMeterDataToUI(); redrawActiveRouteLine(); saveDataToStorage();
@@ -1322,6 +1333,7 @@
     generateReceipt(m);
     saveTripToHistory(m);
     saveTripToSupabase(m);
+    setDriverAvailable(true);
     meters[activeMeterId] = createEmptyMeterObject(activeMeterId);
     updateDotsUI(); renderMeterDataToUI(); redrawActiveRouteLine(); saveDataToStorage();
   }
@@ -2340,8 +2352,37 @@
       switchDriverTab('meter', document.querySelector('#driver-app .tab-btn'));
       showToast('✅ تم قبول الطلب! كود التتبع: ' + joinCode);
       loadDriverRequests();
+      // Auto-set unavailable when accepting a trip
+      await setDriverAvailable(false);
     } catch (e) { showToast('حدث خطأ'); console.error(e); }
   };
+
+  window.toggleDriverAvailability = async function() {
+    if (!supabase || !currentUser) return;
+    try {
+      var { data: drv } = await supabase.from('drivers').select('is_available').eq('id', currentUser.id).single();
+      var newStatus = !(drv && drv.is_available);
+      await setDriverAvailable(newStatus);
+      showToast(newStatus ? '🟢 جاهز لاستقبال الطلبات' : '🔴 تم إيقاف الطلبات');
+    } catch (e) { showToast('فشل تغيير الحالة'); }
+  };
+  window.toggleDriverAvailability = toggleDriverAvailability;
+
+  async function setDriverAvailable(val) {
+    if (!supabase || !currentUser) return;
+    try {
+      await supabase.from('drivers').update({ is_available: val }).eq('id', currentUser.id);
+      setDriverAvailableUI(val);
+    } catch(e) { console.error(e); }
+  }
+  window.setDriverAvailable = setDriverAvailable;
+
+  function setDriverAvailableUI(val) {
+    var badge = document.getElementById('driver-status-badge');
+    if (!badge) return;
+    if (val) { badge.textContent = '🟢 متصل'; badge.style.background = 'var(--success)'; }
+    else { badge.textContent = '🔴 متوقف'; badge.style.background = '#ef4444'; }
+  }
 
   window.rejectRequest = async function(requestId) {
     if (!supabase) return;
