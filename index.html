@@ -579,6 +579,10 @@
       <div class="info-row"><span class="label">اسم السائق</span><span class="val" id="track-driver-name">-</span></div>
       <div class="info-row"><span class="label">المسافة</span><span class="val" id="track-distance">0.00 كم</span></div>
       <div class="info-row"><span class="label">المدة</span><span class="val" id="track-duration">0 د</span></div>
+      <div class="info-row"><span class="label">انتظار</span><span class="val" id="track-wait">0 د</span></div>
+      <div class="info-row"><span class="label">النوع</span><span class="val" id="track-type">-</span></div>
+      <div class="info-row"><span class="label">عدد الركاب</span><span class="val" id="track-passengers">-</span></div>
+      <div class="info-row"><span class="label">وقت البدء</span><span class="val" id="track-start-time">-</span></div>
     </div>
     <div class="card" id="track-rating-section" style="display:none">
       <div id="trackRatingForm">
@@ -1701,6 +1705,11 @@
       document.getElementById('track-driver-name').textContent = trip.driver_name || 'سائق';
       document.getElementById('track-distance').textContent = (trip.distance_km || 0).toFixed(2) + ' كم';
       document.getElementById('track-duration').textContent = (trip.duration_min || 0).toFixed(0) + ' د';
+      document.getElementById('track-wait').textContent = (trip.wait_minutes || 0).toFixed(0) + ' د';
+      document.getElementById('track-type').textContent = trip.classification === 'private' ? 'مخصوص' : 'أفراد (مشترك)';
+      document.getElementById('track-passengers').textContent = (trip.passenger_count || 1) + ' راكب';
+      if (trip.created_at) document.getElementById('track-start-time').textContent = new Date(trip.created_at).toLocaleString('ar-EG');
+      else document.getElementById('track-start-time').textContent = '-';
       document.getElementById('track-info').style.display = 'block';
       document.getElementById('track-map-card').style.display = 'block';
       document.getElementById('track-code').value = trip.join_code || code;
@@ -1720,7 +1729,7 @@
         }
         setTimeout(function() { if (trackMap) trackMap.invalidateSize(); }, 300);
       } catch(e) { console.error(e); }
-      if (trip.status === 'started') {
+      if (trip.status === 'started' || trip.status === 'assigned') {
         if (trackInterval) clearInterval(trackInterval);
         trackInterval = setInterval(function() { trackTrip(code); }, 5000);
       } else {
@@ -1952,10 +1961,27 @@
             acceptedDriverMap.setView([driverLoc.current_lat, driverLoc.current_lng], 15);
           }
         } catch(e) {}
-        var { data: tripUpd } = await supabase.from('trips').select('status').eq('join_code', tripCode).order('created_at', { ascending: false }).limit(1).maybeSingle();
-        if (tripUpd && tripUpd.status === 'started') {
-          clearInterval(acceptedDriverLocTimer);
-          document.getElementById('acceptedTripStatus').textContent = 'جارية 🟢';
+        var { data: tripUpd } = await supabase.from('trips').select('id, status').eq('join_code', tripCode).order('created_at', { ascending: false }).limit(1).maybeSingle();
+        if (tripUpd) {
+          if (tripUpd.status === 'started') {
+            clearInterval(acceptedDriverLocTimer);
+            document.getElementById('acceptedTripStatus').textContent = 'جارية 🟢';
+            if (tripUpd.id) currentChatTripId = tripUpd.id;
+            // Auto-redirect to tracking view after 1.5s
+            setTimeout(function() {
+              switchPassengerTab('track', document.querySelector('#passenger-app .tab-btn'));
+              document.getElementById('track-code').value = tripCode;
+              trackTrip(tripCode);
+            }, 1500);
+          } else if (tripUpd.status === 'completed') {
+            clearInterval(acceptedDriverLocTimer);
+            showToast('✅ تم إنهاء الرحلة');
+            setTimeout(function() {
+              switchPassengerTab('track', document.querySelector('#passenger-app .tab-btn'));
+              document.getElementById('track-code').value = tripCode;
+              trackTrip(tripCode);
+            }, 1000);
+          }
         }
       }, 4000);
       setTimeout(function() { if (acceptedDriverMap) acceptedDriverMap.invalidateSize(); }, 300);
