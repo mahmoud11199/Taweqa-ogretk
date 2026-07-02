@@ -1,5 +1,27 @@
 -- Wallet + Subscription + Referral system
 
+-- 0. Ensure profiles have proper RLS policies (required for login)
+alter table if exists public.profiles enable row level security;
+
+drop policy if exists "Users can view own profile" on public.profiles;
+create policy "Users can view own profile"
+on public.profiles for select
+to authenticated
+using (id = auth.uid());
+
+drop policy if exists "Users can update own profile" on public.profiles;
+create policy "Users can update own profile"
+on public.profiles for update
+to authenticated
+using (id = auth.uid())
+with check (id = auth.uid());
+
+drop policy if exists "Trigger can insert profiles" on public.profiles;
+create policy "Trigger can insert profiles"
+on public.profiles for insert
+to authenticated, service_role
+with check (true);
+
 -- 1. WALLETS
 create table if not exists public.wallets (
   id uuid primary key default gen_random_uuid(),
@@ -121,7 +143,7 @@ on public.referrals for insert
 to authenticated
 with check (referrer_id = auth.uid());
 
--- 5. Helper function: auto-create wallet + referral code on profile creation
+-- 5. Helper function: auto-create profile + wallet + referral code on user creation
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -130,7 +152,19 @@ set search_path = public
 as $$
 declare
   ref_code text;
+  v_full_name text;
+  v_role text;
+  v_phone text;
 begin
+  -- Extract metadata
+  v_full_name := new.raw_user_meta_data ->> 'full_name';
+  v_role := new.raw_user_meta_data ->> 'role';
+  v_phone := new.raw_user_meta_data ->> 'phone';
+
+  -- Create profile
+  insert into public.profiles (id, full_name, role, phone, created_at)
+  values (new.id, v_full_name, v_role, v_phone, now());
+
   -- Create wallet
   insert into public.wallets (user_id, balance) values (new.id, 0);
 
