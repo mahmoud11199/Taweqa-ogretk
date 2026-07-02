@@ -329,12 +329,6 @@
     .tx-item .tx-amount.positive { color: var(--success); }
     .tx-item .tx-amount.negative { color: var(--error); }
     .tx-item .tx-date { font-size: 10px; color: var(--meter-muted); }
-    .subs-card { background: var(--meter-card); border-radius: 14px; padding: 14px; border: 1px solid var(--meter-border); margin-bottom: 10px; }
-    .subs-card .plan-name { font-size: 16px; font-weight: 800; }
-    .subs-card .plan-price { font-size: 24px; font-weight: 900; color: var(--meter-primary); }
-    .subs-card .plan-status { font-size: 12px; padding: 3px 10px; border-radius: 10px; display: inline-block; }
-    .subs-card .plan-status.active { background: rgba(34,197,94,0.2); color: var(--success); }
-    .subs-card .plan-status.expired { background: rgba(239,68,68,0.2); color: var(--error); }
     .ref-code-box { background: rgba(255,255,255,0.05); border: 1px dashed var(--meter-border); border-radius: 10px; padding: 12px; text-align: center; margin: 8px 0; }
     .ref-code-box .code { font-size: 22px; font-weight: 900; letter-spacing: 3px; color: var(--meter-primary); direction: ltr; }
     .ref-progress { margin: 10px 0; }
@@ -2748,7 +2742,7 @@
     if (!supabase || !currentUser) return;
     try {
       // Expire old ones
-      await supabase.rpc('check_subscription_expiry').maybeSingle();
+      await supabase.rpc('check_subscription_expiry');
       var { data: sub } = await supabase.from('subscriptions').select('*').eq('user_id', currentUser.id).eq('status', 'active').order('end_date', { ascending: false }).limit(1).maybeSingle();
       // Auto-renew if balance sufficient
       if (!sub) {
@@ -2813,6 +2807,7 @@
     setTimeout(function() {
       loadReferralInfo();
       checkSubscription();
+      supabase.rpc('check_referral_rewards').catch(function(){});
     }, 500);
   };
 
@@ -2822,6 +2817,7 @@
     setTimeout(function() {
       loadReferralInfo();
       checkSubscription();
+      supabase.rpc('check_referral_rewards').catch(function(){});
     }, 500);
   };
   // ======================== END WALLET/SUBS/REFERRAL ========================
