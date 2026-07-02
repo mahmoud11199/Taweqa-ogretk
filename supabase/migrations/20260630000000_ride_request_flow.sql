@@ -19,6 +19,12 @@ using (
   )
 );
 
+drop policy if exists "Users can manage own passenger record" on public.passengers;
+create policy "Users can manage own passenger record" on public.passengers for all to authenticated using (id = auth.uid()) with check (id = auth.uid());
+
+drop policy if exists "Users can manage own driver record" on public.drivers;
+create policy "Users can manage own driver record" on public.drivers for all to authenticated using (id = auth.uid()) with check (id = auth.uid());
+
 drop policy if exists "Drivers can accept pending requests" on public.ride_requests;
 create policy "Drivers can accept pending requests"
 on public.ride_requests for update
