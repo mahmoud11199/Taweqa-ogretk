@@ -303,6 +303,16 @@
     #loading-screen.hidden { display: none; }
     @media (max-width: 900px) { .hero h1 { font-size: 34px; } .hero { padding: 60px 20px 40px; } .stats-grid { grid-template-columns: repeat(2, 1fr); } .stat-card .stat-value { font-size: 26px; } }
     @media (max-width: 600px) { .hero h1 { font-size: 28px; } .hero p { font-size: 15px; } .stats-grid { grid-template-columns: 1fr; } .features-grid { grid-template-columns: 1fr; } .stat-wide { grid-column: 1; } .navbar .logo { font-size: 17px; } .hero-icon { width: 72px; height: 72px; font-size: 30px; } .auth-card { padding: 28px 20px; } .app-container { padding: 0 8px 80px; } .fare-display { font-size: 32px; } .track-input-group { flex-direction: column; } }
+    .chat-panel { margin-top: 12px; border-top: 1px solid var(--meter-border); padding-top: 10px; }
+    .chat-panel h4 { font-size: 13px; margin-bottom: 6px; color: var(--meter-muted); }
+    .chat-messages { max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 6px 0; }
+    .chat-msg { padding: 6px 10px; border-radius: 10px; font-size: 12px; max-width: 85%; word-break: break-word; }
+    .chat-msg.driver { background: rgba(34,211,238,0.15); align-self: flex-start; }
+    .chat-msg.passenger { background: rgba(245,158,11,0.15); align-self: flex-end; }
+    .chat-msg .meta { font-size: 9px; color: var(--meter-muted); margin-top: 2px; }
+    .chat-input-row { display: flex; gap: 6px; margin-top: 6px; }
+    .chat-input-row input { flex: 1; padding: 8px 12px; border-radius: 20px; border: 1px solid var(--meter-border); background: rgba(255,255,255,0.05); color: #fff; font-size: 12px; outline: none; }
+    .chat-input-row button { padding: 6px 14px; border-radius: 20px; font-size: 12px; white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -443,6 +453,7 @@
     <button class="tab-btn" onclick="switchDriverTab('requests', this);setTimeout(loadDriverRequests,100)"><span class="tab-icon">&#x1F4E8;</span>الطلبات</button>
     <button class="tab-btn" onclick="switchDriverTab('history', this);setTimeout(renderDriverHistory,100)"><span class="tab-icon">&#x1F4DC;</span>السجل</button>
     <button class="tab-btn" onclick="switchDriverTab('profile', this)"><span class="tab-icon">&#x1F464;</span>حسابي</button>
+    <button class="tab-btn" onclick="switchDriverTab('chat', this);setTimeout(openDriverChat,100)"><span class="tab-icon">&#x1F4AC;</span>المحادثة</button>
   </div>
 
   <div id="driver-meter-section">
@@ -492,11 +503,29 @@
       </div>
     </div>
     <div class="card"><div id="map"></div></div>
+    <div class="card chat-panel" id="driver-chat-section" style="display:none">
+      <h4><i class="fas fa-comments"></i> محادثة مع الراكب</h4>
+      <div class="chat-messages" id="chatMessagesDriver"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chatInputDriver" placeholder="اكتب رسالة..." onkeydown="if(event.key==='Enter')sendChatMessage('driver')">
+        <button class="btn btn-primary btn-sm" onclick="sendChatMessage('driver')"><i class="fas fa-paper-plane"></i></button>
+      </div>
+    </div>
   </div>
 
   <div id="driver-requests-section" style="display:none">
     <div class="meter-header"><h1>طلبات الركاب</h1><p>طلبات رحلات جديدة من الركاب</p></div>
     <div class="card"><div id="driverRequestsList"><div class="empty-state">لا توجد طلبات حالياً</div></div></div>
+  </div>
+  <div id="driver-chat-section-standalone" style="display:none">
+    <div class="meter-header"><h1>محادثة مع الراكب</h1></div>
+    <div class="card chat-panel">
+      <div class="chat-messages" id="chatMessagesDriverSA"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chatInputDriverSA" placeholder="اكتب رسالة..." onkeydown="if(event.key==='Enter')sendChatMessage('driverSA')">
+        <button class="btn btn-primary btn-sm" onclick="sendChatMessage('driverSA')"><i class="fas fa-paper-plane"></i></button>
+      </div>
+    </div>
   </div>
 
   <div id="driver-history-section" style="display:none">
@@ -571,6 +600,14 @@
       </div>
     </div>
     <div class="card" id="track-map-card" style="display:none"><div id="track-map" style="height:200px;border-radius:14px;"></div></div>
+    <div class="card chat-panel" id="track-chat-section" style="display:none">
+      <h4><i class="fas fa-comments"></i> محادثة مع السائق</h4>
+      <div class="chat-messages" id="chatMessagesTrack"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chatInputTrack" placeholder="اكتب رسالة..." onkeydown="if(event.key==='Enter')sendChatMessage('track')">
+        <button class="btn btn-primary btn-sm" onclick="sendChatMessage('track')"><i class="fas fa-paper-plane"></i></button>
+      </div>
+    </div>
   </div>
 
   <div id="passenger-request-section" style="display:none">
@@ -884,6 +921,15 @@
     updateDotsUI();
     initDriverMap();
     initGlobalGPS();
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+    // Start driver request polling (every 8 seconds)
+    if (driverRequestPollTimer) clearInterval(driverRequestPollTimer);
+    driverRequestPollTimer = setInterval(function() {
+      loadDriverRequests();
+    }, 8000);
   }
 
   function showPassengerDashboard() {
@@ -1069,10 +1115,11 @@
   }
 
   function switchDriverTab(tab, btn) {
-    ['meter','requests','history','profile'].forEach(function(t) {
+    ['meter','requests','history','profile','chat'].forEach(function(t) {
       var el = document.getElementById('driver-' + t + '-section');
       if (el) el.style.display = t === tab ? 'block' : 'none';
     });
+    document.getElementById('driver-chat-section-standalone').style.display = tab === 'chat' ? 'block' : 'none';
     if (btn) {
       document.querySelectorAll('#driver-app .app-nav .tab-btn').forEach(function(b) { b.classList.remove('active'); });
       btn.classList.add('active');
@@ -1840,15 +1887,30 @@
           payload.pickup_lng = pos.coords.longitude;
         } catch (e) {}
       }
-      var { data, error } = await supabase.from('ride_requests').insert(payload).select('id').single();
+      var { data, error } = await supabase.from('ride_requests').insert(payload).select('id, pickup_lat, pickup_lng').single();
       if (error) { showAlert('request-alert', error.message); document.getElementById('request-btn').disabled = false; document.getElementById('request-loading').classList.add('hidden-el'); return; }
       showAlert('request-alert', 'تم إرسال الطلب! جاري البحث عن سائق...', 'success');
       currentPassengerRequestId = data.id;
+      currentPassengerRequestCreatedAt = Date.now();
+      currentPassengerOfferedDrivers = [];
+      if (data.pickup_lat && data.pickup_lng) {
+        try {
+          var { data: nearest } = await supabase.rpc('find_nearest_available_driver', { pickup_lat: data.pickup_lat, pickup_lng: data.pickup_lng, exclude_ids: [] });
+          if (nearest && nearest.found) {
+            currentPassengerOfferedDrivers.push(nearest.driver_id);
+            await supabase.from('ride_requests').update({ offered_to: nearest.driver_id, offered_at: new Date().toISOString(), offered_drivers: currentPassengerOfferedDrivers }).eq('id', data.id);
+          } else {
+            document.getElementById('reqStatusSub').textContent = 'لا يوجد سائقين قريبين حالياً، سيتم التحقق مرة أخرى';
+          }
+        } catch (e) { console.error('auto-assign error:', e); }
+      }
       showPassengerRequestStatus(data.id, payload);
     } catch (e) { showAlert('request-alert', e.message); }
     document.getElementById('request-btn').disabled = false;
     document.getElementById('request-loading').classList.add('hidden-el');
   };
+  var currentPassengerRequestCreatedAt = null;
+  var currentPassengerOfferedDrivers = [];
 
   var currentPassengerRequestId = null;
   var passengerRequestPollTimer = null;
@@ -1903,8 +1965,44 @@
   async function pollPassengerRequest(requestId) {
     if (!supabase || !requestId) return;
     try {
-      var { data, error } = await supabase.from('ride_requests').select('id, status, driver_id, responded_at').eq('id', requestId).single();
+      var { data, error } = await supabase.from('ride_requests').select('id, status, driver_id, responded_at, pickup_lat, pickup_lng, offered_at').eq('id', requestId).single();
       if (error || !data) { clearInterval(passengerRequestPollTimer); return; }
+      // Auto-cancel after 5 minutes with no acceptance
+      if (currentPassengerRequestCreatedAt && Date.now() - currentPassengerRequestCreatedAt > 300000) {
+        if (data.status === 'pending') {
+          await supabase.from('ride_requests').update({ status: 'cancelled' }).eq('id', requestId);
+          showToast('تم إلغاء الطلب تلقائياً لعدم وجود سائق');
+        }
+        clearInterval(passengerRequestPollTimer);
+        document.getElementById('reqStatusIcon').textContent = '\u23F0';
+        document.getElementById('reqStatusText').textContent = 'انتهى وقت الطلب';
+        document.getElementById('reqStatusSub').textContent = 'لم يتم العثور على سائق، حاول مرة أخرى';
+        document.getElementById('cancelRequestBtn').style.display = 'none';
+        return;
+      }
+      // Auto-reassign if no driver offered, or offered driver hasn't responded within 50 seconds
+      var shouldReassign = false;
+      if (data.status === 'pending' && data.pickup_lat && data.pickup_lng) {
+        if (!data.offered_to) {
+          shouldReassign = true;
+          document.getElementById('reqStatusSub').textContent = 'جاري البحث عن سائق آخر...';
+        } else if (data.offered_at) {
+          var elapsed = Date.now() - new Date(data.offered_at).getTime();
+          if (elapsed > 50000) shouldReassign = true;
+        }
+        if (shouldReassign) {
+          try {
+            var { data: nearest } = await supabase.rpc('find_nearest_available_driver', { pickup_lat: data.pickup_lat, pickup_lng: data.pickup_lng, exclude_ids: currentPassengerOfferedDrivers });
+            if (nearest && nearest.found) {
+              currentPassengerOfferedDrivers.push(nearest.driver_id);
+              await supabase.from('ride_requests').update({ offered_to: nearest.driver_id, offered_at: new Date().toISOString(), offered_drivers: currentPassengerOfferedDrivers }).eq('id', requestId);
+              document.getElementById('reqStatusSub').textContent = 'جاري عرض الطلب على سائق آخر...';
+            } else {
+              document.getElementById('reqStatusSub').textContent = 'لا يوجد سائقين متاحين قريباً';
+            }
+          } catch (e) { console.error('reassign error:', e); }
+        }
+      }
       if (data.status === 'accepted') {
         clearInterval(passengerRequestPollTimer);
         document.getElementById('reqStatusIcon').textContent = '\u2705';
@@ -1926,16 +2024,23 @@
           if (data.driver_id && tripData.join_code) {
             initAcceptedDriverMap(data.driver_id, tripData.join_code);
           }
+          currentChatTripId = tripData.id;
+          if (tripData.status === 'assigned' || tripData.status === 'started') {
+            document.getElementById('track-chat-section').style.display = 'block';
+            loadChat('track', currentChatTripId);
+          }
         }
-      } else if (data.status === 'rejected' || data.status === 'cancelled') {
+      } else if (data.status === 'cancelled') {
         clearInterval(passengerRequestPollTimer);
         document.getElementById('reqStatusIcon').textContent = '\u274C';
-        document.getElementById('reqStatusText').textContent = 'تم رفض الطلب';
+        document.getElementById('reqStatusText').textContent = 'تم إلغاء الطلب';
         document.getElementById('reqStatusSub').textContent = 'يمكنك إرسال طلب جديد';
         document.getElementById('cancelRequestBtn').style.display = 'none';
       }
     } catch (e) { console.error(e); }
   }
+  var currentChatTripId = null;
+  var chatPollTimer = null;
 
   window.cancelPassengerRequest = async function() {
     if (!supabase || !currentPassengerRequestId) return;
@@ -1948,19 +2053,163 @@
     } catch (e) { showToast('فشل الإلغاء'); }
   };
 
+  // ======================== CHAT SYSTEM ========================
+  function openDriverChat() {
+    if (!currentChatTripId) {
+      showToast('لا توجد رحلة نشطة حالياً');
+      return;
+    }
+    loadChat('driverSA', currentChatTripId);
+  }
+  window.openDriverChat = openDriverChat;
+
+  async function loadChat(prefix, tripId) {
+    var container = document.getElementById('chatMessages' + prefix.charAt(0).toUpperCase() + prefix.slice(1));
+    if (!container) return;
+    try {
+      var { data: msgs, error } = await supabase.from('trip_chat_messages').select('*').eq('trip_id', tripId).order('created_at', { ascending: true }).limit(100);
+      if (error) return;
+      container.innerHTML = (msgs || []).map(function(m) {
+        var role = m.sender_role === 'driver' ? 'driver' : 'passenger';
+        var name = m.sender_role === 'driver' ? 'السائق' : 'الراكب';
+        var time = new Date(m.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+        return '<div class="chat-msg ' + role + '">' + escapeHTML(m.message) + '<div class="meta">' + name + ' - ' + time + '</div></div>';
+      }).join('');
+      container.scrollTop = container.scrollHeight;
+    } catch(e) { console.error(e); }
+  }
+  window.loadChat = loadChat;
+
+  async function sendChatMessage(prefix) {
+    if (!supabase || !currentUser || !currentChatTripId) { showToast('لا توجد محادثة نشطة'); return; }
+    var input = document.getElementById('chatInput' + prefix.charAt(0).toUpperCase() + prefix.slice(1));
+    var msg = (input ? input.value : '').trim();
+    if (!msg) return;
+    input.value = '';
+    try {
+      var role = currentProfile && currentProfile.role === 'driver' ? 'driver' : 'passenger';
+      var { error } = await supabase.from('trip_chat_messages').insert({
+        trip_id: currentChatTripId, sender_id: currentUser.id, sender_role: role, message: msg
+      });
+      if (error) { showToast('فشل الإرسال'); console.error(error); return; }
+      loadChat(prefix, currentChatTripId);
+    } catch(e) { console.error(e); }
+  }
+  window.sendChatMessage = sendChatMessage;
+
+  function startChatPoll(tripId) {
+    currentChatTripId = tripId;
+    if (chatPollTimer) clearInterval(chatPollTimer);
+    chatPollTimer = setInterval(function() {
+      var trackChat = document.getElementById('track-chat-section');
+      if (trackChat && trackChat.style.display !== 'none') {
+        loadChat('track', currentChatTripId);
+      }
+      var driverChat = document.getElementById('chatMessagesDriver');
+      if (driverChat && driverChat.style.display !== 'none') {
+        loadChat('driver', currentChatTripId);
+      }
+      var driverChatSA = document.getElementById('chatMessagesDriverSA');
+      if (driverChatSA && driverChatSA.style.display !== 'none') {
+        loadChat('driverSA', currentChatTripId);
+      }
+    }, 3500);
+  }
+  window.startChatPoll = startChatPoll;
+
+  // Hook into trackTrip to show chat when trip is active
+  var origTrackTrip = window.trackTrip;
+  window.trackTrip = async function(optCode) {
+    if (origTrackTrip) await origTrackTrip(optCode);
+    var statusEl = document.getElementById('track-status-val');
+    if (statusEl && (statusEl.textContent.includes('جارية') || statusEl.textContent.includes('الطريق'))) {
+      var tripIdEl = document.getElementById('track-fare-display');
+      if (!currentChatTripId && currentUser) {
+        var code = optCode || document.getElementById('track-code').value.trim();
+        if (code) {
+          try {
+            var { data: userTrip } = await supabase.from('trips').select('id').eq('join_code', code).eq('passenger_id', currentUser.id).maybeSingle();
+            if (userTrip) currentChatTripId = userTrip.id;
+          } catch(e) {}
+        }
+      }
+      if (currentChatTripId) {
+        document.getElementById('track-chat-section').style.display = 'block';
+        loadChat('track', currentChatTripId);
+        startChatPoll(currentChatTripId);
+      }
+    }
+  };
+
+  // Hook into autoLoadActiveTrip to set chat trip id
+  var origAutoLoad = autoLoadActiveTrip;
+  autoLoadActiveTrip = async function() {
+    if (origAutoLoad) await origAutoLoad();
+    if (!supabase || !currentUser) return;
+    try {
+      var { data: trip } = await supabase.from('trips').select('id, join_code, status').eq('passenger_id', currentUser.id).in('status', ['assigned', 'started']).order('created_at', { ascending: false }).limit(1).maybeSingle();
+      if (trip) {
+        currentChatTripId = trip.id;
+        if (trip.status === 'assigned' || trip.status === 'started') {
+          document.getElementById('track-chat-section').style.display = 'block';
+          loadChat('track', trip.id);
+          startChatPoll(trip.id);
+        }
+      }
+    } catch(e) { console.error(e); }
+  };
+
+  // Hook into startMeterForAcceptedTrip to set driver chat
+  window.startMeterForAcceptedTrip = (function(orig) {
+    return async function() {
+      if (orig) await orig();
+      if (currentChatTripId) {
+        document.getElementById('driver-chat-section').style.display = 'block';
+        loadChat('driver', currentChatTripId);
+        startChatPoll(currentChatTripId);
+      }
+    };
+  })(window.startMeterForAcceptedTrip);
+
+  // Hook into acceptRequest to set chat
+  window.acceptRequest = (function(orig) {
+    return async function(requestId) {
+      await orig(requestId);
+      if (acceptedTripData && acceptedTripData.tripId) {
+        currentChatTripId = acceptedTripData.tripId;
+        document.getElementById('driver-chat-section').style.display = 'block';
+        loadChat('driver', currentChatTripId);
+        startChatPoll(currentChatTripId);
+      }
+    };
+  })(window.acceptRequest);
+  // ======================== END CHAT ========================
+
   window.loadDriverRequests = async function() {
     if (!supabase || !currentUser) return;
     var list = document.getElementById('driverRequestsList');
     try {
-      var { data: requests, error } = await supabase.from('ride_requests').select('id, passenger_id, passenger_count, classification, status, pickup_address, destination_address, pickup_lat, pickup_lng, adult_count, child_count, created_at').eq('status', 'pending').is('driver_id', null).order('created_at', { ascending: false }).limit(20);
-      if (error || !requests || !requests.length) { list.innerHTML = '<div class="empty-state">لا توجد طلبات حالياً</div>'; return; }
+      var { data: requests, error } = await supabase.from('ride_requests').select('id, passenger_id, passenger_count, classification, status, pickup_address, destination_address, pickup_lat, pickup_lng, adult_count, child_count, created_at').eq('status', 'pending').eq('offered_to', currentUser.id).order('created_at', { ascending: false }).limit(20);
+      if (error || !requests || !requests.length) {
+        list.innerHTML = '<div class="empty-state">لا توجد طلبات موجهة إليك حالياً</div>';
+        return;
+      }
       list.innerHTML = requests.map(function(r) {
         var typeText = r.classification === 'private' ? 'مخصوص' : 'أفراد';
         var hasLoc = r.pickup_lat && r.pickup_lng;
-        return '<div class="driver-request-item"><div class="top"><span class="name"><i class="fas fa-user"></i> راكب</span><span class="req-badge pending">قيد الانتظار</span></div><div class="info"><i class="fas fa-tag"></i> ' + typeText + ' | <i class="fas fa-users"></i> ' + (r.passenger_count || 1) + ' راكب</div><div class="info"><i class="fas fa-map-pin"></i> ' + escapeHTML(r.pickup_address || 'بدون موقع') + '</div>' + (r.destination_address ? '<div class="info"><i class="fas fa-flag"></i> ' + escapeHTML(r.destination_address) + '</div>' : '') + '<div class="info"><i class="fas fa-clock"></i> ' + new Date(r.created_at).toLocaleString('ar-EG') + '</div><div class="req-actions">' + (hasLoc ? '<button class="btn btn-sm btn-outline" onclick="showPickupOnMap(' + r.pickup_lat + ', ' + r.pickup_lng + ')" style="padding:6px 10px;font-size:11px;"><i class="fas fa-map-marker-alt"></i> موقع</button>' : '') + '<button class="btn btn-success btn-sm" onclick="acceptRequest(\'' + r.id + '\')"><i class="fas fa-check"></i> قبول</button><button class="btn btn-danger btn-sm" onclick="rejectRequest(\'' + r.id + '\')"><i class="fas fa-times"></i> رفض</button></div></div>';
+        var timeAgo = Math.floor((Date.now() - new Date(r.created_at).getTime()) / 1000);
+        var timeText = timeAgo < 60 ? 'منذ ' + timeAgo + ' ثانية' : timeAgo < 3600 ? 'منذ ' + Math.floor(timeAgo / 60) + ' دقيقة' : 'منذ ' + Math.floor(timeAgo / 3600) + ' ساعة';
+        return '<div class="driver-request-item"><div class="top"><span class="name"><i class="fas fa-user"></i> راكب</span><span class="req-badge pending">جديد</span></div><div class="info"><i class="fas fa-tag"></i> ' + typeText + ' | <i class="fas fa-users"></i> ' + (r.passenger_count || 1) + ' راكب</div><div class="info"><i class="fas fa-map-pin"></i> ' + escapeHTML(r.pickup_address || 'بدون موقع') + '</div>' + (r.destination_address ? '<div class="info"><i class="fas fa-flag"></i> ' + escapeHTML(r.destination_address) + '</div>' : '') + '<div class="info"><i class="fas fa-clock"></i> ' + timeText + '</div><div class="req-actions">' + (hasLoc ? '<button class="btn btn-sm btn-outline" onclick="showPickupOnMap(' + r.pickup_lat + ', ' + r.pickup_lng + ')" style="padding:6px 10px;font-size:11px;"><i class="fas fa-map-marker-alt"></i> موقع</button>' : '') + '<button class="btn btn-success btn-sm" onclick="acceptRequest(\'' + r.id + '\')"><i class="fas fa-check"></i> قبول</button><button class="btn btn-danger btn-sm" onclick="rejectRequest(\'' + r.id + '\')"><i class="fas fa-times"></i> رفض</button></div></div>';
       }).join('');
+      // Notify if there are new requests
+      if ('Notification' in window && Notification.permission === 'granted' && typeof driverLastRequestCount !== 'undefined' && requests.length > driverLastRequestCount) {
+        new Notification('🚗 طلب رحلة جديد', { body: 'لديك طلب رحلة جديد من راكب', icon: '/favicon.png' });
+      }
+      driverLastRequestCount = requests.length;
     } catch (e) { list.innerHTML = '<div class="empty-state">خطأ في تحميل الطلبات</div>'; console.error(e); }
   };
+  var driverLastRequestCount = 0;
+  var driverRequestPollTimer = null;
 
   window.showPickupOnMap = function(lat, lng) {
     if (driverMap) {
@@ -1997,7 +2246,8 @@
     if (!supabase) return;
     if (!confirm('رفض هذا الطلب؟')) return;
     try {
-      await supabase.from('ride_requests').update({ status: 'rejected', responded_at: new Date().toISOString() }).eq('id', requestId).eq('status', 'pending');
+      // Just clear offered_to so the request can be reassigned to another driver
+      await supabase.from('ride_requests').update({ offered_to: null, offered_at: null }).eq('id', requestId).eq('offered_to', currentUser.id);
       showToast('تم رفض الطلب');
       loadDriverRequests();
     } catch (e) { showToast('فشل'); }
