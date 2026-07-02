@@ -449,7 +449,7 @@
   <nav class="navbar" style="padding:10px 14px;margin:0 -12px;border-radius:0">
     <div class="logo"><i class="fas fa-motorcycle"></i><span>السائق</span></div>
     <div style="display:flex;gap:8px;align-items:center">
-      <span id="driver-status-badge" onclick="toggleDriverAvailability()" style="font-size:12px;background:var(--success);color:var(--bg-deep);padding:4px 12px;border-radius:20px;font-weight:700;cursor:pointer;">🟢 متصل</span>
+      <span id="driver-status-badge" onclick="toggleDriverAvailability()" style="font-size:12px;background:var(--success);color:var(--bg-deep);padding:4px 12px;border-radius:20px;font-weight:700;cursor:pointer;">🟢 متاح للطلب</span>
       <button class="btn btn-sm btn-outline nav-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i></button>
     </div>
   </nav>
@@ -2363,7 +2363,7 @@
       var { data: drv } = await supabase.from('drivers').select('is_available').eq('id', currentUser.id).single();
       var newStatus = !(drv && drv.is_available);
       await setDriverAvailable(newStatus);
-      showToast(newStatus ? '🟢 جاهز لاستقبال الطلبات' : '🔴 تم إيقاف الطلبات');
+      showToast(newStatus ? '🟢 أصبحت متاحاً للطلب' : '🔴 أصبحت غير متاح للطلب');
     } catch (e) { showToast('فشل تغيير الحالة'); }
   };
   window.toggleDriverAvailability = toggleDriverAvailability;
@@ -2380,8 +2380,8 @@
   function setDriverAvailableUI(val) {
     var badge = document.getElementById('driver-status-badge');
     if (!badge) return;
-    if (val) { badge.textContent = '🟢 متصل'; badge.style.background = 'var(--success)'; }
-    else { badge.textContent = '🔴 متوقف'; badge.style.background = '#ef4444'; }
+    if (val) { badge.textContent = '🟢 متاح للطلب'; badge.style.background = 'var(--success)'; }
+    else { badge.textContent = '🔴 غير متاح'; badge.style.background = '#ef4444'; }
   }
 
   window.rejectRequest = async function(requestId) {
