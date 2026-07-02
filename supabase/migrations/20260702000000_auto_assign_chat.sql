@@ -114,3 +114,6 @@ on public.ride_requests for update
 to authenticated
 using (status='pending' and driver_id is null and offered_to=auth.uid() and exists(select 1 from public.profiles where id=auth.uid() and role='driver'))
 with check (driver_id=auth.uid());
+
+-- 6. Add duration_price_used to trips for detailed receipt
+alter table if exists public.trips add column if not exists duration_price_used double precision default 0.5;

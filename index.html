@@ -313,6 +313,11 @@
     .chat-input-row { display: flex; gap: 6px; margin-top: 6px; }
     .chat-input-row input { flex: 1; padding: 8px 12px; border-radius: 20px; border: 1px solid var(--meter-border); background: rgba(255,255,255,0.05); color: #fff; font-size: 12px; outline: none; }
     .chat-input-row button { padding: 6px 14px; border-radius: 20px; font-size: 12px; white-space: nowrap; }
+    .receipt-header2 { font-size: 16px; font-weight: 800; text-align: center; padding: 10px 0 6px; border-bottom: 2px dashed var(--meter-border); margin-bottom: 8px; }
+    .receipt-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--meter-muted); margin-bottom: 2px; }
+    .receipt-sub { font-size: 11px; color: var(--meter-muted); margin-right: 8px; }
+    .receipt-footer { text-align: center; font-size: 10px; color: var(--meter-muted); margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--meter-border); }
+    .receipt .receipt-body { padding: 0 4px; }
   </style>
 </head>
 <body>
@@ -1546,25 +1551,95 @@
   function generateReceipt(m) {
     var body = document.getElementById('receiptBody');
     var waitingMinutes = m.totalWaitSeconds / 60;
+    var now = new Date().toLocaleString('ar-EG');
+    var typeLabel = m.tripType === 'makhsoos' ? '🚘 مخصوص' : '👥 أفراد (مشترك)';
+    var code = escapeHTML(m.shareCode || '-');
+    var kmP = m.kmPrice.toFixed(2), durP = m.durationPrice.toFixed(2), waitP = m.waitPrice.toFixed(2);
+    var bandira = m.bandira.toFixed(2);
+    var dist = m.totalDistance.toFixed(2), dur = m.totalDurationMinutes.toFixed(0), wait = waitingMinutes.toFixed(0);
+    var distCost = (m.totalDistance * m.kmPrice).toFixed(2), durCost = (m.totalDurationMinutes * m.durationPrice).toFixed(2), waitCost = (waitingMinutes * m.waitPrice).toFixed(2);
+    var totalFare = clampNumber(m.finalFare, 0, 100000, 0).toFixed(2);
     var itemsHTML = '';
+
     if (m.tripType === 'makhsoos') {
-      var distCost = m.totalDistance * m.kmPrice;
-      itemsHTML = '<div class="receipt-line"><span class="label">فتحة العداد</span><span class="value">' + m.bandira.toFixed(2) + ' ج</span></div><div class="receipt-line"><span class="label">المسافة</span><span class="value">' + distCost.toFixed(2) + ' ج</span></div><div class="receipt-line"><span class="label">الزمن (' + m.totalDurationMinutes.toFixed(0) + ' د)</span><span class="value">' + (m.totalDurationMinutes * m.durationPrice).toFixed(2) + ' ج</span></div><div class="receipt-line"><span class="label">الانتظار</span><span class="value">' + (waitingMinutes * m.waitPrice).toFixed(2) + ' ج</span></div>';
+      itemsHTML = ''
+        + '<div class="receipt-line"><span class="label">🔰 فتحة العداد</span><span class="value">' + bandira + ' ج</span></div>'
+        + '<div class="receipt-line"><span class="label">📏 المسافة (' + dist + ' كم × ' + kmP + ')</span><span class="value">' + distCost + ' ج</span></div>'
+        + '<div class="receipt-line"><span class="label">⏱ الزمن (' + dur + ' د × ' + durP + ')</span><span class="value">' + durCost + ' ج</span></div>'
+        + '<div class="receipt-line"><span class="label">⏳ الانتظار (' + wait + ' د × ' + waitP + ')</span><span class="value">' + waitCost + ' ج</span></div>';
     } else {
-      itemsHTML = '<div style="font-weight:700;font-size:12px;margin-bottom:6px;color:var(--meter-primary);">تصفية الأفراد:</div>';
-      (m.passengersData || []).forEach(function(p) {
-	        itemsHTML += '<div class="receipt-line"><span class="label">' + escapeHTML(p.name) + '</span><span class="value">' + clampNumber(p.individualFare, 0, 100000, 0).toFixed(2) + ' ج</span></div>';
+      itemsHTML = '<div style="font-weight:700;font-size:12px;margin-bottom:8px;color:var(--meter-primary);">📋 تفاصيل الركاب:</div>';
+      (m.passengersData || []).forEach(function(p, idx) {
+        var pf = clampNumber(p.individualFare, 0, 100000, 0).toFixed(2);
+        var pDist = Math.max(0, m.totalDistance - clampNumber(p.startDistance, 0, 1000, 0));
+        var pDur = Math.max(0, m.totalDurationMinutes - clampNumber(p.startDuration, 0, 1440, 0));
+        var pWait = Math.max(0, waitingMinutes - clampNumber(p.startWait, 0, 1440, 0));
+        var isInit = p.isInitial !== false;
+        itemsHTML += '<div style="font-size:12px;margin-bottom:8px;padding:6px;background:rgba(255,255,255,0.03);border-radius:8px;">'
+          + '<div style="font-weight:700;margin-bottom:3px;">' + escapeHTML(p.name || 'راكب ' + (idx + 1)) + '</div>'
+          + (isInit ? ('<div class="receipt-sub">🔰 فتحة: ' + bandira + ' ج</div>') : '')
+          + '<div class="receipt-sub">📏 مسافة: ' + pDist.toFixed(2) + ' كم × ' + kmP + ' = ' + (pDist * m.kmPrice).toFixed(2) + ' ج</div>'
+          + (isInit ? '<div class="receipt-sub">⏱ زمن: ' + pDur.toFixed(0) + ' د × ' + durP + ' = ' + (pDur * m.durationPrice).toFixed(2) + ' ج</div><div class="receipt-sub">⏳ انتظار: ' + pWait.toFixed(0) + ' د × ' + waitP + ' = ' + (pWait * m.waitPrice).toFixed(2) + ' ج</div>' : '')
+          + '<div style="font-weight:600;margin-top:2px;color:var(--meter-primary);">🗂 المجموع: ' + pf + ' ج</div>'
+          + '</div>';
       });
     }
-	    body.innerHTML = '<div class="receipt-line"><span class="label">كود المشاركة</span><span class="value">' + escapeHTML(m.shareCode || '-') + '</span></div><div class="receipt-divider"></div>' + itemsHTML + '<div class="receipt-divider"></div><div class="receipt-line receipt-total"><span>الإجمالي</span><span>' + clampNumber(m.finalFare, 0, 100000, 0).toFixed(2) + ' ج</span></div>';
+
+    body.innerHTML = '<div class="receipt-header2">🧾 فاتورة الرحلة</div>'
+      + '<div style="padding:0 4px 8px;">'
+      + '<div class="receipt-meta"><span>' + typeLabel + '</span><span>كود: ' + code + '</span></div>'
+      + '<div class="receipt-meta" style="font-size:11px;">' + now + '</div>'
+      + '<div class="receipt-divider"></div>'
+      + itemsHTML
+      + '<div class="receipt-divider"></div>'
+      + '<div class="receipt-line receipt-total"><span>💰 الإجمالي</span><span>' + totalFare + ' ج</span></div>'
+      + '<div class="receipt-footer">🛞 ' + kmP + ' ج/كم | ⏱ ' + durP + ' ج/د | ⏳ ' + waitP + ' ج/د انتظار</div>'
+      + '</div>';
     document.getElementById('receiptModal').style.display = 'flex';
   }
 
   function closeReceipt() { document.getElementById('receiptModal').style.display = 'none'; }
   window.closeReceipt = closeReceipt;
 
+  var lastReceiptText = '';
   function shareWhatsApp() {
-    var text = '🚖 فاتورة رحلة من "توقع أجرتك"\nالإجمالي: ' + document.getElementById('totalFareDisplay').innerText;
+    var m = meters[activeMeterId];
+    if (!m) { showToast('لا توجد بيانات رحلة'); return; }
+    var waitingMinutes = m.totalWaitSeconds / 60;
+    var typeLabel = m.tripType === 'makhsoos' ? 'مخصوص' : 'أفراد';
+    var kmP = m.kmPrice.toFixed(2), durP = m.durationPrice.toFixed(2), waitP = m.waitPrice.toFixed(2);
+    var bandira = m.bandira.toFixed(2);
+    var dist = m.totalDistance.toFixed(2), dur = m.totalDurationMinutes.toFixed(0), wait = waitingMinutes.toFixed(0);
+    var distCost = (m.totalDistance * m.kmPrice).toFixed(2), durCost = (m.totalDurationMinutes * m.durationPrice).toFixed(2), waitCost = (waitingMinutes * m.waitPrice).toFixed(2);
+    var totalFare = clampNumber(m.finalFare, 0, 100000, 0).toFixed(2);
+    var lines = [];
+    lines.push('🧾 فاتورة رحلة - توقع أجرتك');
+    lines.push('═══════════════════════');
+    lines.push('🆔 الكود: ' + (m.shareCode || '-'));
+    lines.push('🚘 النوع: ' + typeLabel);
+    lines.push('📅 ' + new Date().toLocaleDateString('ar-EG') + ' ' + new Date().toLocaleTimeString('ar-EG', {hour:'2-digit',minute:'2-digit'}));
+    lines.push('───────────────────────');
+    if (m.tripType === 'makhsoos') {
+      lines.push('🔰 فتحة: ' + bandira + ' ج');
+      lines.push('📏 مسافة (' + dist + ' كم × ' + kmP + ') = ' + distCost + ' ج');
+      lines.push('⏱ زمن (' + dur + ' د × ' + durP + ') = ' + durCost + ' ج');
+      lines.push('⏳ انتظار (' + wait + ' د × ' + waitP + ') = ' + waitCost + ' ج');
+    } else {
+      (m.passengersData || []).forEach(function(p, idx) {
+        var pf = clampNumber(p.individualFare, 0, 100000, 0).toFixed(2);
+        var pName = p.name || ('راكب ' + (idx + 1));
+        lines.push(''); lines.push('◉ ' + pName + ': ' + pf + ' ج');
+        lines.push('  📏 مسافة: ' + Math.max(0, m.totalDistance - clampNumber(p.startDistance, 0, 1000, 0)).toFixed(2) + ' كم');
+        lines.push('  💰 الفردي: ' + pf + ' ج');
+      });
+    }
+    lines.push('───────────────────────');
+    lines.push('💰 الإجمالي: ' + totalFare + ' ج');
+    lines.push('🛞 ' + kmP + ' ج/كم | ⏱ ' + durP + ' ج/د | ⏳ ' + waitP + ' ج/د');
+    lines.push('═══════════════════════');
+    lines.push('توقع أجرتك - التوك توك الذكي');
+    var text = lines.join('\n');
+    lastReceiptText = text;
     window.open('https://wa.me/?text=' + encodeURIComponent(text));
   }
   window.shareWhatsApp = shareWhatsApp;

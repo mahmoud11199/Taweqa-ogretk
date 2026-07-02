@@ -109,6 +109,7 @@ Deno.serve(async (req) => {
     total_fare: serverFare,
     meter_start_fee: clampNumber(meter.bandira, 0, 1000, 5),
     km_price_used: clampNumber(meter.kmPrice, 1, 50, 5),
+    duration_price_used: clampNumber(meter.durationPrice, 0, 10, 0.5),
     wait_price_used: clampNumber(meter.waitPrice, 0, 20, 1),
     join_code: String(meter.shareCode || ''),
     passenger_count: Math.round(clampNumber(meter.passengerCount, 0, 20, 1)),
