@@ -318,6 +318,31 @@
     .receipt-sub { font-size: 11px; color: var(--meter-muted); margin-right: 8px; }
     .receipt-footer { text-align: center; font-size: 10px; color: var(--meter-muted); margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--meter-border); }
     .receipt .receipt-body { padding: 0 4px; }
+    .wallet-balance { text-align: center; padding: 20px 0; }
+    .wallet-balance .amount { font-size: 36px; font-weight: 900; color: var(--meter-primary); }
+    .wallet-balance .label { font-size: 12px; color: var(--meter-muted); }
+    .wallet-actions { display: flex; gap: 8px; margin: 12px 0; }
+    .wallet-actions .btn { flex: 1; justify-content: center; }
+    .tx-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--meter-border); font-size: 12px; }
+    .tx-item .tx-desc { color: var(--text); flex: 1; }
+    .tx-item .tx-amount { font-weight: 700; }
+    .tx-item .tx-amount.positive { color: var(--success); }
+    .tx-item .tx-amount.negative { color: var(--error); }
+    .tx-item .tx-date { font-size: 10px; color: var(--meter-muted); }
+    .subs-card { background: var(--meter-card); border-radius: 14px; padding: 14px; border: 1px solid var(--meter-border); margin-bottom: 10px; }
+    .subs-card .plan-name { font-size: 16px; font-weight: 800; }
+    .subs-card .plan-price { font-size: 24px; font-weight: 900; color: var(--meter-primary); }
+    .subs-card .plan-status { font-size: 12px; padding: 3px 10px; border-radius: 10px; display: inline-block; }
+    .subs-card .plan-status.active { background: rgba(34,197,94,0.2); color: var(--success); }
+    .subs-card .plan-status.expired { background: rgba(239,68,68,0.2); color: var(--error); }
+    .ref-code-box { background: rgba(255,255,255,0.05); border: 1px dashed var(--meter-border); border-radius: 10px; padding: 12px; text-align: center; margin: 8px 0; }
+    .ref-code-box .code { font-size: 22px; font-weight: 900; letter-spacing: 3px; color: var(--meter-primary); direction: ltr; }
+    .ref-progress { margin: 10px 0; }
+    .ref-progress .bar { height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; }
+    .ref-progress .bar-fill { height: 100%; background: linear-gradient(90deg, var(--meter-primary), var(--primary)); border-radius: 4px; transition: width 0.5s; }
+    .ref-progress .count { font-size: 12px; color: var(--meter-muted); margin-top: 4px; }
+    .paymob-mock { background: var(--meter-card); border-radius: 14px; padding: 16px; border: 1px solid var(--meter-border); }
+    .paymob-mock input { width: 100%; padding: 10px; margin: 6px 0; border-radius: 8px; border: 1px solid var(--meter-border); background: rgba(255,255,255,0.05); color: #fff; font-size: 14px; }
   </style>
 </head>
 <body>
@@ -401,6 +426,7 @@
     <div class="field"><label>رقم الهاتف</label><input type="tel" id="reg-phone" placeholder="01XXXXXXXXX" autocomplete="tel"></div>
     <div class="field"><label>كلمة السر (6 أحرف على الأقل)</label><input type="password" id="reg-password" placeholder="كلمة السر" minlength="6" autocomplete="new-password"><div class="password-strength" id="reg-password-strength"></div></div>
     <div class="field"><label>تأكيد كلمة السر</label><input type="password" id="reg-confirm" placeholder="أعد إدخال كلمة السر"><div class="error-msg" id="reg-password-error">كلمة السر غير متطابقة</div></div>
+    <div class="field"><label>كود الإحالة (اختياري)</label><input type="text" id="reg-ref" placeholder="مثلاً: ABC12345" maxlength="10" style="text-transform:uppercase;letter-spacing:2px;"></div>
     <button class="btn btn-accent" id="register-btn" onclick="handleRegister()"><i class="fas fa-user-plus"></i> <span id="register-btn-text">تسجيل كراكب</span></button>
     <div id="register-loading" class="hidden-el"><div class="loader-dots"><span></span><span></span><span></span></div></div>
     <div class="auth-link">لديك حساب؟ <a onclick="showAuthForm('login')">تسجيل دخول</a></div>
@@ -459,6 +485,7 @@
     <button class="tab-btn" onclick="switchDriverTab('history', this);setTimeout(renderDriverHistory,100)"><span class="tab-icon">&#x1F4DC;</span>السجل</button>
     <button class="tab-btn" onclick="switchDriverTab('profile', this)"><span class="tab-icon">&#x1F464;</span>حسابي</button>
     <button class="tab-btn" onclick="switchDriverTab('chat', this);setTimeout(openDriverChat,100)"><span class="tab-icon">&#x1F4AC;</span>المحادثة</button>
+    <button class="tab-btn" onclick="switchDriverTab('wallet', this);setTimeout(loadWallet,100)"><span class="tab-icon">&#x1F4B0;</span>المحفظة</button>
   </div>
 
   <div id="driver-meter-section">
@@ -551,7 +578,31 @@
         <div class="profile-stat"><div class="num" id="driver-stat-revenue">0</div><div class="lbl">الإيرادات (ج)</div></div>
         <div class="profile-stat"><div class="num" id="driver-stat-rating">-</div><div class="lbl">التقييم ⭐</div></div>
       </div>
+      <div id="driver-ref-section" style="margin-top:10px;"></div>
       <button class="btn btn-outline" style="width:100%;margin-top:12px;" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>
+    </div>
+  </div>
+  <div id="driver-wallet-section" style="display:none">
+    <div class="meter-header"><h1>&#x1F4B0; المحفظة</h1><p>رصيدك واشتراكك الشهري</p></div>
+    <div class="card">
+      <div class="wallet-balance">
+        <div class="amount" id="wallet-balance-driver">0.00 ج</div>
+        <div class="label">الرصيد الحالي</div>
+      </div>
+      <div class="wallet-actions">
+        <button class="btn btn-primary" onclick="showChargeForm('driver')"><i class="fas fa-plus"></i> شحن</button>
+        <button class="btn btn-accent" onclick="showSubscription('driver')"><i class="fas fa-crown"></i> الاشتراك</button>
+      </div>
+    </div>
+    <div class="card"><div id="wallet-tx-list-driver"><div class="empty-state">لا توجد معاملات</div></div></div>
+    <div id="charge-form-driver" style="display:none;" class="card paymob-mock">
+      <h4 style="margin-bottom:8px;">💳 شحن المحفظة (وضع اختبار)</h4>
+      <input type="number" id="charge-amount-driver" placeholder="المبلغ (ج)" min="10" value="100">
+      <input type="text" id="charge-card-driver" placeholder="رقم البطاقة (تجريبي: 4242 4242 4242 4242)" value="4242 4242 4242 4242">
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="btn btn-success" onclick="processCharge('driver')" style="flex:1;justify-content:center;"><i class="fas fa-check"></i> تأكيد الشحن</button>
+        <button class="btn btn-outline" onclick="hideChargeForm('driver')" style="flex:1;justify-content:center;">إلغاء</button>
+      </div>
     </div>
   </div>
 </div>
@@ -566,6 +617,7 @@
     <button class="tab-btn" onclick="switchPassengerTab('request', this)"><span class="tab-icon">&#x1F680;</span>طلب رحلة</button>
     <button class="tab-btn" onclick="switchPassengerTab('history', this);setTimeout(loadPassengerHistory,100)"><span class="tab-icon">&#x1F4DC;</span>تاريخي</button>
     <button class="tab-btn" onclick="switchPassengerTab('profile', this)"><span class="tab-icon">&#x1F464;</span>حسابي</button>
+    <button class="tab-btn" onclick="switchPassengerTab('wallet', this);setTimeout(loadWallet,100)"><span class="tab-icon">&#x1F4B0;</span>المحفظة</button>
   </div>
 
   <div id="passenger-track-section">
@@ -684,7 +736,31 @@
         <div class="profile-stat"><div class="num" id="passenger-stat-trips">0</div><div class="lbl">إجمالي الرحلات</div></div>
         <div class="profile-stat"><div class="num" id="passenger-stat-spent">0</div><div class="lbl">الإجمالي (ج)</div></div>
       </div>
+      <div id="passenger-ref-section" style="margin-top:10px;"></div>
       <button class="btn btn-outline" style="width:100%;margin-top:12px;" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>
+    </div>
+  </div>
+  <div id="passenger-wallet-section" style="display:none">
+    <div class="meter-header"><h1>&#x1F4B0; المحفظة</h1><p>رصيدك واشتراكك الشهري</p></div>
+    <div class="card">
+      <div class="wallet-balance">
+        <div class="amount" id="wallet-balance-passenger">0.00 ج</div>
+        <div class="label">الرصيد الحالي</div>
+      </div>
+      <div class="wallet-actions">
+        <button class="btn btn-primary" onclick="showChargeForm('passenger')"><i class="fas fa-plus"></i> شحن</button>
+        <button class="btn btn-accent" onclick="showSubscription('passenger')"><i class="fas fa-crown"></i> الاشتراك</button>
+      </div>
+    </div>
+    <div class="card"><div id="wallet-tx-list-passenger"><div class="empty-state">لا توجد معاملات</div></div></div>
+    <div id="charge-form-passenger" style="display:none;" class="card paymob-mock">
+      <h4 style="margin-bottom:8px;">💳 شحن المحفظة (وضع اختبار)</h4>
+      <input type="number" id="charge-amount-passenger" placeholder="المبلغ (ج)" min="10" value="100">
+      <input type="text" id="charge-card-passenger" placeholder="رقم البطاقة (تجريبي: 4242 4242 4242 4242)" value="4242 4242 4242 4242">
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="btn btn-success" onclick="processCharge('passenger')" style="flex:1;justify-content:center;"><i class="fas fa-check"></i> تأكيد الشحن</button>
+        <button class="btn btn-outline" onclick="hideChargeForm('passenger')" style="flex:1;justify-content:center;">إلغاء</button>
+      </div>
     </div>
   </div>
 </div>
@@ -828,6 +904,7 @@
     var phone = document.getElementById('reg-phone').value.trim();
     var pass = document.getElementById('reg-password').value;
     var confirm = document.getElementById('reg-confirm').value;
+    var refCode = document.getElementById('reg-ref').value.trim().toUpperCase();
     if (!name) { showAlert('register-alert', 'يرجى إدخال الاسم الكامل'); return; }
     if (!email) { showAlert('register-alert', 'يرجى إدخال البريد الإلكتروني'); return; }
     if (!pass || pass.length < 6) { showAlert('register-alert', 'كلمة السر يجب أن تكون 6 أحرف على الأقل'); return; }
@@ -837,7 +914,7 @@
 	      var requestedRole = selectedRole;
 	      var { data, error } = await supabase.auth.signUp({
 	        email: email, password: pass,
-	options: { data: { full_name: name, role: requestedRole, phone: phone } }
+	options: { data: { full_name: name, role: requestedRole, phone: phone, ref: refCode || null } }
 	      });
 	      if (error) { showAlert('register-alert', error.message || 'فشل التسجيل'); setLoading('register', false); return; }
 	      if (data && data.user && requestedRole === 'driver') {
@@ -860,14 +937,16 @@
     try {
       var { data, error } = await supabase.auth.signInWithPassword({ email: email, password: pass });
       if (error) { showAlert('login-alert', error.message || 'فشل تسجيل الدخول'); setLoading('login', false); return; }
+      updateLastActivity();
       initSession();
     } catch (e) { showAlert('login-alert', e.message || 'حدث خطأ'); setLoading('login', false); }
   };
 
-	  window.handleLogout = async function() {
-	    if (!supabase) return;
-	    stopGlobalGPS();
-	    await supabase.auth.signOut();
+  window.handleLogout = async function() {
+    if (!supabase) return;
+    stopGlobalGPS();
+    try { localStorage.removeItem('taweqe_last_activity'); } catch(e) {}
+    await supabase.auth.signOut();
     currentUser = null; currentProfile = null;
     showLandingPage();
     showToast('تم تسجيل الخروج');
@@ -910,6 +989,9 @@
       if (error || !session) { sessionInitialized = true; clearTimeout(loadingFallback); showLandingPage(); return; }
       sessionInitialized = true;
       currentUser = session.user;
+      // Check inactivity before proceeding
+      if (checkSessionInactivity()) { clearTimeout(loadingFallback); showLandingPage(); return; }
+      updateLastActivity();
       var { data: profile } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
       currentProfile = profile;
       if (!profile) { clearTimeout(loadingFallback); showLandingPage(); return; }
@@ -1075,35 +1157,106 @@
     });
   }
 
+  async function loadStatsFromDB() {
+    if (!supabase) throw new Error('No supabase');
+    // Try RPC first
+    try {
+      var { data, error } = await supabase.rpc('get_public_stats');
+      if (!error && data) return data;
+    } catch(e) {}
+    // Fallback: direct queries (each wrapped in try/catch for missing tables)
+    async function safeQuery(promise) { try { return await promise; } catch(e) { return { data: [] }; } }
+    var q1 = safeQuery(supabase.from('profiles').select('id, role').limit(1000));
+    var q2 = safeQuery(supabase.from('trips').select('total_fare, distance_km, status, created_at').limit(1000));
+    var q3 = safeQuery(supabase.from('ratings').select('score').limit(1000));
+    var q4 = safeQuery(supabase.from('drivers').select('id, is_available'));
+    var q5 = safeQuery(supabase.from('referrals').select('id, status'));
+    var results = await Promise.all([q1, q2, q3, q4, q5]);
+    var profiles = results[0].data || [];
+    var trips = results[1].data || [];
+    var ratings = results[2].data || [];
+    var drivers = results[3].data || [];
+    var referrals = results[4].data || [];
+
+    var usersTotal = profiles.length;
+    var usersDrivers = profiles.filter(function(p) { return p.role === 'driver'; }).length;
+    var usersPassengers = profiles.filter(function(p) { return p.role === 'passenger'; }).length;
+    var tripsAll = trips;
+    var tripsCompleted = trips.filter(function(t) { return t.status === 'completed'; });
+    var tripsCancelled = trips.filter(function(t) { return t.status === 'cancelled'; });
+    var today = new Date(); today.setHours(0,0,0,0);
+    var tripsToday = trips.filter(function(t) { return new Date(t.created_at) >= today; });
+    var weekAgo = new Date(Date.now() - 7*24*60*60*1000);
+    var tripsWeek = trips.filter(function(t) { return new Date(t.created_at) >= weekAgo; });
+    var monthAgo = new Date(Date.now() - 30*24*60*60*1000);
+    var tripsMonth = trips.filter(function(t) { return new Date(t.created_at) >= monthAgo; });
+    var totalFare = tripsCompleted.reduce(function(s, t) { return s + (parseFloat(t.total_fare) || 0); }, 0);
+    var totalDist = tripsCompleted.reduce(function(s, t) { return s + (parseFloat(t.distance_km) || 0); }, 0);
+    var avgFare = tripsCompleted.length > 0 ? totalFare / tripsCompleted.length : 0;
+    var activeDrivers = drivers.filter(function(d) { return d.is_available === true; }).length;
+    var avgRating = ratings.length > 0 ? ratings.reduce(function(s, r) { return s + r.score; }, 0) / ratings.length : 0;
+    var refTotal = referrals.length;
+    var refSuccessful = referrals.filter(function(r) { return r.status === 'completed' || r.status === 'rewarded'; }).length;
+
+    return {
+      users: { total: usersTotal, drivers: usersDrivers, passengers: usersPassengers },
+      trips: {
+        total: tripsAll.length, completed: tripsCompleted.length, cancelled: tripsCancelled.length,
+        today: tripsToday.length, this_week: tripsWeek.length, this_month: tripsMonth.length,
+        total_fare: totalFare, avg_fare: avgFare, total_distance_km: totalDist
+      },
+      drivers: { active: activeDrivers, available_now: activeDrivers },
+      ratings: { avg_score: parseFloat(avgRating.toFixed(1)), total: ratings.length },
+      referrals: { total: refTotal, successful: refSuccessful }
+    };
+  }
+
+  function renderStats(stats) {
+    var grid = document.getElementById('statsGrid');
+    if (!grid) return;
+    var fn = function(n) { return (!n && n !== 0) ? '0' : Number(n).toLocaleString('ar-EG'); };
+    var cards = [
+      { val: stats.users.total, label: 'إجمالي المستخدمين', sub: fn(stats.users.drivers) + ' سائق | ' + fn(stats.users.passengers) + ' راكب', icon: 'fa-users', cls: 'stat-purple', suffix: '' },
+      { val: stats.trips.completed, label: 'رحلات مكتملة', sub: fn(stats.trips.total) + ' إجمالي | ' + fn(stats.trips.cancelled) + ' ملغية', icon: 'fa-check-circle', cls: 'stat-green', suffix: '' },
+      { val: stats.trips.today, label: 'رحلات اليوم', sub: fn(stats.trips.this_week) + ' أسبوع | ' + fn(stats.trips.this_month) + ' شهر', icon: 'fa-calendar-day', cls: 'stat-blue', suffix: '' },
+      { val: stats.trips.total_fare, label: 'إجمالي الإيرادات', sub: 'متوسط ' + fn(stats.trips.avg_fare) + ' ج.م للرحلة', icon: 'fa-money-bill-wave', cls: 'stat-gold', suffix: '' },
+      { val: Math.round(stats.trips.total_distance_km), label: 'إجمالي المسافة', sub: 'جميع الرحلات المكتملة', icon: 'fa-road', cls: 'stat-orange', suffix: ' كم' },
+      { val: stats.drivers.active, label: 'سائقين نشطين', sub: fn(stats.drivers.available_now) + ' متاح الآن', icon: 'fa-users-gear', cls: 'stat-emerald', suffix: '' },
+      { val: stats.ratings.avg_score, label: 'متوسط التقييم', sub: fn(stats.ratings.total) + ' تقييم', icon: 'fa-star', cls: 'stat-pink', suffix: '' },
+      { val: stats.referrals.total, label: 'إحالات السائقين', sub: fn(stats.referrals.successful) + ' إحالة ناجحة', icon: 'fa-link', cls: 'stat-blue', suffix: '' }
+    ];
+    var html = '';
+    cards.forEach(function(c, i) {
+      var safeVal = clampNumber(c.val, 0, 1000000000, 0);
+      html += '<div class="stat-card ' + escapeHTML(c.cls) + '" style="transition-delay:' + (0.05*i) + 's"><div class="stat-icon"><i class="fas ' + escapeHTML(c.icon) + '"></i></div><div class="stat-value" data-target="' + safeVal + '" data-suffix="' + escapeHTML(c.suffix) + '">0</div><div class="stat-label">' + escapeHTML(c.label) + '</div><div class="stat-sublabel">' + escapeHTML(c.sub) + '</div></div>';
+    });
+    grid.innerHTML = html;
+    setTimeout(function() {
+      grid.querySelectorAll('.stat-card').forEach(function(el, i) { setTimeout(function() { el.classList.add('visible'); }, i * 80); });
+      animateCounters();
+    }, 200);
+  }
+
   async function loadStats() {
     var grid = document.getElementById('statsGrid');
     if (!grid) return;
     try {
+      // Try Edge Function first (most efficient)
       var res = await fetch(SUPABASE_URL + '/functions/v1/get-public-stats');
-      if (!res.ok) throw new Error('Failed');
-      var stats = await res.json();
-      var fn = function(n) { return (!n && n !== 0) ? '0' : Number(n).toLocaleString('ar-EG'); };
-      var cards = [
-	        { val: stats.users.total, label: 'إجمالي المستخدمين', sub: fn(stats.users.drivers) + ' سائق | ' + fn(stats.users.passengers) + ' راكب', icon: 'fa-users', cls: 'stat-purple', suffix: '' },
-	        { val: stats.trips.completed, label: 'رحلات مكتملة', sub: fn(stats.trips.total) + ' إجمالي | ' + fn(stats.trips.cancelled) + ' ملغية', icon: 'fa-check-circle', cls: 'stat-green', suffix: '' },
-	        { val: stats.trips.today, label: 'رحلات اليوم', sub: fn(stats.trips.this_week) + ' أسبوع | ' + fn(stats.trips.this_month) + ' شهر', icon: 'fa-calendar-day', cls: 'stat-blue', suffix: '' },
-	        { val: stats.trips.total_fare, label: 'إجمالي الإيرادات', sub: 'متوسط ' + fn(stats.trips.avg_fare) + ' ج.م للرحلة', icon: 'fa-money-bill-wave', cls: 'stat-gold', suffix: '' },
-	        { val: Math.round(stats.trips.total_distance_km), label: 'إجمالي المسافة', sub: 'جميع الرحلات المكتملة', icon: 'fa-road', cls: 'stat-orange', suffix: ' كم' },
-	        { val: stats.drivers.active, label: 'سائقين نشطين', sub: fn(stats.drivers.available_now) + ' متاح الآن', icon: 'fa-users-gear', cls: 'stat-emerald', suffix: '' },
-	        { val: stats.ratings.avg_score, label: 'متوسط التقييم', sub: fn(stats.ratings.total) + ' تقييم', icon: 'fa-star', cls: 'stat-pink', suffix: '' },
-	        { val: stats.referrals.total, label: 'إحالات السائقين', sub: fn(stats.referrals.successful) + ' إحالة ناجحة', icon: 'fa-link', cls: 'stat-blue', suffix: '' }
-	      ];
-	      var html = '';
-	      cards.forEach(function(c, i) {
-	        var safeVal = clampNumber(c.val, 0, 1000000000, 0);
-	        html += '<div class="stat-card ' + escapeHTML(c.cls) + '" style="transition-delay:' + (0.05*i) + 's"><div class="stat-icon"><i class="fas ' + escapeHTML(c.icon) + '"></i></div><div class="stat-value" data-target="' + safeVal + '" data-suffix="' + escapeHTML(c.suffix) + '">0</div><div class="stat-label">' + escapeHTML(c.label) + '</div><div class="stat-sublabel">' + escapeHTML(c.sub) + '</div></div>';
-	      });
-      grid.innerHTML = html;
-      setTimeout(function() {
-        grid.querySelectorAll('.stat-card').forEach(function(el, i) { setTimeout(function() { el.classList.add('visible'); }, i * 80); });
-        animateCounters();
-      }, 200);
-    } catch (e) { console.error('Stats error:', e); grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--text-muted);padding:40px;">تعذر تحميل الإحصائيات</div>'; }
+      if (res.ok) {
+        var stats = await res.json();
+        renderStats(stats);
+        return;
+      }
+    } catch(e) { /* fall through */ }
+    // Fallback: direct DB queries
+    try {
+      var stats = await loadStatsFromDB();
+      renderStats(stats);
+    } catch(e2) {
+      console.error('Stats error:', e2);
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--text-muted);padding:40px;">تعذر تحميل الإحصائيات</div>';
+    }
   }
 
   window.toggleFaq = function(el) {
@@ -1134,7 +1287,7 @@
   }
 
   function switchDriverTab(tab, btn) {
-    ['meter','requests','history','profile','chat'].forEach(function(t) {
+    ['meter','requests','history','profile','chat','wallet'].forEach(function(t) {
       var el = document.getElementById('driver-' + t + '-section');
       if (el) el.style.display = t === tab ? 'block' : 'none';
     });
@@ -1148,7 +1301,7 @@
   window.switchDriverTab = switchDriverTab;
 
   function switchPassengerTab(tab, btn) {
-    ['track','request','request-status','history','profile'].forEach(function(t) {
+    ['track','request','request-status','history','profile','wallet'].forEach(function(t) {
       var el = document.getElementById('passenger-' + t + '-section');
       if (el) el.style.display = t === tab ? 'block' : 'none';
     });
@@ -2490,7 +2643,231 @@
     }
   });
 
-  // ======================== INIT ========================
+  // ======================== WALLET + SUBSCRIPTION + REFERRAL ========================
+  window.loadWallet = async function() {
+    if (!supabase || !currentUser) return;
+    var role = currentProfile && currentProfile.role === 'driver' ? 'driver' : 'passenger';
+    try {
+      // Load balance
+      var { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', currentUser.id).single();
+      if (wallet) {
+        document.getElementById('wallet-balance-' + role).textContent = wallet.balance.toFixed(2) + ' ج';
+      }
+      // Load transactions
+      var { data: txs } = await supabase.from('wallet_transactions').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(20);
+      var txList = document.getElementById('wallet-tx-list-' + role);
+      if (txs && txs.length) {
+        txList.innerHTML = txs.map(function(t) {
+          var sign = t.amount >= 0 ? 'positive' : 'negative';
+          var typeLabels = { charge: 'شحن', subscription: 'اشتراك', refund: 'استرداد', referral_reward: 'مكافأة إحالة', withdrawal: 'سحب' };
+          var statusLabels = { pending: 'قيد الانتظار', completed: 'مكتملة', failed: 'فشلت' };
+          return '<div class="tx-item">'
+            + '<div><div class="tx-desc">' + escapeHTML(typeLabels[t.type] || t.type) + '</div>'
+            + '<div class="tx-date">' + new Date(t.created_at).toLocaleString('ar-EG') + '</div></div>'
+            + '<div style="text-align:left;"><div class="tx-amount ' + sign + '">' + (t.amount >= 0 ? '+' : '') + t.amount.toFixed(2) + ' ج</div>'
+            + '<div style="font-size:10px;color:var(--meter-muted)">' + statusLabels[t.status] + '</div></div></div>';
+        }).join('');
+      } else {
+        txList.innerHTML = '<div class="empty-state">لا توجد معاملات</div>';
+      }
+    } catch(e) { console.error(e); }
+  };
+
+  window.showChargeForm = function(role) {
+    document.getElementById('charge-form-' + role).style.display = 'block';
+  };
+  window.hideChargeForm = function(role) {
+    document.getElementById('charge-form-' + role).style.display = 'none';
+  };
+
+  window.processCharge = async function(role) {
+    if (!supabase || !currentUser) return;
+    var amount = parseFloat(document.getElementById('charge-amount-' + role).value);
+    if (!amount || amount < 10) { showToast('أقل مبلغ للشحن 10 جنيه'); return; }
+    try {
+      // Mock Paymob charge: update balance immediately (test mode)
+      var { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', currentUser.id).single();
+      var newBalance = (wallet ? wallet.balance : 0) + amount;
+      if (wallet) {
+        await supabase.from('wallets').update({ balance: newBalance }).eq('user_id', currentUser.id);
+      } else {
+        await supabase.from('wallets').insert({ user_id: currentUser.id, balance: amount });
+      }
+      await supabase.from('wallet_transactions').insert({
+        user_id: currentUser.id, amount: amount, type: 'charge', status: 'completed',
+        description: 'شحن المحفظة - تجريبي'
+      });
+      showToast('✅ تم شحن ' + amount.toFixed(2) + ' ج بنجاح (وضع اختبار)');
+      hideChargeForm(role);
+      loadWallet();
+      checkSubscription();
+    } catch(e) { showToast('فشل الشحن'); console.error(e); }
+  };
+
+  window.showSubscription = async function(role) {
+    if (!supabase || !currentUser) return;
+    var price = role === 'driver' ? 299 : 89;
+    var planName = role === 'driver' ? '🚘 باقة السائق' : '🧑 باقة الراكب';
+    try {
+      var { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', currentUser.id).single();
+      var balance = wallet ? wallet.balance : 0;
+      var { data: sub } = await supabase.from('subscriptions').select('*').eq('user_id', currentUser.id).eq('status', 'active').order('end_date', { ascending: false }).limit(1).maybeSingle();
+      var subStatus = sub ? 'نشط حتى ' + new Date(sub.end_date).toLocaleDateString('ar-EG') : 'غير مشترك';
+      var isActive = !!sub;
+      if (confirm(
+        planName + '\nالسعر: ' + price + ' ج/شهر\n'
+        + 'رصيدك: ' + balance.toFixed(2) + ' ج\n'
+        + 'الحالة: ' + subStatus + '\n\n'
+        + (isActive ? 'هل تريد تجديد الاشتراك؟' : 'هل تريد الاشتراك؟')
+      )) {
+        if (balance < price) {
+          showToast('❌ الرصيد غير كافٍ. اشحن المحفظة أولاً');
+          return;
+        }
+        // Deduct & activate
+        await supabase.from('wallets').update({ balance: balance - price }).eq('user_id', currentUser.id);
+        await supabase.from('wallet_transactions').insert({
+          user_id: currentUser.id, amount: -price, type: 'subscription', status: 'completed',
+          description: 'اشتراك شهري - ' + (role === 'driver' ? 'سائق' : 'راكب')
+        });
+        if (sub) {
+          await supabase.from('subscriptions').update({ status: 'active', end_date: new Date(Date.now() + 30*24*60*60*1000).toISOString(), auto_renew: true }).eq('id', sub.id);
+        } else {
+          await supabase.from('subscriptions').insert({
+            user_id: currentUser.id, plan_type: role, status: 'active',
+            start_date: new Date().toISOString(), end_date: new Date(Date.now() + 30*24*60*60*1000).toISOString(), auto_renew: true
+          });
+        }
+        showToast('✅ تم تفعيل الاشتراك لمدة 30 يوم');
+        loadWallet();
+      }
+    } catch(e) { showToast('فشل الاشتراك'); console.error(e); }
+  };
+
+  async function checkSubscription() {
+    if (!supabase || !currentUser) return;
+    try {
+      // Expire old ones
+      await supabase.rpc('check_subscription_expiry').maybeSingle();
+      var { data: sub } = await supabase.from('subscriptions').select('*').eq('user_id', currentUser.id).eq('status', 'active').order('end_date', { ascending: false }).limit(1).maybeSingle();
+      // Auto-renew if balance sufficient
+      if (!sub) {
+        var { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', currentUser.id).single();
+        var role = currentProfile && currentProfile.role === 'driver' ? 'driver' : 'passenger';
+        var price = role === 'driver' ? 299 : 89;
+        if (wallet && wallet.balance >= price) {
+          // Try to renew
+          await supabase.rpc('renew_subscription', { p_user_id: currentUser.id });
+        }
+      }
+    } catch(e) { /* silent */ }
+  }
+  window.checkSubscription = checkSubscription;
+
+  function loadReferralInfo() {
+    if (!supabase || !currentUser) return;
+    var role = currentProfile && currentProfile.role === 'driver' ? 'driver' : 'passenger';
+    var driverRefEl = document.getElementById('driver-ref-section');
+    var passengerRefEl = document.getElementById('passenger-ref-section');
+    if (role === 'driver' && !driverRefEl) return;
+    if (role === 'passenger' && !passengerRefEl) return;
+    var targetEl = role === 'driver' ? driverRefEl : passengerRefEl;
+    supabase.from('referral_codes').select('code').eq('user_id', currentUser.id).single().then(function(r) {
+      if (!r.data) return;
+      var code = r.data.code;
+      var shareUrl = window.location.origin + '?ref=' + code;
+      supabase.from('referrals').select('id, status').eq('referrer_id', currentUser.id).then(function(r2) {
+        var totalRefs = r2.data ? r2.data.length : 0;
+        var completedRefs = r2.data ? r2.data.filter(function(x) { return x.status !== 'pending'; }).length : 0;
+        var progress = Math.min(completedRefs / 10 * 100, 100);
+        targetEl.innerHTML = '<div class="ref-code-box">'
+          + '<div style="font-size:12px;color:var(--meter-muted);margin-bottom:4px;">🔗 كود الإحالة الخاص بك</div>'
+          + '<div class="code" id="refCodeDisplay">' + escapeHTML(code) + '</div>'
+          + '<div style="display:flex;gap:8px;margin-top:8px;justify-content:center;">'
+          + '<button class="btn btn-sm btn-outline" onclick="copyReferralCode()" style="padding:4px 12px;font-size:11px;"><i class="fas fa-copy"></i> نسخ</button>'
+          + '<button class="btn btn-sm btn-outline" onclick="shareReferralCode()" style="padding:4px 12px;font-size:11px;"><i class="fab fa-whatsapp"></i> مشاركة</button>'
+          + '</div></div>'
+          + '<div class="ref-progress"><div style="font-size:12px;color:var(--meter-muted);margin-bottom:4px;">📊 إحالاتي: ' + completedRefs + ' / 10</div>'
+          + '<div class="bar"><div class="bar-fill" style="width:' + progress + '%;"></div></div>'
+          + '<div class="count">' + (completedRefs >= 10 ? '🎉 أحسنت! ستحصل على شهر مجاني' : (10 - completedRefs) + ' إحالات متبقية للحصول على شهر مجاني') + '</div></div>';
+      });
+    });
+  }
+  window.copyReferralCode = function() {
+    var el = document.getElementById('refCodeDisplay');
+    if (!el) return;
+    navigator.clipboard.writeText(el.textContent).then(function() { showToast('✅ تم نسخ الكود'); }).catch(function() { showToast('فشل النسخ'); });
+  };
+  window.shareReferralCode = function() {
+    var el = document.getElementById('refCodeDisplay');
+    if (!el) return;
+    var code = el.textContent;
+    var url = window.location.origin + '/?ref=' + code;
+    window.open('https://wa.me/?text=' + encodeURIComponent('اشترك في تطبيق "توقع أجرتك" باستخدام كود الإحالة الخاص بي: ' + code + '\n' + url));
+  };
+
+  // Hook into initSession to load wallet/ref on login
+  var origShowDriverDashboard = showDriverDashboard;
+  showDriverDashboard = function() {
+    if (origShowDriverDashboard) origShowDriverDashboard();
+    setTimeout(function() {
+      loadReferralInfo();
+      checkSubscription();
+    }, 500);
+  };
+
+  var origShowPassengerDashboard = showPassengerDashboard;
+  showPassengerDashboard = function() {
+    if (origShowPassengerDashboard) origShowPassengerDashboard();
+    setTimeout(function() {
+      loadReferralInfo();
+      checkSubscription();
+    }, 500);
+  };
+  // ======================== END WALLET/SUBS/REFERRAL ========================
+
+  // ======================== SESSION INACTIVITY TIMEOUT (7 days) ========================
+  var SESSION_INACTIVITY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+  function updateLastActivity() {
+    try { localStorage.setItem('taweqe_last_activity', Date.now()); } catch(e) {}
+  }
+
+  function checkSessionInactivity() {
+    try {
+      var last = parseInt(localStorage.getItem('taweqe_last_activity'), 10);
+      if (last && (Date.now() - last) > SESSION_INACTIVITY_MS) {
+        // Session expired due to inactivity
+        localStorage.removeItem('taweqe_last_activity');
+        if (supabase) {
+          supabase.auth.signOut();
+        }
+        showToast('⌛ انتهت صلاحية الجلسة بسبب عدم النشاط. سجل دخول مرة أخرى');
+        return true;
+      }
+    } catch(e) {}
+    return false;
+  }
+
+  // Track user activity
+  function initActivityTracking() {
+    var events = ['mousedown', 'keydown', 'touchstart', 'scroll', 'mousemove'];
+    function handler() {
+      updateLastActivity();
+    }
+    for (var i = 0; i < events.length; i++) {
+      document.addEventListener(events[i], handler, { passive: true });
+    }
+    // Check periodically (every 5 minutes)
+    setInterval(function() {
+      if (currentUser) {
+        checkSessionInactivity();
+      }
+    }, 5 * 60 * 1000);
+  }
+  initActivityTracking();
+  // ======================== END SESSION INACTIVITY ========================
+
   var sessionInitialized = false;
 
   // Fallback: show landing page after 4s regardless of what happens
