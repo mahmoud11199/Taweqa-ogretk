@@ -446,6 +446,16 @@
   </div>
 
   <div id="driver-meter-section">
+    <div id="pending-trip-banner" style="display:none;background:rgba(34,197,94,0.1);border:1px solid var(--success);border-radius:12px;padding:10px 14px;margin-bottom:12px;align-items:center;gap:10px;">
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:700;">🚗 طلب راكب منتظر</div>
+        <div style="font-size:12px;color:var(--meter-muted);">كود التتبع: <strong id="pending-trip-code" style="color:var(--success);">-</strong></div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-sm btn-success" onclick="startMeterForAcceptedTrip()" style="padding:6px 14px;font-size:12px;"><i class="fas fa-play"></i> بدء الرحلة</button>
+        <button class="btn btn-sm btn-outline" onclick="dismissAcceptedTrip()" style="padding:6px 10px;font-size:12px;"><i class="fas fa-times"></i></button>
+      </div>
+    </div>
     <div class="meter-header"><h1>العداد الذكي Pro</h1><p id="globalStatusText">تتبع حي للمسار ونظام ركاب ديناميكي</p></div>
     <div class="meter-selector">
       <div id="meterTab_1" class="meter-tab active" onclick="switchActiveMeterUI(1)"><span id="dot_1" class="meter-status-dot"></span>عداد 1</div>
@@ -570,8 +580,13 @@
       <div class="request-form">
         <div class="field"><label>موقع pickup</label><div style="display:flex;gap:8px;"><input type="text" id="request-pickup" placeholder="العنوان أو المنطقة" style="flex:1;"><button class="btn btn-sm btn-outline" onclick="getCurrentLocation()" style="white-space:nowrap;"><i class="fas fa-location-dot"></i></button></div></div>
         <div class="field"><label>الوجهة</label><input type="text" id="request-destination" placeholder="الوجهة (اختياري)"></div>
-        <div class="field"><label>نوع الرحلة</label><select id="request-type"><option value="private">مخصوص</option><option value="shared">أفراد (مشترك)</option></select></div>
-        <div class="field"><label>عدد الركاب</label><input type="number" id="request-passengers" value="1" min="1" max="10"></div>
+        <div class="field"><label>نوع الرحلة</label><select id="request-type" onchange="updateFareEstimate()"><option value="private">مخصوص</option><option value="shared">أفراد (مشترك)</option></select></div>
+        <div class="field"><label>عدد الركاب</label><input type="number" id="request-passengers" value="1" min="1" max="10" onchange="updateFareEstimate()"></div>
+        <div id="fare-estimate" style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);border-radius:10px;padding:10px 14px;margin:12px 0;font-size:13px;text-align:center;">
+          <span style="color:var(--meter-muted);">تقدير الأجرة: </span>
+          <strong id="fareEstimateValue" style="color:var(--success);">15 - 35 ج.م</strong>
+          <span style="color:var(--meter-muted);font-size:11px;display:block;margin-top:2px;">تقدير أولي — السعر النهائي حسب العداد</span>
+        </div>
         <button class="btn btn-accent" id="request-btn" onclick="requestRide()" style="width:100%;justify-content:center;"><i class="fas fa-paper-plane"></i> إرسال طلب رحلة</button>
         <div id="request-loading" class="hidden-el" style="text-align:center;"><div class="loader-dots"><span></span><span></span><span></span></div></div>
       </div>
@@ -601,7 +616,10 @@
           <div class="row"><span class="lbl">كود التتبع</span><span class="val" id="acceptedTripCode">-</span></div>
           <div class="row"><span class="lbl">حالة الرحلة</span><span class="val" id="acceptedTripStatus">-</span></div>
         </div>
-        <button class="btn btn-primary" style="margin-top:14px;width:100%;justify-content:center;" onclick="startTrackingFromRequest()"><i class="fas fa-map-marker-alt"></i> تتبع الرحلة</button>
+        <div id="accepted-driver-map-container" style="height:140px;border-radius:12px;margin-top:12px;overflow:hidden;border:1px solid var(--meter-border);"></div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="startTrackingFromRequest()"><i class="fas fa-map-marker-alt"></i> تتبع الرحلة</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1148,6 +1166,48 @@
       document.getElementById('globalStatusText').innerText = '\u0639\u062F\u0627\u062F ' + m.id + ' \u062C\u0627\u0647\u0632';
     }
   }
+  window.startMeterForAcceptedTrip = async function() {
+    if (!acceptedTripData) { showToast('لا يوجد طلب منتظر'); return; }
+    var m = meters[activeMeterId];
+    if (m.isActive) { showToast('العداد شغال بالفعل'); return; }
+    var selectedType = document.getElementById('tripType').value;
+    m.isActive = true; m.isPaused = false; m.startTime = Date.now(); m.pausedTimeTotal = 0;
+    m.tripType = selectedType;
+    m.kmPrice = clampNumber(document.getElementById('kmPriceInput').value, 1, 50, 5);
+    m.waitPrice = clampNumber(document.getElementById('waitPriceInput').value, 0, 20, 1);
+    m.durationPrice = clampNumber(document.getElementById('durationPriceInput').value, 0, 10, 0.50);
+    m.shareCode = acceptedTripData.joinCode;
+    m.tripId = acceptedTripData.tripId;
+    m.lastSupabaseSync = 0;
+    m.totalDistance = 0; m.totalWaitSeconds = 0; m.waitingStartedAt = null; m.waitingBaseSeconds = 0;
+    m.passengerCount = 1;
+    m.lastLat = null; m.lastLng = null; m.lastAccuracy = null; m.lastSpeedKmh = null; m.lastLocationTime = null;
+    m.pathCoords = [];
+    if (selectedType === 'afrad') {
+      m.passengersData = [];
+      for (var i = 1; i <= m.passengerCount; i++) {
+        m.passengersData.push({ id: i, name: 'راكب رقم ' + i, startDistance: 0, startDuration: 0, startWait: 0, isInside: true, isInitial: true, individualFare: 0 });
+      }
+    }
+    if (m.tripId) {
+      try {
+        await supabase.from('trips').update({ status: 'started', started_at: new Date().toISOString() }).eq('id', m.tripId);
+        await invokeTripEvent('start', m);
+        m.lastSupabaseSync = Date.now();
+        saveDataToStorage();
+        showToast('🚀 بدأت رحلة الراكب — كود: ' + m.shareCode);
+      } catch(e) { console.error(e); showToast('فشل بدء الرحلة'); return; }
+    }
+    acceptedTripData = null;
+    document.getElementById('pending-trip-banner').style.display = 'none';
+    updateDotsUI(); renderMeterDataToUI(); redrawActiveRouteLine(); saveDataToStorage();
+  };
+  window.dismissAcceptedTrip = function() {
+    acceptedTripData = null;
+    document.getElementById('pending-trip-banner').style.display = 'none';
+    showToast('تم إلغاء الرحلة المنتظرة');
+  };
+
 	  async function startCurrentMeter() {
     var m = meters[activeMeterId];
     if (m.isActive) return;
@@ -1301,14 +1361,31 @@
 	      }
 	    }
     if (updated) { renderMeterDataToUI(); saveDataToStorage(); }
+    syncDriverLocation();
   }, 1000);
 
-	  function initGlobalGPS() {
-	    if (globalWatchId !== null) return;
-	    if (navigator.geolocation) {
-	      globalWatchId = navigator.geolocation.watchPosition(handleGlobalLocation, handleGPSError, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
-	    }
-	  }
+  var lastDriverLocSync = 0;
+
+  async function syncDriverLocation() {
+    if (!supabase || !currentUser) return;
+    var m = meters[activeMeterId];
+    var lat = m?.lastLat;
+    var lng = m?.lastLng;
+    if (lat == null || lng == null) return;
+    var now = Date.now();
+    if (now - lastDriverLocSync < 10000) return;
+    lastDriverLocSync = now;
+    try {
+      await supabase.from('drivers').update({ current_lat: lat, current_lng: lng }).eq('id', currentUser.id);
+    } catch(e) {}
+  }
+
+  function initGlobalGPS() {
+    if (globalWatchId !== null) return;
+    if (navigator.geolocation) {
+      globalWatchId = navigator.geolocation.watchPosition(handleGlobalLocation, handleGPSError, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
+    }
+  }
 	  function stopGlobalGPS() {
 	    if (navigator.geolocation && globalWatchId !== null) {
 	      navigator.geolocation.clearWatch(globalWatchId);
@@ -1573,7 +1650,7 @@
       var trip = data.trip;
       var locations = data.locations || [];
       document.getElementById('track-fare-display').textContent = (trip.total_fare || 0).toFixed(2) + ' ج';
-      document.getElementById('track-status-val').textContent = trip.status === 'started' ? 'جارية 🟢' : trip.status === 'completed' ? 'مكتملة ✅' : trip.status;
+      document.getElementById('track-status-val').textContent = trip.status === 'started' ? 'جارية 🟢' : trip.status === 'assigned' ? 'السائق في الطريق 🚗' : trip.status === 'completed' ? 'مكتملة ✅' : trip.status;
       document.getElementById('track-driver-name').textContent = trip.driver_name || 'سائق';
       document.getElementById('track-distance').textContent = (trip.distance_km || 0).toFixed(2) + ' كم';
       document.getElementById('track-duration').textContent = (trip.duration_min || 0).toFixed(0) + ' د';
@@ -1735,7 +1812,7 @@
   async function autoLoadActiveTrip() {
     if (!supabase || !currentUser) return;
     try {
-      var { data: trip } = await supabase.from('trips').select('join_code, id, status').eq('passenger_id', currentUser.id).eq('status', 'started').order('created_at', { ascending: false }).limit(1).maybeSingle();
+      var { data: trip } = await supabase.from('trips').select('join_code, id, status').eq('passenger_id', currentUser.id).in('status', ['assigned', 'started']).order('created_at', { ascending: false }).limit(1).maybeSingle();
       if (trip && trip.join_code) {
         document.getElementById('track-code').value = trip.join_code;
         document.getElementById('auto-track-banner').style.display = 'flex';
@@ -1791,6 +1868,38 @@
     passengerRequestPollTimer = setInterval(function() { pollPassengerRequest(requestId); }, 3000);
   }
 
+  var acceptedDriverMap = null;
+  var acceptedDriverLocTimer = null;
+
+  function initAcceptedDriverMap(driverId, tripCode) {
+    var container = document.getElementById('accepted-driver-map-container');
+    if (!container) return;
+    container.innerHTML = '<div id="accepted-driver-map" style="height:140px;border-radius:12px;"></div>';
+    if (acceptedDriverMap) { acceptedDriverMap.remove(); acceptedDriverMap = null; }
+    try {
+      acceptedDriverMap = L.map('accepted-driver-map').setView([30.0444, 31.2357], 14);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(acceptedDriverMap);
+      var driverMarker = L.marker([30.0444, 31.2357], { icon: L.divIcon({ className: 'driver-marker', html: '🚗', iconSize: [24, 24], iconAnchor: [12, 12] }) }).addTo(acceptedDriverMap);
+      if (acceptedDriverLocTimer) clearInterval(acceptedDriverLocTimer);
+      acceptedDriverLocTimer = setInterval(async function() {
+        if (!driverId) return;
+        try {
+          var { data: driverLoc } = await supabase.from('drivers').select('current_lat, current_lng').eq('id', driverId).single();
+          if (driverLoc && driverLoc.current_lat && driverLoc.current_lng) {
+            driverMarker.setLatLng([driverLoc.current_lat, driverLoc.current_lng]);
+            acceptedDriverMap.setView([driverLoc.current_lat, driverLoc.current_lng], 15);
+          }
+        } catch(e) {}
+        var { data: tripUpd } = await supabase.from('trips').select('status').eq('join_code', tripCode).order('created_at', { ascending: false }).limit(1).maybeSingle();
+        if (tripUpd && tripUpd.status === 'started') {
+          clearInterval(acceptedDriverLocTimer);
+          document.getElementById('acceptedTripStatus').textContent = 'جارية 🟢';
+        }
+      }, 4000);
+      setTimeout(function() { if (acceptedDriverMap) acceptedDriverMap.invalidateSize(); }, 300);
+    } catch(e) { console.error(e); }
+  }
+
   async function pollPassengerRequest(requestId) {
     if (!supabase || !requestId) return;
     try {
@@ -1804,14 +1913,19 @@
         document.getElementById('cancelRequestBtn').style.display = 'none';
         document.getElementById('requestAcceptedContent').style.display = 'block';
         document.getElementById('requestStatusCard').style.display = 'none';
+        var driverName = 'سائق';
         if (data.driver_id) {
           var { data: driverData } = await supabase.from('profiles').select('full_name').eq('id', data.driver_id).single();
-          document.getElementById('acceptedDriverName').textContent = driverData?.full_name || 'سائق';
+          if (driverData) driverName = driverData.full_name || 'سائق';
+          document.getElementById('acceptedDriverName').textContent = driverName;
         }
-        var { data: tripData } = await supabase.from('trips').select('join_code, status').eq('passenger_id', currentUser.id).order('created_at', { ascending: false }).limit(1).single();
+        var { data: tripData } = await supabase.from('trips').select('join_code, status').eq('passenger_id', currentUser.id).eq('driver_id', data.driver_id).order('created_at', { ascending: false }).limit(1).maybeSingle();
         if (tripData) {
           document.getElementById('acceptedTripCode').textContent = tripData.join_code || '-';
-          document.getElementById('acceptedTripStatus').textContent = tripData.status === 'started' ? 'جارية' : tripData.status;
+          document.getElementById('acceptedTripStatus').textContent = tripData.status === 'started' ? 'جارية 🟢' : tripData.status === 'assigned' ? 'السائق في الطريق 🚗' : tripData.status;
+          if (data.driver_id && tripData.join_code) {
+            initAcceptedDriverMap(data.driver_id, tripData.join_code);
+          }
         }
       } else if (data.status === 'rejected' || data.status === 'cancelled') {
         clearInterval(passengerRequestPollTimer);
@@ -1842,21 +1956,39 @@
       if (error || !requests || !requests.length) { list.innerHTML = '<div class="empty-state">لا توجد طلبات حالياً</div>'; return; }
       list.innerHTML = requests.map(function(r) {
         var typeText = r.classification === 'private' ? 'مخصوص' : 'أفراد';
-        return '<div class="driver-request-item"><div class="top"><span class="name"><i class="fas fa-user"></i> راكب</span><span class="req-badge pending">قيد الانتظار</span></div><div class="info"><i class="fas fa-tag"></i> ' + typeText + ' | <i class="fas fa-users"></i> ' + (r.passenger_count || 1) + ' راكب</div><div class="info"><i class="fas fa-map-pin"></i> ' + escapeHTML(r.pickup_address || 'بدون موقع') + '</div>' + (r.destination_address ? '<div class="info"><i class="fas fa-flag"></i> ' + escapeHTML(r.destination_address) + '</div>' : '') + '<div class="info"><i class="fas fa-clock"></i> ' + new Date(r.created_at).toLocaleString('ar-EG') + '</div><div class="req-actions"><button class="btn btn-success btn-sm" onclick="acceptRequest(\'' + r.id + '\')"><i class="fas fa-check"></i> قبول</button><button class="btn btn-danger btn-sm" onclick="rejectRequest(\'' + r.id + '\')"><i class="fas fa-times"></i> رفض</button></div></div>';
+        var hasLoc = r.pickup_lat && r.pickup_lng;
+        return '<div class="driver-request-item"><div class="top"><span class="name"><i class="fas fa-user"></i> راكب</span><span class="req-badge pending">قيد الانتظار</span></div><div class="info"><i class="fas fa-tag"></i> ' + typeText + ' | <i class="fas fa-users"></i> ' + (r.passenger_count || 1) + ' راكب</div><div class="info"><i class="fas fa-map-pin"></i> ' + escapeHTML(r.pickup_address || 'بدون موقع') + '</div>' + (r.destination_address ? '<div class="info"><i class="fas fa-flag"></i> ' + escapeHTML(r.destination_address) + '</div>' : '') + '<div class="info"><i class="fas fa-clock"></i> ' + new Date(r.created_at).toLocaleString('ar-EG') + '</div><div class="req-actions">' + (hasLoc ? '<button class="btn btn-sm btn-outline" onclick="showPickupOnMap(' + r.pickup_lat + ', ' + r.pickup_lng + ')" style="padding:6px 10px;font-size:11px;"><i class="fas fa-map-marker-alt"></i> موقع</button>' : '') + '<button class="btn btn-success btn-sm" onclick="acceptRequest(\'' + r.id + '\')"><i class="fas fa-check"></i> قبول</button><button class="btn btn-danger btn-sm" onclick="rejectRequest(\'' + r.id + '\')"><i class="fas fa-times"></i> رفض</button></div></div>';
       }).join('');
     } catch (e) { list.innerHTML = '<div class="empty-state">خطأ في تحميل الطلبات</div>'; console.error(e); }
   };
 
+  window.showPickupOnMap = function(lat, lng) {
+    if (driverMap) {
+      driverMap.setView([lat, lng], 16);
+      L.circleMarker([lat, lng], { radius: 8, color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 0.7 }).addTo(driverMap);
+      showToast('📍 موقع pickup على الخريطة');
+      switchDriverTab('meter', document.querySelector('#driver-app .tab-btn'));
+    } else {
+      showToast('الخريطة غير متاحة');
+    }
+  };
+
+  var acceptedTripData = null;
+
   window.acceptRequest = async function(requestId) {
     if (!supabase || !currentUser) return;
-    if (!confirm('قبول هذا الطلب؟ سيتم إنشاء رحلة جديدة.')) return;
+    if (!confirm('قبول هذا الطلب؟')) return;
     try {
       var joinCode = String(Math.floor(100000 + Math.random() * 900000));
-      var { data: requestData, error: reqError } = await supabase.from('ride_requests').update({ driver_id: currentUser.id, status: 'accepted', responded_at: new Date().toISOString() }).eq('id', requestId).eq('status', 'pending').select('passenger_id, passenger_count, classification, pickup_address, destination_address').single();
+      var { data: requestData, error: reqError } = await supabase.from('ride_requests').update({ driver_id: currentUser.id, status: 'accepted', responded_at: new Date().toISOString() }).eq('id', requestId).eq('status', 'pending').select('passenger_id, passenger_count, classification, pickup_address, destination_address, pickup_lat, pickup_lng').single();
       if (reqError) { showToast('فشل قبول الطلب: ' + reqError.message); return; }
-      var { error: tripError } = await supabase.from('trips').insert({ driver_id: currentUser.id, passenger_id: requestData.passenger_id, status: 'started', classification: requestData.classification === 'private' ? 'private' : 'shared', passenger_count: requestData.passenger_count || 1, adult_count: requestData.passenger_count || 1, join_code: joinCode, start_address: requestData.pickup_address || '', end_address: requestData.destination_address || '' });
+      var { data: tripData, error: tripError } = await supabase.from('trips').insert({ driver_id: currentUser.id, passenger_id: requestData.passenger_id, status: 'assigned', classification: requestData.classification === 'private' ? 'private' : 'shared', passenger_count: requestData.passenger_count || 1, adult_count: requestData.passenger_count || 1, join_code: joinCode, start_address: requestData.pickup_address || '', end_address: requestData.destination_address || '' }).select('id, join_code').single();
       if (tripError) { showToast('فشل إنشاء الرحلة: ' + tripError.message); return; }
-      showToast('تم قبول الطلب! كود التتبع: ' + joinCode);
+      acceptedTripData = { tripId: tripData.id, joinCode: joinCode, passengerName: 'راكب', pickupAddress: requestData.pickup_address, pickupLat: requestData.pickup_lat, pickupLng: requestData.pickup_lng };
+      document.getElementById('pending-trip-banner').style.display = 'block';
+      document.getElementById('pending-trip-code').textContent = joinCode;
+      switchDriverTab('meter', document.querySelector('#driver-app .tab-btn'));
+      showToast('✅ تم قبول الطلب! كود التتبع: ' + joinCode);
       loadDriverRequests();
     } catch (e) { showToast('حدث خطأ'); console.error(e); }
   };
@@ -1869,6 +2001,17 @@
       showToast('تم رفض الطلب');
       loadDriverRequests();
     } catch (e) { showToast('فشل'); }
+  };
+
+  window.updateFareEstimate = function() {
+    var type = document.getElementById('request-type').value;
+    var count = parseInt(document.getElementById('request-passengers').value) || 1;
+    var el = document.getElementById('fareEstimateValue');
+    if (type === 'private') {
+      el.textContent = '15 - 35 ج.م';
+    } else {
+      el.textContent = (count * 3) + ' - ' + (count * 8) + ' ج.م للفرد';
+    }
   };
 
   window.getCurrentLocation = function() {
