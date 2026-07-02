@@ -1,0 +1,143 @@
+﻿  var currentChatTripId = null;
+  var chatPollTimer = null;
+
+  window.cancelPassengerRequest = async function() {
+    if (!supabase || !currentPassengerRequestId) return;
+    if (!confirm('هل أنت متأكد من إلغاء الطلب؟')) return;
+    try {
+      await supabase.from('ride_requests').update({ status: 'cancelled' }).eq('id', currentPassengerRequestId);
+      clearInterval(passengerRequestPollTimer);
+      showToast('تم إلغاء الطلب');
+      switchPassengerTab('request', document.querySelector('#passenger-app .tab-btn'));
+    } catch (e) { showToast('فشل الإلغاء'); }
+  };
+
+  function openDriverChat() {
+    if (!currentChatTripId) {
+      showToast('لا توجد رحلة نشطة حالياً');
+      return;
+    }
+    loadChat('driverSA', currentChatTripId);
+  }
+  window.openDriverChat = openDriverChat;
+
+  async function loadChat(prefix, tripId) {
+    var container = document.getElementById('chatMessages' + prefix.charAt(0).toUpperCase() + prefix.slice(1));
+    if (!container) return;
+    try {
+      var { data: msgs, error } = await supabase.from('trip_chat_messages').select('*').eq('trip_id', tripId).order('created_at', { ascending: true }).limit(100);
+      if (error) return;
+      container.innerHTML = (msgs || []).map(function(m) {
+        var role = m.sender_role === 'driver' ? 'driver' : 'passenger';
+        var name = m.sender_role === 'driver' ? 'السائق' : 'الراكب';
+        var time = new Date(m.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+        return '<div class="chat-msg ' + role + '">' + escapeHTML(m.message) + '<div class="meta">' + name + ' - ' + time + '</div></div>';
+      }).join('');
+      container.scrollTop = container.scrollHeight;
+    } catch(e) { console.error(e); }
+  }
+  window.loadChat = loadChat;
+
+  async function sendChatMessage(prefix) {
+    if (!supabase || !currentUser || !currentChatTripId) { showToast('لا توجد محادثة نشطة'); return; }
+    var input = document.getElementById('chatInput' + prefix.charAt(0).toUpperCase() + prefix.slice(1));
+    var msg = (input ? input.value : '').trim();
+    if (!msg) return;
+    input.value = '';
+    try {
+      var role = currentProfile && currentProfile.role === 'driver' ? 'driver' : 'passenger';
+      var { error } = await supabase.from('trip_chat_messages').insert({
+        trip_id: currentChatTripId, sender_id: currentUser.id, sender_role: role, message: msg
+      });
+      if (error) { showToast('فشل الإرسال'); console.error(error); return; }
+      loadChat(prefix, currentChatTripId);
+    } catch(e) { console.error(e); }
+  }
+  window.sendChatMessage = sendChatMessage;
+
+  function startChatPoll(tripId) {
+    currentChatTripId = tripId;
+    if (chatPollTimer) clearInterval(chatPollTimer);
+    chatPollTimer = setInterval(function() {
+      var trackChat = document.getElementById('track-chat-section');
+      if (trackChat && trackChat.style.display !== 'none') {
+        loadChat('track', currentChatTripId);
+      }
+      var driverChat = document.getElementById('chatMessagesDriver');
+      if (driverChat && driverChat.style.display !== 'none') {
+        loadChat('driver', currentChatTripId);
+      }
+      var driverChatSA = document.getElementById('chatMessagesDriverSA');
+      if (driverChatSA && driverChatSA.style.display !== 'none') {
+        loadChat('driverSA', currentChatTripId);
+      }
+    }, 3500);
+  }
+  window.startChatPoll = startChatPoll;
+
+  // Hook into trackTrip to show chat when trip is active
+  var origTrackTrip = window.trackTrip;
+  window.trackTrip = async function(optCode) {
+    if (origTrackTrip) await origTrackTrip(optCode);
+    var statusEl = document.getElementById('track-status-val');
+    if (statusEl && (statusEl.textContent.includes('جارية') || statusEl.textContent.includes('الطريق'))) {
+      var tripIdEl = document.getElementById('track-fare-display');
+      if (!currentChatTripId && currentUser) {
+        var code = optCode || document.getElementById('track-code').value.trim();
+        if (code) {
+          try {
+            var { data: userTrip } = await supabase.from('trips').select('id').eq('join_code', code).eq('passenger_id', currentUser.id).maybeSingle();
+            if (userTrip) currentChatTripId = userTrip.id;
+          } catch(e) {}
+        }
+      }
+      if (currentChatTripId) {
+        document.getElementById('track-chat-section').style.display = 'block';
+        loadChat('track', currentChatTripId);
+        startChatPoll(currentChatTripId);
+      }
+    }
+  };
+
+  // Hook into autoLoadActiveTrip to set chat trip id
+  var origAutoLoad = autoLoadActiveTrip;
+  autoLoadActiveTrip = async function() {
+    if (origAutoLoad) await origAutoLoad();
+    if (!supabase || !currentUser) return;
+    try {
+      var { data: trip } = await supabase.from('trips').select('id, join_code, status').eq('passenger_id', currentUser.id).in('status', ['assigned', 'started']).order('created_at', { ascending: false }).limit(1).maybeSingle();
+      if (trip) {
+        currentChatTripId = trip.id;
+        if (trip.status === 'assigned' || trip.status === 'started') {
+          document.getElementById('track-chat-section').style.display = 'block';
+          loadChat('track', trip.id);
+          startChatPoll(trip.id);
+        }
+      }
+    } catch(e) { console.error(e); }
+  };
+
+  // Hook into startMeterForAcceptedTrip to set driver chat
+  window.startMeterForAcceptedTrip = (function(orig) {
+    return async function() {
+      if (orig) await orig();
+      if (currentChatTripId) {
+        document.getElementById('driver-chat-section').style.display = 'block';
+        loadChat('driver', currentChatTripId);
+        startChatPoll(currentChatTripId);
+      }
+    };
+  })(window.startMeterForAcceptedTrip);
+
+  // Hook into acceptRequest to set chat
+  window.acceptRequest = (function(orig) {
+    return async function(requestId) {
+      await orig(requestId);
+      if (acceptedTripData && acceptedTripData.tripId) {
+        currentChatTripId = acceptedTripData.tripId;
+        document.getElementById('driver-chat-section').style.display = 'block';
+        loadChat('driver', currentChatTripId);
+        startChatPoll(currentChatTripId);
+      }
+    };
+  })(window.acceptRequest);
