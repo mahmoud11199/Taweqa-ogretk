@@ -124,52 +124,7 @@
     document.getElementById('track-rating-section').style.display = 'none';
   };
 
-  window.closeRating = function() {
-    document.getElementById('ratingModal').style.display = 'none';
-  };
 
-  window.submitRating = async function() {
-    if (!supabase || !currentUser) { showToast('يجب تسجيل الدخول أولاً'); return; }
-    var activeStars = document.querySelectorAll('#ratingStars span.active').length;
-    if (activeStars === 0) { showToast('اختر عدد النجوم أولاً'); return; }
-    var comment = document.getElementById('ratingComment').value.trim();
-    var tripId = document.getElementById('ratingTripId').value;
-    var driverId = document.getElementById('ratingDriverId').value;
-    if (!tripId || !driverId) { showToast('بيانات الرحلة غير متوفرة'); return; }
-    try {
-      var { error } = await supabase.from('ratings').upsert({
-        trip_id: tripId, driver_id: driverId, passenger_id: currentUser.id,
-        score: activeStars, comment: comment || null
-      }, { onConflict: 'trip_id, passenger_id' });
-      if (error) { showToast('فشل إرسال التقييم: ' + error.message); return; }
-      document.getElementById('ratingFormContent').style.display = 'none';
-      document.getElementById('ratingDoneContent').style.display = 'block';
-      setTimeout(function() { document.getElementById('ratingModal').style.display = 'none'; }, 2000);
-    } catch (e) { showToast('حدث خطأ'); console.error(e); }
-  };
-
-  window.showRatingModal = function(tripId, driverId) {
-    document.getElementById('ratingTripId').value = tripId || '';
-    document.getElementById('ratingDriverId').value = driverId || '';
-    document.getElementById('ratingFormContent').style.display = 'block';
-    document.getElementById('ratingDoneContent').style.display = 'none';
-    document.getElementById('ratingComment').value = '';
-    document.querySelectorAll('#ratingStars span').forEach(function(s) { s.classList.remove('active'); s.textContent = '☆'; });
-    document.getElementById('ratingModal').style.display = 'flex';
-  };
-
-  async function loadDriverRating() {
-    if (!supabase || !currentUser) return;
-    try {
-      var { data } = await supabase.from('ratings').select('score').eq('driver_id', currentUser.id);
-      if (data && data.length) {
-        var avg = data.reduce(function(s, r) { return s + r.score; }, 0) / data.length;
-        document.getElementById('driver-stat-rating').textContent = avg.toFixed(1);
-      } else {
-        document.getElementById('driver-stat-rating').textContent = '-';
-      }
-    } catch (e) { console.error(e); }
-  }
 
   window.startTrackingFromRequest = function() {
     var code = document.getElementById('acceptedTripCode').textContent;

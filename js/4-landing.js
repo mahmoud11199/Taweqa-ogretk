@@ -118,14 +118,6 @@ async function loadStats() {
   var grid = document.getElementById('statsGrid');
   if (!grid) return;
   try {
-    var res = await fetch(SUPABASE_URL + '/functions/v1/get-public-stats');
-    if (res.ok) {
-      var stats = await res.json();
-      renderStats(stats);
-      return;
-    }
-  } catch(e) { /* fall through */ }
-  try {
     var stats = await loadStatsFromDB();
     renderStats(stats);
   } catch(e2) {
