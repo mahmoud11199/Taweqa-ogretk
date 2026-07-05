@@ -542,7 +542,7 @@
     var dist = m.totalDistance.toFixed(2), dur = m.totalDurationMinutes.toFixed(0), wait = waitingMinutes.toFixed(0);
     var distCost = (m.totalDistance * m.kmPrice).toFixed(2), durCost = (m.totalDurationMinutes * m.durationPrice).toFixed(2), waitCost = (waitingMinutes * m.waitPrice).toFixed(2);
     var totalFare = clampNumber(m.finalFare, 0, 100000, 0).toFixed(2);
-    var paymentLabel = m.payment_method === 'cash' ? 'نقدي' : 'محفظة';
+    var paymentLabel = m.payment_method === 'cash' ? 'نقدي (يداً بيد)' : (m.payment_status === 'paid_wallet' ? 'محفظة - تم الدفع ✅' : 'محفظة - في انتظار الدفع');
     var itemsHTML = '';
 
     // Price adjustment banner
@@ -664,7 +664,7 @@
   function saveTripToHistory(m) {
     try {
       var history = JSON.parse(localStorage.getItem('smart_meter_history')) || [];
-      history.unshift({ id: m.shareCode || Math.floor(100000 + Math.random() * 900000).toString(), meterId: m.id, date: new Date().toLocaleString('ar-EG'), tripType: m.tripType, distance: m.totalDistance, duration: m.totalDurationMinutes, wait: m.totalWaitSeconds / 60, fare: m.finalFare, savedPath: m.pathCoords });
+      history.unshift({ id: m.shareCode || Math.floor(100000 + Math.random() * 900000).toString(), meterId: m.id, date: new Date().toLocaleString('ar-EG'), tripType: m.tripType, distance: m.totalDistance, duration: m.totalDurationMinutes, wait: m.totalWaitSeconds / 60, fare: m.finalFare, savedPath: m.pathCoords, paymentMethod: m.payment_method || 'cash', paymentStatus: m.payment_status || 'unpaid' });
       localStorage.setItem('smart_meter_history', JSON.stringify(history));
     } catch(e) {}
   }
@@ -674,9 +674,13 @@
     try {
       var history = JSON.parse(localStorage.getItem('smart_meter_history')) || [];
       if (!history.length) { list.innerHTML = '<div class="empty-state">لا توجد رحلات مسجلة</div>'; return; }
-	      list.innerHTML = history.map(function(item, index) {
-	        return '<div class="history-item"><div class="history-header"><span>🗓️ ' + escapeHTML(item.date) + '</span><span style="color:var(--meter-primary)">' + escapeHTML(item.id) + '</span></div><div class="history-details"><div>عداد ' + escapeHTML(item.meterId) + '</div><div>' + (item.tripType === 'makhsoos' ? 'مخصوص' : 'أفراد') + '</div><div>' + clampNumber(item.distance, 0, 1000, 0).toFixed(2) + ' كم</div><div>' + clampNumber(item.duration, 0, 1440, 0).toFixed(0) + ' دقيقة</div></div><div class="history-fare">الإجمالي: ' + clampNumber(item.fare, 0, 100000, 0).toFixed(2) + ' ج</div><div id="histMap_' + index + '" class="history-map"></div></div>';
-	      }).join('');
+      list.innerHTML = history.map(function(item, index) {
+        var payLabel = '';
+        if (item.paymentMethod === 'cash') payLabel = '💰 نقدي';
+        else if (item.paymentStatus === 'paid_wallet') payLabel = '✅ مدفوع المحفظة';
+        else payLabel = '⏳ unpaid';
+        return '<div class="history-item"><div class="history-header"><span>' + escapeHTML(item.date) + '</span><span style="color:var(--meter-primary)">' + escapeHTML(item.id) + '</span></div><div class="history-details"><div>عداد ' + escapeHTML(item.meterId) + '</div><div>' + (item.tripType === 'makhsoos' ? 'مخصوص' : 'أفراد') + '</div><div>' + clampNumber(item.distance, 0, 1000, 0).toFixed(2) + ' كم</div><div>' + clampNumber(item.duration, 0, 1440, 0).toFixed(0) + ' دقيقة</div></div><div class="history-fare">الإجمالي: ' + clampNumber(item.fare, 0, 100000, 0).toFixed(2) + ' ج</div><div style="font-size:10px;color:var(--meter-muted);margin-top:2px;">' + payLabel + '</div><div id="histMap_' + index + '" class="history-map"></div></div>';
+      }).join('');
       setTimeout(function() {
         history.forEach(function(item, index) {
           var mapId = 'histMap_' + index;

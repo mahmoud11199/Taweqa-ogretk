@@ -378,11 +378,40 @@
         if (proposalAccepted) {
           priceActions += '<div style="font-size:10px;color:var(--success);margin-top:2px;">✅ تم الاتفاق على السعر</div>';
         }
+        // Payment button for unpaid wallet trips
+        if (isCompleted && t.payment_method === 'wallet' && (t.payment_status === 'unpaid' || t.payment_status === null)) {
+          priceActions += '<button class="btn btn-sm btn-success" onclick="payTripFromWallet(\'' + t.id + '\', ' + fare + ')" style="padding:4px 10px;font-size:11px;margin-top:4px;"><i class="fas fa-wallet"></i> ادفع ' + fare.toFixed(2) + ' ج من المحفظة</button>';
+        }
+        if (t.payment_status === 'paid_wallet') {
+          priceActions += '<div style="font-size:10px;color:var(--success);margin-top:2px;">✅ مدفوع عن طريق المحفظة</div>';
+        }
+        if (t.payment_status === 'paid_cash') {
+          priceActions += '<div style="font-size:10px;color:var(--meter-muted);margin-top:2px;">💰 نقدي (يداً بيد)</div>';
+        }
         return '<div class="history-item"><div class="history-header"><span>' + escapeHTML(new Date(t.created_at).toLocaleDateString('ar-EG')) + '</span><span style="color:var(--meter-primary)">' + escapeHTML(t.join_code || '-') + '</span></div><div class="history-details"><div>' + (t.classification === 'private' ? 'مخصوص' : 'أفراد') + '</div><div>' + clampNumber(t.distance_km, 0, 1000, 0).toFixed(2) + ' كم</div><div>' + clampNumber(t.duration_min, 0, 1440, 0).toFixed(0) + ' د</div><div>' + clampNumber(t.passenger_count, 1, 20, 1) + ' راكب</div></div><div class="history-fare">' + clampNumber(fare, 0, 100000, 0).toFixed(2) + ' ج</div>' + priceActions + '</div>';
       }).join('');
     } catch (e) { list.innerHTML = '<div class="empty-state">خطأ في التحميل</div>'; }
   }
   window.loadPassengerHistory = loadPassengerHistory;
+
+  window.payTripFromWallet = async function(tripId, amount) {
+    if (!confirm('تأكيد دفع ' + amount.toFixed(2) + ' ج من محفظتك لهذه الرحلة؟')) return;
+    try {
+      var { data, error } = await supabase.rpc('pay_trip_from_wallet', { p_trip_id: tripId });
+      if (error) { showToast('❌ فشل: ' + error.message); return; }
+      if (data && data.success) {
+        showToast('✅ تم الدفع بنجاح: ' + data.amount.toFixed(2) + ' ج');
+        loadPassengerHistory();
+        if (typeof loadWallet === 'function') setTimeout(loadWallet, 500);
+      } else {
+        var msg = data?.error || 'فشل الدفع';
+        if (data?.required) {
+          msg = '❌ الرصيد غير كافٍ. المطلوب: ' + data.required.toFixed(2) + ' ج، رصيدك: ' + (data.balance || 0).toFixed(2) + ' ج';
+        }
+        showToast(msg);
+      }
+    } catch(e) { showToast('❌ حدث خطأ'); console.error(e); }
+  };
 
   window.showPassengerPriceProposal = function(tripId, currentFare) {
     var proposed = prompt('السعر الحالي: ' + currentFare.toFixed(2) + ' ج\nأدخل السعر المقترح:', currentFare.toFixed(2));
