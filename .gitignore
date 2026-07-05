@@ -1,4 +1,6 @@
 supabase/.temp/
 node_modules/
 .env
+*.tar
+*.zip
 *.local
