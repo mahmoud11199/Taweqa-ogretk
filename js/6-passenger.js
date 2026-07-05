@@ -363,9 +363,42 @@
     try {
       var { data: trips, error } = await supabase.from('trips').select('*').eq('passenger_id', currentUser.id).order('created_at', { ascending: false }).limit(20);
       if (error || !trips || !trips.length) { list.innerHTML = '<div class="empty-state">لا توجد رحلات سابقة</div>'; return; }
-	      list.innerHTML = trips.map(function(t) {
-	        return '<div class="history-item"><div class="history-header"><span>🗓️ ' + escapeHTML(new Date(t.created_at).toLocaleDateString('ar-EG')) + '</span><span style="color:var(--meter-primary)">' + escapeHTML(t.join_code || '-') + '</span></div><div class="history-details"><div>' + (t.classification === 'private' ? 'مخصوص' : 'أفراد') + '</div><div>' + clampNumber(t.distance_km, 0, 1000, 0).toFixed(2) + ' كم</div><div>' + clampNumber(t.duration_min, 0, 1440, 0).toFixed(0) + ' د</div><div>' + clampNumber(t.passenger_count, 1, 20, 1) + ' راكب</div></div><div class="history-fare">' + clampNumber(t.total_fare, 0, 100000, 0).toFixed(2) + ' ج</div></div>';
-	      }).join('');
+      list.innerHTML = trips.map(function(t) {
+        var isCompleted = t.status === 'completed';
+        var hasPendingProposal = t.passenger_proposed_fare != null && t.passenger_price_accepted !== true;
+        var proposalAccepted = t.passenger_price_accepted === true;
+        var fare = proposalAccepted ? t.total_fare : t.total_fare;
+        var priceActions = '';
+        if (isCompleted && !proposalAccepted) {
+          priceActions = '<button class="btn btn-sm btn-outline" onclick="showPassengerPriceProposal(\'' + t.id + '\', ' + (t.total_fare || 0) + ')" style="padding:4px 10px;font-size:11px;margin-top:4px;"><i class="fas fa-edit"></i> ' + (hasPendingProposal ? 'تعديل الاقتراح' : 'تعديل السعر') + '</button>';
+        }
+        if (hasPendingProposal) {
+          priceActions += '<div style="font-size:10px;color:var(--accent);margin-top:2px;">⏳ بانتظار موافقة السائق على ' + t.passenger_proposed_fare.toFixed(2) + ' ج</div>';
+        }
+        if (proposalAccepted) {
+          priceActions += '<div style="font-size:10px;color:var(--success);margin-top:2px;">✅ تم الاتفاق على السعر</div>';
+        }
+        return '<div class="history-item"><div class="history-header"><span>' + escapeHTML(new Date(t.created_at).toLocaleDateString('ar-EG')) + '</span><span style="color:var(--meter-primary)">' + escapeHTML(t.join_code || '-') + '</span></div><div class="history-details"><div>' + (t.classification === 'private' ? 'مخصوص' : 'أفراد') + '</div><div>' + clampNumber(t.distance_km, 0, 1000, 0).toFixed(2) + ' كم</div><div>' + clampNumber(t.duration_min, 0, 1440, 0).toFixed(0) + ' د</div><div>' + clampNumber(t.passenger_count, 1, 20, 1) + ' راكب</div></div><div class="history-fare">' + clampNumber(fare, 0, 100000, 0).toFixed(2) + ' ج</div>' + priceActions + '</div>';
+      }).join('');
     } catch (e) { list.innerHTML = '<div class="empty-state">خطأ في التحميل</div>'; }
   }
   window.loadPassengerHistory = loadPassengerHistory;
+
+  window.showPassengerPriceProposal = function(tripId, currentFare) {
+    var proposed = prompt('السعر الحالي: ' + currentFare.toFixed(2) + ' ج\nأدخل السعر المقترح:', currentFare.toFixed(2));
+    if (proposed === null) return;
+    var fareNum = parseFloat(proposed);
+    if (!fareNum || fareNum < 0 || fareNum > 100000) { showToast('قيمة غير صالحة'); return; }
+    if (fareNum >= currentFare) { showToast('السعر المقترح يجب أن يكون أقل من السعر الحالي'); return; }
+    var note = prompt('سبب التعديل (اختياري):', '');
+    if (note === null) return;
+    supabase.rpc('propose_trip_price', { p_trip_id: tripId, p_proposed_fare: fareNum, p_note: note || '' }).then(function(r) {
+      if (r.error) { showToast('❌ فشل: ' + r.error.message); return; }
+      if (r.data && r.data.success) {
+        showToast('✅ تم اقتراح السعر. بانتظار موافقة السائق');
+        loadPassengerHistory();
+      } else {
+        showToast('❌ ' + (r.data?.error || 'فشل'));
+      }
+    });
+  };

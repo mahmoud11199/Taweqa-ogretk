@@ -216,6 +216,55 @@
     } catch(e) { return false; }
   };
 
+  window.checkPendingPriceProposals = async function() {
+    if (!supabase || !currentUser) return;
+    try {
+      var { data: proposals } = await supabase.from('trips')
+        .select('id, join_code, passenger_proposed_fare, passenger_adjustment_note, total_fare, passenger_id')
+        .eq('driver_id', currentUser.id)
+        .not('passenger_proposed_fare', 'is', null)
+        .eq('passenger_price_accepted', false)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      if (!proposals || !proposals.length) {
+        var existingBanner = document.getElementById('price-proposal-banner');
+        if (existingBanner) existingBanner.style.display = 'none';
+        return;
+      }
+      var banner = document.getElementById('price-proposal-banner');
+      if (!banner) {
+        var meterSection = document.getElementById('driver-meter-section');
+        if (!meterSection) return;
+        banner = document.createElement('div');
+        banner.id = 'price-proposal-banner';
+        banner.style.cssText = 'background:rgba(245,158,11,0.1);border:1px solid var(--accent);border-radius:12px;padding:10px 14px;margin-bottom:12px;';
+        meterSection.insertBefore(banner, meterSection.firstChild);
+      }
+      banner.innerHTML = proposals.map(function(p) {
+        return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:13px;"><span style="flex:1;">💬 الراكب يقترح <strong>' + p.passenger_proposed_fare.toFixed(2) + ' ج</strong> بدلاً من ' + (p.total_fare || 0).toFixed(2) + ' ج (كود: ' + escapeHTML(p.join_code || '-') + ')' + (p.passenger_adjustment_note ? '<br><span style="font-size:11px;color:var(--meter-muted);">السبب: ' + escapeHTML(p.passenger_adjustment_note) + '</span>' : '') + '</span><button class="btn btn-sm btn-success" onclick="acceptPriceProposal(\'' + p.id + '\')" style="padding:4px 10px;font-size:11px;">قبول</button><button class="btn btn-sm btn-outline" onclick="rejectPriceProposal(\'' + p.id + '\')" style="padding:4px 10px;font-size:11px;">رفض</button></div>';
+      }).join('');
+      banner.style.display = 'block';
+    } catch(e) { console.error(e); }
+  };
+
+  window.acceptPriceProposal = async function(tripId) {
+    if (!confirm('قبول السعر المقترح من الراكب؟')) return;
+    var { data, error } = await supabase.rpc('accept_passenger_price', { p_trip_id: tripId });
+    if (error) { showToast('❌ ' + error.message); return; }
+    if (data && data.success) {
+      showToast('✅ تم قبول السعر الجديد: ' + data.new_fare.toFixed(2) + ' ج');
+      checkPendingPriceProposals();
+    }
+  };
+
+  window.rejectPriceProposal = async function(tripId) {
+    if (!confirm('رفض السعر المقترح؟')) return;
+    var { data, error } = await supabase.rpc('reject_passenger_price', { p_trip_id: tripId });
+    if (error) { showToast('❌ ' + error.message); return; }
+    showToast('تم رفض الاقتراح');
+    checkPendingPriceProposals();
+  };
+
   // Hook into initSession to load wallet/ref on login
   var origShowDriverDashboard = showDriverDashboard;
   showDriverDashboard = function() {
@@ -224,7 +273,13 @@
       loadReferralInfo();
       checkSubscription();
       supabase.rpc('check_referral_rewards').catch(function(){});
+      checkPendingPriceProposals();
     }, 500);
+    // Poll for proposals every 30s
+    if (window._priceProposalInterval) clearInterval(window._priceProposalInterval);
+    window._priceProposalInterval = setInterval(function() {
+      if (currentUser) checkPendingPriceProposals();
+    }, 30000);
   };
 
   var origShowPassengerDashboard = showPassengerDashboard;
