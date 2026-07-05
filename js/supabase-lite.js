@@ -1,5 +1,6 @@
 (function() {
 var STORAGE_KEY = 'taweqe_sb_session';
+var _authCbs = [];
 
 function loadSession() {
   try { var d = JSON.parse(localStorage.getItem(STORAGE_KEY)); if (d && d.access_token && d.expires_at > Date.now() / 1000) return d; } catch(e) {}
@@ -37,9 +38,15 @@ function makeAuth(url, anonKey) {
     if (s && s.access_token) t.Authorization = 'Bearer ' + s.access_token;
     return t;
   }
+  function notifyAuth(event, session) {
+    _authCbs.forEach(function(cb) { try { cb(event, session); } catch(e) {} });
+  }
   function handleResp(resp) {
     if (resp.error) return { data: null, error: resp.error };
-    if (resp.data && resp.data.access_token) saveSession(resp.data);
+    if (resp.data && resp.data.access_token) {
+      saveSession(resp.data);
+      notifyAuth('SIGNED_IN', resp.data);
+    }
     return { data: resp.data, error: null };
   }
   return {
@@ -57,12 +64,13 @@ function makeAuth(url, anonKey) {
     },
     signOut: function() {
       var s = loadSession();
+      clearSession();
+      notifyAuth('SIGNED_OUT', null);
       if (s && s.access_token) {
         return sbFetch(authUrl + '/logout', {
           method: 'POST', headers: Object.assign({}, gh, { Authorization: 'Bearer ' + s.access_token })
-        }).then(function() { clearSession(); return { error: null }; });
+        }).then(function() { return { error: null }; });
       }
-      clearSession();
       return Promise.resolve({ error: null });
     },
     getSession: function() {
@@ -107,10 +115,11 @@ function makeAuth(url, anonKey) {
         body: JSON.stringify(params)
       }).then(handleResp);
     },
-    onAuthStateChange: function(cb) {
-      var id = Date.now() + '_' + Math.random();
-      var unsub = function() {};
-      return { data: { subscription: { id: id, unsubscribe: unsub } } };
+    onAuthStateChanged: function(cb) {
+      _authCbs.push(cb);
+      var session = loadSession();
+      if (session) setTimeout(function() { cb('SIGNED_IN', session); }, 0);
+      return { data: { subscription: { id: 'lite_' + Date.now(), unsubscribe: function() { var i = _authCbs.indexOf(cb); if (i >= 0) _authCbs.splice(i, 1); } } } };
     }
   };
 }
