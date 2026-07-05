@@ -4,7 +4,7 @@ var supabase = null;
 
 function initSupa() {
   try {
-    var c = window.__supa || (window.supabase && window.supabase.createClient);
+    var c = window.__supa || window.__supaLiteCreateClient || (window.supabase && window.supabase.createClient);
     if (c) { supabase = c(SUPABASE_URL, SUPABASE_ANON_KEY); return true; }
   } catch(e) { console.warn('Supabase init error:', e); }
   return false;
