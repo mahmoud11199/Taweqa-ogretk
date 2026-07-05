@@ -45,6 +45,11 @@ window.handleLogin = async function() {
 window.handleLogout = async function() {
   if (!supabase) return;
   stopGlobalGPS();
+  if (typeof trackInterval !== 'undefined' && trackInterval) { clearInterval(trackInterval); trackInterval = null; }
+  if (typeof passengerRequestPollTimer !== 'undefined' && passengerRequestPollTimer) { clearInterval(passengerRequestPollTimer); passengerRequestPollTimer = null; }
+  if (typeof acceptedDriverLocTimer !== 'undefined' && acceptedDriverLocTimer) { clearInterval(acceptedDriverLocTimer); acceptedDriverLocTimer = null; }
+  if (typeof driverRequestPollTimer !== 'undefined' && driverRequestPollTimer) { clearInterval(driverRequestPollTimer); driverRequestPollTimer = null; }
+  if (typeof chatPollTimer !== 'undefined' && chatPollTimer) { clearInterval(chatPollTimer); chatPollTimer = null; }
   try { localStorage.removeItem('taweqe_last_activity'); } catch(e) {}
   await supabase.auth.signOut();
   currentUser = null; currentProfile = null;

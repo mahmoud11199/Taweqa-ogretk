@@ -114,6 +114,7 @@
 .driver-request-item .info i { width: 16px; color: var(--meter-primary); }
 #loading-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
 #loading-screen.hidden { display: none; }
+.driver-marker { font-size: 24px; text-align: center; line-height: 24px; }
 .chat-panel { margin-top: 12px; border-top: 1px solid var(--meter-border); padding-top: 10px; }
 .chat-panel h4 { font-size: 13px; margin-bottom: 6px; color: var(--meter-muted); }
 .chat-messages { max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 6px 0; }

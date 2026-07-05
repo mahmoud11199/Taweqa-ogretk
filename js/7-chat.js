@@ -55,20 +55,24 @@
   }
   window.sendChatMessage = sendChatMessage;
 
+  function isVisible(el) {
+    return el && el.offsetParent !== null;
+  }
+
   function startChatPoll(tripId) {
     currentChatTripId = tripId;
     if (chatPollTimer) clearInterval(chatPollTimer);
     chatPollTimer = setInterval(function() {
       var trackChat = document.getElementById('track-chat-section');
-      if (trackChat && trackChat.style.display !== 'none') {
+      if (isVisible(trackChat)) {
         loadChat('track', currentChatTripId);
       }
-      var driverChat = document.getElementById('chatMessagesDriver');
-      if (driverChat && driverChat.style.display !== 'none') {
+      var driverChatSection = document.getElementById('driver-chat-section');
+      if (isVisible(driverChatSection)) {
         loadChat('driver', currentChatTripId);
       }
-      var driverChatSA = document.getElementById('chatMessagesDriverSA');
-      if (driverChatSA && driverChatSA.style.display !== 'none') {
+      var driverChatSASection = document.getElementById('driver-chat-section-standalone');
+      if (isVisible(driverChatSASection)) {
         loadChat('driverSA', currentChatTripId);
       }
     }, 3500);
@@ -81,7 +85,6 @@
     if (origTrackTrip) await origTrackTrip(optCode);
     var statusEl = document.getElementById('track-status-val');
     if (statusEl && (statusEl.textContent.includes('جارية') || statusEl.textContent.includes('الطريق'))) {
-      var tripIdEl = document.getElementById('track-fare-display');
       if (!currentChatTripId && currentUser) {
         var code = optCode || document.getElementById('track-code').value.trim();
         if (code) {
@@ -94,7 +97,7 @@
       if (currentChatTripId) {
         document.getElementById('track-chat-section').style.display = 'block';
         loadChat('track', currentChatTripId);
-        startChatPoll(currentChatTripId);
+        if (!chatPollTimer) startChatPoll(currentChatTripId);
       }
     }
   };

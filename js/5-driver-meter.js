@@ -20,11 +20,13 @@
   }
 
   function switchDriverTab(tab, btn) {
-    ['meter','requests','history','profile','chat','wallet'].forEach(function(t) {
+    ['meter','requests','history','profile','wallet'].forEach(function(t) {
       var el = document.getElementById('driver-' + t + '-section');
       if (el) el.style.display = t === tab ? 'block' : 'none';
     });
     document.getElementById('driver-chat-section-standalone').style.display = tab === 'chat' ? 'block' : 'none';
+    var chatSection = document.getElementById('driver-chat-section');
+    if (chatSection) chatSection.style.display = 'none';
     if (btn) {
       document.querySelectorAll('#driver-app .app-nav .tab-btn').forEach(function(b) { b.classList.remove('active'); });
       btn.classList.add('active');
@@ -429,6 +431,8 @@
   function resetCurrentMeterData() {
     if (confirm('هل أنت متأكد من تصفير العداد بالكامل؟')) {
       meters[activeMeterId] = createEmptyMeterObject(activeMeterId);
+      acceptedTripData = null;
+      document.getElementById('pending-trip-banner').style.display = 'none';
       updateDotsUI(); renderMeterDataToUI(); redrawActiveRouteLine(); saveDataToStorage();
       showToast('تم تصفير العداد');
     }
@@ -728,7 +732,8 @@
   window.showPickupOnMap = function(lat, lng) {
     if (driverMap) {
       driverMap.setView([lat, lng], 16);
-      L.circleMarker([lat, lng], { radius: 8, color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 0.7 }).addTo(driverMap);
+      if (window._pickupMarker) driverMap.removeLayer(window._pickupMarker);
+      window._pickupMarker = L.circleMarker([lat, lng], { radius: 8, color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 0.7 }).addTo(driverMap);
       showToast('📍 موقع pickup على الخريطة');
       switchDriverTab('meter', document.querySelector('#driver-app .tab-btn'));
     } else {
