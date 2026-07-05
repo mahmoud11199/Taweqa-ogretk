@@ -151,6 +151,7 @@
 
   window.requestRide = async function() {
     if (!supabase || !currentUser) { showToast('يجب تسجيل الدخول أولاً'); return; }
+    if (typeof requireSubscription === 'function' && !(await requireSubscription())) return;
     var pickup = document.getElementById('request-pickup').value.trim();
     var destination = document.getElementById('request-destination').value.trim();
     var type = document.getElementById('request-type').value;

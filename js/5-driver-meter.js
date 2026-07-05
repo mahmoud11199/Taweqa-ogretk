@@ -122,6 +122,7 @@
   }
   window.startMeterForAcceptedTrip = async function() {
     if (!acceptedTripData) { showToast('لا يوجد طلب منتظر'); return; }
+    if (typeof requireSubscription === 'function' && !(await requireSubscription())) return;
     var m = meters[activeMeterId];
     if (m.isActive) { showToast('العداد شغال بالفعل'); return; }
     var selectedType = document.getElementById('tripType').value;
@@ -162,7 +163,8 @@
     showToast('تم إلغاء الرحلة المنتظرة');
   };
 
-	  async function startCurrentMeter() {
+ 	  async function startCurrentMeter() {
+    if (typeof requireSubscription === 'function' && !(await requireSubscription())) return;
     var m = meters[activeMeterId];
     if (m.isActive) return;
     var selectedType = document.getElementById('tripType').value;

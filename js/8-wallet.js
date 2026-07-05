@@ -95,11 +95,11 @@
       if (!wallet || wallet.balance < amount) { showToast('❌ الرصيد غير كافٍ'); return; }
       if (!confirm('تأكيد سحب ' + amount.toFixed(2) + ' ج من المحفظة؟')) return;
 
-      await supabase.from('wallets').update({ balance: wallet.balance - amount }).eq('user_id', currentUser.id);
-      await supabase.from('wallet_transactions').insert({
-        user_id: currentUser.id, amount: -amount, type: 'withdrawal', status: 'pending',
-        description: 'طلب سحب - قيد المراجعة'
-      });
+      var { data, error } = await supabase.rpc('process_user_withdrawal', { p_user_id: currentUser.id, p_amount: amount });
+      if (error || !data || !data.success) {
+        showToast('❌ فشل السحب: ' + (data?.error || error?.message || ''));
+        return;
+      }
       showToast('✅ تم تقديم طلب السحب. سنقوم بمعالجته قريباً');
       hideWithdrawForm(role);
       loadWallet();
@@ -109,60 +109,53 @@
   window.showSubscription = async function(role) {
     if (!supabase || !currentUser) return;
     var price = role === 'driver' ? 299 : 89;
-    var planName = role === 'driver' ? '🚘 باقة السائق' : '🧑 باقة الراكب';
+    var planName = role === 'driver' ? 'باقة السائق' : 'باقة الراكب';
     try {
       var { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', currentUser.id).single();
       var balance = wallet ? wallet.balance : 0;
       var { data: sub } = await supabase.from('subscriptions').select('*').eq('user_id', currentUser.id).eq('status', 'active').order('end_date', { ascending: false }).limit(1).maybeSingle();
       var subStatus = sub ? 'نشط حتى ' + new Date(sub.end_date).toLocaleDateString('ar-EG') : 'غير مشترك';
       var isActive = !!sub;
-      if (confirm(
+      if (!confirm(
         planName + '\nالسعر: ' + price + ' ج/شهر\n'
         + 'رصيدك: ' + balance.toFixed(2) + ' ج\n'
         + 'الحالة: ' + subStatus + '\n\n'
         + (isActive ? 'هل تريد تجديد الاشتراك؟' : 'هل تريد الاشتراك؟')
-      )) {
-        if (balance < price) {
-          showToast('❌ الرصيد غير كافٍ. اشحن المحفظة أولاً');
-          return;
-        }
-        // Deduct & activate
-        await supabase.from('wallets').update({ balance: balance - price }).eq('user_id', currentUser.id);
-        await supabase.from('wallet_transactions').insert({
-          user_id: currentUser.id, amount: -price, type: 'subscription', status: 'completed',
-          description: 'اشتراك شهري - ' + (role === 'driver' ? 'سائق' : 'راكب')
-        });
-        if (sub) {
-          await supabase.from('subscriptions').update({ status: 'active', end_date: new Date(Date.now() + 30*24*60*60*1000).toISOString(), auto_renew: true }).eq('id', sub.id);
-        } else {
-          await supabase.from('subscriptions').insert({
-            user_id: currentUser.id, plan_type: role, status: 'active',
-            start_date: new Date().toISOString(), end_date: new Date(Date.now() + 30*24*60*60*1000).toISOString(), auto_renew: true
-          });
-        }
-        showToast('✅ تم تفعيل الاشتراك لمدة 30 يوم');
-        loadWallet();
+      )) return;
+
+      if (balance < price) {
+        showToast('❌ الرصيد غير كافٍ. اشحن المحفظة أولاً');
+        return;
       }
+
+      var { data, error } = await supabase.rpc('renew_subscription', { p_user_id: currentUser.id });
+      if (error || !data || !data.success) {
+        showToast('❌ فشل الاشتراك: ' + (data?.error || error?.message || ''));
+        return;
+      }
+      showToast('✅ تم تفعيل الاشتراك لمدة 30 يوم');
+      loadWallet();
     } catch(e) { showToast('فشل الاشتراك'); console.error(e); }
   };
 
   async function checkSubscription() {
     if (!supabase || !currentUser) return;
     try {
-      // Expire old ones
       await supabase.rpc('check_subscription_expiry');
+      var { data: lastSub } = await supabase.from('subscriptions').select('auto_renew').eq('user_id', currentUser.id).order('end_date', { ascending: false }).limit(1).maybeSingle();
+      var shouldAutoRenew = !lastSub || lastSub.auto_renew === true;
+      if (!shouldAutoRenew) return;
+
       var { data: sub } = await supabase.from('subscriptions').select('*').eq('user_id', currentUser.id).eq('status', 'active').order('end_date', { ascending: false }).limit(1).maybeSingle();
-      // Auto-renew if balance sufficient
       if (!sub) {
         var { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', currentUser.id).single();
         var role = currentProfile && currentProfile.role === 'driver' ? 'driver' : 'passenger';
         var price = role === 'driver' ? 299 : 89;
         if (wallet && wallet.balance >= price) {
-          // Try to renew
           await supabase.rpc('renew_subscription', { p_user_id: currentUser.id });
         }
       }
-    } catch(e) { /* silent */ }
+    } catch(e) {}
   }
   window.checkSubscription = checkSubscription;
 
@@ -206,6 +199,21 @@
     var code = el.textContent;
     var url = window.location.origin + '/?ref=' + code;
     window.open('https://wa.me/?text=' + encodeURIComponent('اشترك في تطبيق "توقع أجرتك" باستخدام كود الإحالة الخاص بي: ' + code + '\n' + url));
+  };
+
+  window.requireSubscription = async function() {
+    if (!supabase || !currentUser) return false;
+    try {
+      await supabase.rpc('check_subscription_expiry');
+      var { data: sub } = await supabase.from('subscriptions').select('id, end_date').eq('user_id', currentUser.id).eq('status', 'active').order('end_date', { ascending: false }).limit(1).maybeSingle();
+      if (!sub) {
+        var role = currentProfile && currentProfile.role === 'driver' ? 'driver' : 'passenger';
+        var price = role === 'driver' ? 299 : 89;
+        showToast('⚠️ يجب الاشتراك أولاً (' + price + ' ج/شهر)');
+        return false;
+      }
+      return true;
+    } catch(e) { return false; }
   };
 
   // Hook into initSession to load wallet/ref on login
