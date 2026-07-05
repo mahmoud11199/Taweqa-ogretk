@@ -1,6 +1,7 @@
 ﻿  window.loadWallet = async function() {
     if (!supabase || !currentUser) return;
     var role = currentProfile && currentProfile.role === 'driver' ? 'driver' : 'passenger';
+    if (typeof checkPaymobReturn === 'function') checkPaymobReturn();
     try {
       // Load balance
       var { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', currentUser.id).single();
@@ -39,23 +40,70 @@
     var amount = parseFloat(document.getElementById('charge-amount-' + role).value);
     if (!amount || amount < 10) { showToast('أقل مبلغ للشحن 10 جنيه'); return; }
     try {
-      // Mock Paymob charge: update balance immediately (test mode)
-      var { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', currentUser.id).single();
-      var newBalance = (wallet ? wallet.balance : 0) + amount;
-      if (wallet) {
-        await supabase.from('wallets').update({ balance: newBalance }).eq('user_id', currentUser.id);
-      } else {
-        await supabase.from('wallets').insert({ user_id: currentUser.id, balance: amount });
-      }
-      await supabase.from('wallet_transactions').insert({
-        user_id: currentUser.id, amount: amount, type: 'charge', status: 'completed',
-        description: 'شحن المحفظة - تجريبي'
+      var btn = document.getElementById('charge-btn-' + role);
+      if (btn) btn.disabled = true;
+
+      var { data, error } = await supabase.functions.invoke('paymob-charge', {
+        body: { action: 'create', amount: amount }
       });
-      showToast('✅ تم شحن ' + amount.toFixed(2) + ' ج بنجاح (وضع اختبار)');
-      hideChargeForm(role);
+
+      if (error || !data || !data.redirect_url) {
+        showToast('❌ فشل الاتصال ببوابة الدفع. ' + (error?.message || ''));
+        if (btn) btn.disabled = false;
+        return;
+      }
+
+      // Save return URL in session storage
+      try {
+        sessionStorage.setItem('paymob_pending', JSON.stringify({ amount: amount, intention_id: data.intention_id }));
+      } catch(e) {}
+
+      showToast('🔄 جاري تحويلك إلى بوابة الدفع...');
+      window.location.href = data.redirect_url;
+    } catch(e) { showToast('❌ فشل الشحن'); console.error(e); }
+  };
+
+  // Check for Paymob return
+  window.checkPaymobReturn = async function() {
+    var params = new URLSearchParams(window.location.search);
+    var paymobStatus = params.get('paymob');
+    if (paymobStatus === 'success') {
+      showToast('✅ تم شحن المحفظة بنجاح!');
       loadWallet();
       checkSubscription();
-    } catch(e) { showToast('فشل الشحن'); console.error(e); }
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (paymobStatus === 'failed') {
+      showToast('❌ فشلت عملية الدفع. حاول مرة أخرى');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  };
+
+  // Withdrawal
+  window.showWithdrawForm = function(role) {
+    document.getElementById('withdraw-form-' + role).style.display = 'block';
+  };
+  window.hideWithdrawForm = function(role) {
+    document.getElementById('withdraw-form-' + role).style.display = 'none';
+  };
+  window.processWithdrawal = async function(role) {
+    if (!supabase || !currentUser) return;
+    var amount = parseFloat(document.getElementById('withdraw-amount-' + role).value);
+    if (!amount || amount < 20) { showToast('أقل مبلغ للسحب 20 جنيه'); return; }
+    try {
+      var { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', currentUser.id).single();
+      if (!wallet || wallet.balance < amount) { showToast('❌ الرصيد غير كافٍ'); return; }
+      if (!confirm('تأكيد سحب ' + amount.toFixed(2) + ' ج من المحفظة؟')) return;
+
+      await supabase.from('wallets').update({ balance: wallet.balance - amount }).eq('user_id', currentUser.id);
+      await supabase.from('wallet_transactions').insert({
+        user_id: currentUser.id, amount: -amount, type: 'withdrawal', status: 'pending',
+        description: 'طلب سحب - قيد المراجعة'
+      });
+      showToast('✅ تم تقديم طلب السحب. سنقوم بمعالجته قريباً');
+      hideWithdrawForm(role);
+      loadWallet();
+    } catch(e) { showToast('❌ فشل السحب'); console.error(e); }
   };
 
   window.showSubscription = async function(role) {

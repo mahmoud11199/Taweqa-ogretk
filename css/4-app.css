@@ -147,7 +147,5 @@
 .ref-progress .bar { height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; }
 .ref-progress .bar-fill { height: 100%; background: linear-gradient(90deg, var(--meter-primary), var(--primary)); border-radius: 4px; transition: width 0.5s; }
 .ref-progress .count { font-size: 12px; color: var(--meter-muted); margin-top: 4px; }
-.paymob-mock { background: var(--meter-card); border-radius: 14px; padding: 16px; border: 1px solid var(--meter-border); }
-.paymob-mock input { width: 100%; padding: 10px; margin: 6px 0; border-radius: 8px; border: 1px solid var(--meter-border); background: rgba(255,255,255,0.05); color: #fff; font-size: 14px; }
 @media (max-width: 900px) { .hero h1 { font-size: 34px; } .hero { padding: 60px 20px 40px; } .stats-grid { grid-template-columns: repeat(2, 1fr); } .stat-card .stat-value { font-size: 26px; } }
 @media (max-width: 600px) { .hero h1 { font-size: 28px; } .hero p { font-size: 15px; } .stats-grid { grid-template-columns: 1fr; } .features-grid { grid-template-columns: 1fr; } .stat-wide { grid-column: 1; } .navbar .logo { font-size: 17px; } .hero-icon { width: 72px; height: 72px; font-size: 30px; } .auth-card { padding: 28px 20px; } .app-container { padding: 0 8px 80px; } .fare-display { font-size: 32px; } .track-input-group { flex-direction: column; } }

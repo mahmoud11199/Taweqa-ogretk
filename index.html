@@ -272,16 +272,24 @@
       <div class="wallet-actions">
         <button class="btn btn-primary" onclick="showChargeForm('driver')"><i class="fas fa-plus"></i> شحن</button>
         <button class="btn btn-accent" onclick="showSubscription('driver')"><i class="fas fa-crown"></i> الاشتراك</button>
+        <button class="btn btn-warning" onclick="showWithdrawForm('driver')"><i class="fas fa-arrow-down"></i> سحب</button>
       </div>
     </div>
     <div class="card"><div id="wallet-tx-list-driver"><div class="empty-state">لا توجد معاملات</div></div></div>
-    <div id="charge-form-driver" style="display:none;" class="card paymob-mock">
-      <h4 style="margin-bottom:8px;">💳 شحن المحفظة (وضع اختبار)</h4>
+    <div id="charge-form-driver" style="display:none;" class="card">
+      <h4 style="margin-bottom:8px;">شحن المحفظة</h4>
       <input type="number" id="charge-amount-driver" placeholder="المبلغ (ج)" min="10" value="100">
-      <input type="text" id="charge-card-driver" placeholder="رقم البطاقة (تجريبي: 4242 4242 4242 4242)" value="4242 4242 4242 4242">
       <div style="display:flex;gap:8px;margin-top:8px;">
-        <button class="btn btn-success" onclick="processCharge('driver')" style="flex:1;justify-content:center;"><i class="fas fa-check"></i> تأكيد الشحن</button>
+        <button class="btn btn-success" id="charge-btn-driver" onclick="processCharge('driver')" style="flex:1;justify-content:center;"><i class="fas fa-plus"></i> شحن</button>
         <button class="btn btn-outline" onclick="hideChargeForm('driver')" style="flex:1;justify-content:center;">إلغاء</button>
+      </div>
+    </div>
+    <div id="withdraw-form-driver" style="display:none;" class="card">
+      <h4 style="margin-bottom:8px;">سحب من المحفظة</h4>
+      <input type="number" id="withdraw-amount-driver" placeholder="المبلغ (ج)" min="20" value="100">
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="btn btn-warning" onclick="processWithdrawal('driver')" style="flex:1;justify-content:center;"><i class="fas fa-arrow-down"></i> سحب</button>
+        <button class="btn btn-outline" onclick="hideWithdrawForm('driver')" style="flex:1;justify-content:center;">إلغاء</button>
       </div>
     </div>
   </div>
@@ -430,16 +438,24 @@
       <div class="wallet-actions">
         <button class="btn btn-primary" onclick="showChargeForm('passenger')"><i class="fas fa-plus"></i> شحن</button>
         <button class="btn btn-accent" onclick="showSubscription('passenger')"><i class="fas fa-crown"></i> الاشتراك</button>
+        <button class="btn btn-warning" onclick="showWithdrawForm('passenger')"><i class="fas fa-arrow-down"></i> سحب</button>
       </div>
     </div>
     <div class="card"><div id="wallet-tx-list-passenger"><div class="empty-state">لا توجد معاملات</div></div></div>
-    <div id="charge-form-passenger" style="display:none;" class="card paymob-mock">
-      <h4 style="margin-bottom:8px;">💳 شحن المحفظة (وضع اختبار)</h4>
+    <div id="charge-form-passenger" style="display:none;" class="card">
+      <h4 style="margin-bottom:8px;">شحن المحفظة</h4>
       <input type="number" id="charge-amount-passenger" placeholder="المبلغ (ج)" min="10" value="100">
-      <input type="text" id="charge-card-passenger" placeholder="رقم البطاقة (تجريبي: 4242 4242 4242 4242)" value="4242 4242 4242 4242">
       <div style="display:flex;gap:8px;margin-top:8px;">
-        <button class="btn btn-success" onclick="processCharge('passenger')" style="flex:1;justify-content:center;"><i class="fas fa-check"></i> تأكيد الشحن</button>
+        <button class="btn btn-success" id="charge-btn-passenger" onclick="processCharge('passenger')" style="flex:1;justify-content:center;"><i class="fas fa-plus"></i> شحن</button>
         <button class="btn btn-outline" onclick="hideChargeForm('passenger')" style="flex:1;justify-content:center;">إلغاء</button>
+      </div>
+    </div>
+    <div id="withdraw-form-passenger" style="display:none;" class="card">
+      <h4 style="margin-bottom:8px;">سحب من المحفظة</h4>
+      <input type="number" id="withdraw-amount-passenger" placeholder="المبلغ (ج)" min="20" value="100">
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="btn btn-warning" onclick="processWithdrawal('passenger')" style="flex:1;justify-content:center;"><i class="fas fa-arrow-down"></i> سحب</button>
+        <button class="btn btn-outline" onclick="hideWithdrawForm('passenger')" style="flex:1;justify-content:center;">إلغاء</button>
       </div>
     </div>
   </div>
@@ -497,6 +513,7 @@
 <script src="js/6-passenger.js"></script>
 <script src="js/7-chat.js"></script>
 <script src="js/8-wallet.js"></script>
+<script src="js/9-paymob.js"></script>
 <script src="js/9-init.js"></script>
 </body>
 </html>
