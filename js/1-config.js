@@ -10,11 +10,24 @@ function initSupa() {
   return false;
 }
 
-if (!initSupa()) {
-  var _r = 0;
+function tryInitSupa(maxWaitMs) {
+  if (initSupa()) return true;
+  var waited = 0;
+  var step = 100;
   var _t = setInterval(function() {
-    if (initSupa() || _r++ > 30) clearInterval(_t);
-  }, 100);
+    waited += step;
+    if (initSupa() || waited >= maxWaitMs) { clearInterval(_t); }
+  }, step);
+  return false;
+}
+
+if (!tryInitSupa(5000)) {
+  // Retry on user interaction in case modules loaded late
+  document.addEventListener('click', function _retry() {
+    if (!supabase && initSupa()) {
+      document.removeEventListener('click', _retry);
+    }
+  });
 }
 
 var currentUser = null, currentProfile = null;

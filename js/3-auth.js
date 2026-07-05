@@ -29,6 +29,12 @@ window.handleRegister = async function() {
 };
 
 window.handleLogin = async function() {
+  if (!supabase) {
+    initSupa();
+    if (!supabase) {
+      await new Promise(function(r) { var _t2 = setInterval(function() { if (initSupa() || supabase) { clearInterval(_t2); r(); } }, 100); setTimeout(r, 3000); });
+    }
+  }
   if (!supabase) { showToast('خدمة الدخول غير متاحة'); return; }
   var email = document.getElementById('login-email').value.trim();
   var pass = document.getElementById('login-password').value;
