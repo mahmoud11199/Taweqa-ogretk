@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-type TripAction = 'start' | 'sync' | 'complete';
+type TripAction = 'start' | 'sync' | 'complete' | 'adjust_prices';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -91,6 +91,8 @@ Deno.serve(async (req) => {
     tripId?: string | null;
     meter?: Record<string, unknown>;
     location?: { lat?: number; lng?: number; accuracy?: number; speedKmh?: number };
+    payment_method?: string;
+    payment_status?: string;
   } | null;
 
   if (!body?.action || !body.meter) return jsonResponse({ error: 'Invalid payload' }, 400);
@@ -98,8 +100,16 @@ Deno.serve(async (req) => {
   const userId = authData.user.id;
   const meter = body.meter;
   const status = body.action === 'complete' ? 'completed' : 'started';
+
+  // On start: save originals = used prices
+  // On complete: if originals not yet set, they were already stored on start
+  const originalKmPrice = clampNumber(meter.original_km_price ?? meter.kmPrice, 1, 50, 5);
+  const originalWaitPrice = clampNumber(meter.original_wait_price ?? meter.waitPrice, 0, 20, 1);
+  const originalDurationPrice = clampNumber(meter.original_duration_price ?? meter.durationPrice, 0, 10, 0.5);
+  const originalBandira = clampNumber(meter.original_bandira ?? meter.bandira, 0, 1000, 5);
+
   const serverFare = calculateServerFare(meter);
-  const payload = {
+  const payload: Record<string, unknown> = {
     driver_id: userId,
     status,
     classification: meter.tripType === 'makhsoos' ? 'private' : 'shared',
@@ -111,6 +121,11 @@ Deno.serve(async (req) => {
     km_price_used: clampNumber(meter.kmPrice, 1, 50, 5),
     duration_price_used: clampNumber(meter.durationPrice, 0, 10, 0.5),
     wait_price_used: clampNumber(meter.waitPrice, 0, 20, 1),
+    original_km_price: originalKmPrice,
+    original_wait_price: originalWaitPrice,
+    original_duration_price: originalDurationPrice,
+    original_bandira: originalBandira,
+    price_adjusted: meter.price_adjusted === true || body.action === 'adjust_prices',
     join_code: String(meter.shareCode || ''),
     passenger_count: Math.round(clampNumber(meter.passengerCount, 0, 20, 1)),
     passenger_breakdown: JSON.stringify(meter.passengersData || []),
@@ -121,11 +136,34 @@ Deno.serve(async (req) => {
     server_calculated: true,
   };
 
+  // Include payment info on complete
+  if (body.action === 'complete') {
+    payload.payment_method = body.payment_method || meter.payment_method || 'cash';
+    payload.payment_status = body.payment_status || meter.payment_status || 'unpaid';
+  }
+
   let tripId = body.tripId || null;
   if (body.action === 'start') {
     const { data, error } = await admin.from('trips').insert(payload).select('id').single();
     if (error) return jsonResponse({ error: error.message }, 400);
     tripId = data.id;
+  } else if (body.action === 'adjust_prices') {
+    if (!tripId) return jsonResponse({ error: 'tripId is required' }, 400);
+    const adjustPayload: Record<string, unknown> = {
+      km_price_used: clampNumber(meter.kmPrice, 1, 50, 5),
+      wait_price_used: clampNumber(meter.waitPrice, 0, 20, 1),
+      duration_price_used: clampNumber(meter.durationPrice, 0, 10, 0.5),
+      meter_start_fee: clampNumber(meter.bandira, 0, 1000, 5),
+      total_fare: serverFare,
+      price_adjusted: true,
+      last_synced_at: new Date().toISOString(),
+    };
+    const { error } = await admin
+      .from('trips')
+      .update(adjustPayload)
+      .eq('id', tripId)
+      .eq('driver_id', userId);
+    if (error) return jsonResponse({ error: error.message }, 400);
   } else {
     if (!tripId) return jsonResponse({ error: 'tripId is required' }, 400);
     const updatePayload = { ...payload };
@@ -138,10 +176,15 @@ Deno.serve(async (req) => {
     if (error) return jsonResponse({ error: error.message }, 400);
   }
 
+  const eventType = body.action === 'complete' ? 'completed'
+    : body.action === 'start' ? 'started'
+    : body.action === 'adjust_prices' ? 'price_adjusted'
+    : 'location';
+
   await admin.from('trip_events').insert({
     trip_id: String(tripId),
     actor_id: userId,
-    event_type: body.action === 'complete' ? 'completed' : body.action === 'start' ? 'started' : 'location',
+    event_type: eventType,
     payload: { meter, serverFare, location: body.location || null },
   });
 

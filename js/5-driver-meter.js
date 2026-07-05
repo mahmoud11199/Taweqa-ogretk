@@ -200,34 +200,113 @@
   }
   window.startCurrentMeter = startCurrentMeter;
 
-	  function stopCurrentMeter() {
-	    var m = meters[activeMeterId];
-	    if (!m.isActive) return;
-	    updateWaitSeconds(m);
-    if (m.isPaused) { m.isPaused = false; if (m.lastPauseTimestamp) m.pausedTimeTotal += (Date.now() - m.lastPauseTimestamp); }
-    if (m.tripType === 'afrad') {
-      m.passengersData.forEach(function(p) {
-        if (p.isInside) {
-          p.isInside = false;
-          var pDist = m.totalDistance - p.startDistance;
-          if (p.isInitial) {
-            var pDuration = m.totalDurationMinutes - (p.startDuration || 0);
-            var pWait = (m.totalWaitSeconds / 60) - (p.startWait || 0);
-            p.individualFare = m.bandira + (pDist * m.kmPrice) + (pDuration * m.durationPrice) + (pWait * m.waitPrice);
-          } else { p.individualFare = pDist * m.kmPrice; }
-        }
-      });
-    }
-    m.isActive = false;
-    calculateFare(m);
-    generateReceipt(m);
-    saveTripToHistory(m);
-    saveTripToSupabase(m);
-    setDriverAvailable(true);
-    meters[activeMeterId] = createEmptyMeterObject(activeMeterId);
-    updateDotsUI(); renderMeterDataToUI(); redrawActiveRouteLine(); saveDataToStorage();
-  }
-  window.stopCurrentMeter = stopCurrentMeter;
+ 	  function stopCurrentMeter() {
+ 	    var m = meters[activeMeterId];
+ 	    if (!m.isActive) return;
+ 	    updateWaitSeconds(m);
+     if (m.isPaused) { m.isPaused = false; if (m.lastPauseTimestamp) m.pausedTimeTotal += (Date.now() - m.lastPauseTimestamp); }
+     if (m.tripType === 'afrad') {
+       m.passengersData.forEach(function(p) {
+         if (p.isInside) {
+           p.isInside = false;
+           var pDist = m.totalDistance - p.startDistance;
+           if (p.isInitial) {
+             var pDuration = m.totalDurationMinutes - (p.startDuration || 0);
+             var pWait = (m.totalWaitSeconds / 60) - (p.startWait || 0);
+             p.individualFare = m.bandira + (pDist * m.kmPrice) + (pDuration * m.durationPrice) + (pWait * m.waitPrice);
+           } else { p.individualFare = pDist * m.kmPrice; }
+         }
+       });
+     }
+     m.isActive = false;
+     calculateFare(m);
+     // Save originals before any adjustment
+     m._origKmPrice = m.kmPrice;
+     m._origWaitPrice = m.waitPrice;
+     m._origDurationPrice = m.durationPrice;
+     m._origBandira = m.bandira;
+     m.original_km_price = m.kmPrice;
+     m.original_wait_price = m.waitPrice;
+     m.original_duration_price = m.durationPrice;
+     m.original_bandira = m.bandira;
+     showSettlementDialog(m);
+   }
+
+   window.showSettlementDialog = function(m) {
+     document.getElementById('settle-bandira').value = m.bandira;
+     document.getElementById('settle-km-price').value = m.kmPrice;
+     document.getElementById('settle-duration-price').value = m.durationPrice;
+     document.getElementById('settle-wait-price').value = m.waitPrice;
+     document.getElementById('settle-distance').textContent = (m.totalDistance || 0).toFixed(2);
+     document.getElementById('settle-duration').textContent = (m.totalDurationMinutes || 0).toFixed(0);
+     document.getElementById('settle-wait').textContent = ((m.totalWaitSeconds || 0) / 60).toFixed(0);
+     updateSettleTotal(m);
+     document.getElementById('settlementModal').style.display = 'flex';
+   };
+
+   window.updateSettleTotal = function(m) {
+     var bandira = parseFloat(document.getElementById('settle-bandira').value) || 0;
+     var kmPrice = parseFloat(document.getElementById('settle-km-price').value) || 0;
+     var durPrice = parseFloat(document.getElementById('settle-duration-price').value) || 0;
+     var waitPrice = parseFloat(document.getElementById('settle-wait-price').value) || 0;
+     var total = bandira + (m.totalDistance * kmPrice) + (m.totalDurationMinutes * durPrice) + ((m.totalWaitSeconds / 60) * waitPrice);
+     document.getElementById('settle-total').textContent = Math.max(total, m.minFare || 10).toFixed(2) + ' ج';
+   };
+
+   ['settle-bandira', 'settle-km-price', 'settle-duration-price', 'settle-wait-price'].forEach(function(id) {
+     document.getElementById(id).addEventListener('input', function() {
+       var m = meters[activeMeterId];
+       if (m) updateSettleTotal(m);
+     });
+   });
+
+   window.onSettlePaymentChange = function() {};
+
+   window.confirmSettlement = async function() {
+     var m = meters[activeMeterId];
+     if (!m) return;
+     var bandira = parseFloat(document.getElementById('settle-bandira').value) || 0;
+     var kmPrice = parseFloat(document.getElementById('settle-km-price').value) || 0;
+     var durPrice = parseFloat(document.getElementById('settle-duration-price').value) || 0;
+     var waitPrice = parseFloat(document.getElementById('settle-wait-price').value) || 0;
+     var paymentMethod = document.querySelector('input[name="settle-payment"]:checked').value;
+
+     var pricesChanged = bandira !== m._origBandira || kmPrice !== m._origKmPrice || durPrice !== m._origDurationPrice || waitPrice !== m._origWaitPrice;
+
+     m.bandira = bandira;
+     m.kmPrice = kmPrice;
+     m.durationPrice = durPrice;
+     m.waitPrice = waitPrice;
+     m.payment_method = paymentMethod;
+     m.payment_status = paymentMethod === 'cash' ? 'paid_cash' : 'unpaid';
+     m.price_adjusted = pricesChanged;
+
+     calculateFare(m);
+
+     if (pricesChanged) {
+       try {
+         await invokeTripEvent('adjust_prices', m);
+       } catch(e) { console.error('Price adjust error:', e); }
+     }
+
+     document.getElementById('settlementModal').style.display = 'none';
+     generateReceipt(m);
+     saveTripToHistory(m);
+     await saveTripToSupabase(m);
+     setDriverAvailable(true);
+     meters[activeMeterId] = createEmptyMeterObject(activeMeterId);
+     updateDotsUI(); renderMeterDataToUI(); redrawActiveRouteLine(); saveDataToStorage();
+   };
+
+   window.cancelSettlement = function() {
+     document.getElementById('settlementModal').style.display = 'none';
+     var m = meters[activeMeterId];
+     if (m) {
+       m.isActive = true;
+       showToast('تم إلغاء التسوية');
+       renderMeterDataToUI();
+     }
+   };
 
   function togglePauseCurrentMeter() {
     var m = meters[activeMeterId];
@@ -456,14 +535,37 @@
     var body = document.getElementById('receiptBody');
     var waitingMinutes = m.totalWaitSeconds / 60;
     var now = new Date().toLocaleString('ar-EG');
-    var typeLabel = m.tripType === 'makhsoos' ? '🚘 مخصوص' : '👥 أفراد (مشترك)';
+    var typeLabel = m.tripType === 'makhsoos' ? 'مخصوص' : 'أفراد (مشترك)';
     var code = escapeHTML(m.shareCode || '-');
     var kmP = m.kmPrice.toFixed(2), durP = m.durationPrice.toFixed(2), waitP = m.waitPrice.toFixed(2);
     var bandira = m.bandira.toFixed(2);
     var dist = m.totalDistance.toFixed(2), dur = m.totalDurationMinutes.toFixed(0), wait = waitingMinutes.toFixed(0);
     var distCost = (m.totalDistance * m.kmPrice).toFixed(2), durCost = (m.totalDurationMinutes * m.durationPrice).toFixed(2), waitCost = (waitingMinutes * m.waitPrice).toFixed(2);
     var totalFare = clampNumber(m.finalFare, 0, 100000, 0).toFixed(2);
+    var paymentLabel = m.payment_method === 'cash' ? 'نقدي' : 'محفظة';
     var itemsHTML = '';
+
+    // Price adjustment banner
+    var adjustmentHTML = '';
+    if (m.price_adjusted && m._origKmPrice != null) {
+      var origKmP = m._origKmPrice.toFixed(2), origDurP = m._origDurationPrice.toFixed(2), origWaitP = m._origWaitPrice.toFixed(2);
+      var origDistCost = (m.totalDistance * m._origKmPrice).toFixed(2);
+      var origDurCost = (m.totalDurationMinutes * m._origDurationPrice).toFixed(2);
+      var origWaitCost = (waitingMinutes * m._origWaitPrice).toFixed(2);
+      var origBandira = m._origBandira.toFixed(2);
+      var origTotal = m._origBandira + (m.totalDistance * m._origKmPrice) + (m.totalDurationMinutes * m._origDurationPrice) + (waitingMinutes * m._origWaitPrice);
+      var origTotalFare = Math.max(origTotal, m.minFare || 10).toFixed(2);
+      adjustmentHTML = '<div style="margin-bottom:8px;padding:8px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:8px;font-size:12px;">'
+        + '<div style="font-weight:700;color:var(--accent);margin-bottom:4px;">تم تعديل الأسعار بعد الاتفاق</div>'
+        + '<table style="width:100%;border-collapse:collapse;">'
+        + '<tr><td></td><td style="text-align:center;font-weight:600;">الأصلي</td><td style="text-align:center;font-weight:600;">المعدل</td></tr>'
+        + '<tr><td>فتحة العداد</td><td style="text-align:center;">' + origBandira + '</td><td style="text-align:center;">' + bandira + '</td></tr>'
+        + '<tr><td>الكيلومتر</td><td style="text-align:center;">' + origKmP + '</td><td style="text-align:center;">' + kmP + '</td></tr>'
+        + '<tr><td>دقيقة الوقت</td><td style="text-align:center;">' + origDurP + '</td><td style="text-align:center;">' + durP + '</td></tr>'
+        + '<tr><td>دقيقة الانتظار</td><td style="text-align:center;">' + origWaitP + '</td><td style="text-align:center;">' + waitP + '</td></tr>'
+        + '<tr><td><strong>الإجمالي</strong></td><td style="text-align:center;"><strong>' + origTotalFare + '</strong></td><td style="text-align:center;"><strong style="color:var(--meter-primary);">' + totalFare + '</strong></td></tr>'
+        + '</table></div>';
+    }
 
     if (m.tripType === 'makhsoos') {
       itemsHTML = ''
@@ -472,32 +574,34 @@
         + '<div class="receipt-line"><span class="label">⏱ الزمن (' + dur + ' د × ' + durP + ')</span><span class="value">' + durCost + ' ج</span></div>'
         + '<div class="receipt-line"><span class="label">⏳ الانتظار (' + wait + ' د × ' + waitP + ')</span><span class="value">' + waitCost + ' ج</span></div>';
     } else {
-      itemsHTML = '<div style="font-weight:700;font-size:12px;margin-bottom:8px;color:var(--meter-primary);">📋 تفاصيل الركاب:</div>';
+      itemsHTML = '<div style="font-weight:700;font-size:12px;margin-bottom:8px;color:var(--meter-primary);">تفاصيل الركاب:</div>';
       (m.passengersData || []).forEach(function(p, idx) {
         var pf = clampNumber(p.individualFare, 0, 100000, 0).toFixed(2);
         var pDist = Math.max(0, m.totalDistance - clampNumber(p.startDistance, 0, 1000, 0));
-        var pDur = Math.max(0, m.totalDurationMinutes - clampNumber(p.startDuration, 0, 1440, 0));
-        var pWait = Math.max(0, waitingMinutes - clampNumber(p.startWait, 0, 1440, 0));
+        var pDur2 = Math.max(0, m.totalDurationMinutes - clampNumber(p.startDuration, 0, 1440, 0));
+        var pWait2 = Math.max(0, waitingMinutes - clampNumber(p.startWait, 0, 1440, 0));
         var isInit = p.isInitial !== false;
         itemsHTML += '<div style="font-size:12px;margin-bottom:8px;padding:6px;background:rgba(255,255,255,0.03);border-radius:8px;">'
           + '<div style="font-weight:700;margin-bottom:3px;">' + escapeHTML(p.name || 'راكب ' + (idx + 1)) + '</div>'
           + (isInit ? ('<div class="receipt-sub">🔰 فتحة: ' + bandira + ' ج</div>') : '')
           + '<div class="receipt-sub">📏 مسافة: ' + pDist.toFixed(2) + ' كم × ' + kmP + ' = ' + (pDist * m.kmPrice).toFixed(2) + ' ج</div>'
-          + (isInit ? '<div class="receipt-sub">⏱ زمن: ' + pDur.toFixed(0) + ' د × ' + durP + ' = ' + (pDur * m.durationPrice).toFixed(2) + ' ج</div><div class="receipt-sub">⏳ انتظار: ' + pWait.toFixed(0) + ' د × ' + waitP + ' = ' + (pWait * m.waitPrice).toFixed(2) + ' ج</div>' : '')
-          + '<div style="font-weight:600;margin-top:2px;color:var(--meter-primary);">🗂 المجموع: ' + pf + ' ج</div>'
+          + (isInit ? '<div class="receipt-sub">⏱ زمن: ' + pDur2.toFixed(0) + ' د × ' + durP + ' = ' + (pDur2 * m.durationPrice).toFixed(2) + ' ج</div><div class="receipt-sub">⏳ انتظار: ' + pWait2.toFixed(0) + ' د × ' + waitP + ' = ' + (pWait2 * m.waitPrice).toFixed(2) + ' ج</div>' : '')
+          + '<div style="font-weight:600;margin-top:2px;color:var(--meter-primary);">المجموع: ' + pf + ' ج</div>'
           + '</div>';
       });
     }
 
-    body.innerHTML = '<div class="receipt-header2">🧾 فاتورة الرحلة</div>'
+    body.innerHTML = '<div class="receipt-header2">فاتورة الرحلة</div>'
       + '<div style="padding:0 4px 8px;">'
       + '<div class="receipt-meta"><span>' + typeLabel + '</span><span>كود: ' + code + '</span></div>'
       + '<div class="receipt-meta" style="font-size:11px;">' + now + '</div>'
+      + '<div class="receipt-meta" style="font-size:12px;color:var(--meter-primary);">طريقة الدفع: ' + paymentLabel + '</div>'
       + '<div class="receipt-divider"></div>'
+      + adjustmentHTML
       + itemsHTML
       + '<div class="receipt-divider"></div>'
-      + '<div class="receipt-line receipt-total"><span>💰 الإجمالي</span><span>' + totalFare + ' ج</span></div>'
-      + '<div class="receipt-footer">🛞 ' + kmP + ' ج/كم | ⏱ ' + durP + ' ج/د | ⏳ ' + waitP + ' ج/د انتظار</div>'
+      + '<div class="receipt-line receipt-total"><span>الإجمالي</span><span>' + totalFare + ' ج</span></div>'
+      + '<div class="receipt-footer">' + kmP + ' ج/كم | ' + durP + ' ج/د | ' + waitP + ' ج/د انتظار</div>'
       + '</div>';
     document.getElementById('receiptModal').style.display = 'flex';
   }
@@ -618,20 +722,23 @@
 	    };
 		  }
 
-	  async function invokeTripEvent(action, m) {
-	    if (!supabase || !currentUser) return null;
-	    var latestPoint = m.pathCoords && m.pathCoords.length ? m.pathCoords[m.pathCoords.length - 1] : null;
-	    var { data, error } = await supabase.functions.invoke('trip-events', {
-	      body: {
-	        action: action,
-	        tripId: m.tripId || null,
-	        meter: m,
-	        location: latestPoint ? { lat: latestPoint.lat, lng: latestPoint.lng, accuracy: m.lastAccuracy || null, speedKmh: m.lastSpeedKmh || null } : null
-	      }
-	    });
-	    if (error) throw error;
-	    return data || null;
-	  }
+ 	  async function invokeTripEvent(action, m) {
+ 	    if (!supabase || !currentUser) return null;
+ 	    var latestPoint = m.pathCoords && m.pathCoords.length ? m.pathCoords[m.pathCoords.length - 1] : null;
+ 	    var body = {
+ 	      action: action,
+ 	      tripId: m.tripId || null,
+ 	      meter: m,
+ 	      location: latestPoint ? { lat: latestPoint.lat, lng: latestPoint.lng, accuracy: m.lastAccuracy || null, speedKmh: m.lastSpeedKmh || null } : null
+ 	    };
+ 	    if (action === 'complete') {
+ 	      body.payment_method = m.payment_method || 'cash';
+ 	      body.payment_status = m.payment_status || 'unpaid';
+ 	    }
+ 	    var { data, error } = await supabase.functions.invoke('trip-events', { body: body });
+ 	    if (error) throw error;
+ 	    return data || null;
+ 	  }
 
 	  async function createStartedTripInSupabase(m) {
 	    if (!supabase || !currentUser) return;
