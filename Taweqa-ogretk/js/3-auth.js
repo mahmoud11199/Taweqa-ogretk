@@ -48,6 +48,24 @@ window.handleLogin = async function() {
   } catch (e) { showAlert('login-alert', e.message || 'حدث خطأ'); setLoading('login', false); }
 };
 
+window.deleteMyAccount = async function() {
+  if (!supabase || !currentUser) { showToast('يجب تسجيل الدخول أولاً'); return; }
+  if (!confirm('⚠️ هل أنت متأكد؟\n\nسيتم حذف حسابك وجميع بياناتك بشكل نهائي!\nلا يمكن التراجع عن هذا الإجراء.')) return;
+  if (!confirm('✅ للتأكيد النهائي: اضغط OK لحذف الحساب')) return;
+  try {
+    showToast('جاري حذف الحساب...');
+    var { data, error } = await supabase.functions.invoke('delete-account', {});
+    if (error) { showToast('❌ فشل حذف الحساب: ' + error.message); return; }
+    if (data && data.success) {
+      currentUser = null; currentProfile = null;
+      showLandingPage();
+      showToast('✅ تم حذف الحساب وجميع البيانات المرتبطة');
+    } else {
+      showToast('❌ فشل حذف الحساب');
+    }
+  } catch (e) { showToast('❌ حدث خطأ: ' + e.message); console.error(e); }
+};
+
 window.handleLogout = async function() {
   if (!supabase) return;
   stopGlobalGPS();
