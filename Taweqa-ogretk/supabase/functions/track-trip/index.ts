@@ -33,8 +33,8 @@ Deno.serve(async (req) => {
   );
   if (authError || !authData.user) return jsonResponse({ error: 'Unauthorized' }, 401);
 
-  const body = await req.json().catch(() => null) as { code?: string; trip_id?: string } | null;
-  let query = admin.from('trips').select('id, status, driver_id, total_fare, distance_km, duration_min, wait_minutes, classification, passenger_count, join_code, created_at, last_lat, last_lng');
+  const body = await req.json().catch(() => null) as { code?: string; trip_id?: string; include_driver_location?: boolean } | null;
+  let query = admin.from('trips').select('id, status, driver_id, passenger_id, total_fare, distance_km, duration_min, wait_minutes, classification, passenger_count, join_code, created_at, last_lat, last_lng, waypoints, completed_at');
 
   if (body?.trip_id) {
     query = query.eq('id', body.trip_id);
@@ -50,11 +50,44 @@ Deno.serve(async (req) => {
   if (!trips?.length) return jsonResponse({ error: 'Trip not found' }, 404);
 
   const trip = trips[0];
-  const { data: driver } = await admin
-    .from('profiles')
-    .select('full_name')
-    .eq('id', trip.driver_id)
-    .single();
+
+  // Driver profile + car info
+  let driverInfo: Record<string, unknown> = { full_name: 'سائق', phone: null, avatar_url: null, car_plate: null, car_model: null, car_color: null, avg_rating: null, total_ratings: 0, current_lat: null, current_lng: null };
+  if (trip.driver_id) {
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('full_name, phone, avatar_url')
+      .eq('id', trip.driver_id)
+      .single();
+    if (profile) {
+      driverInfo.full_name = profile.full_name || 'سائق';
+      driverInfo.phone = profile.phone;
+      driverInfo.avatar_url = profile.avatar_url;
+    }
+
+    const { data: driverRow } = await admin
+      .from('drivers')
+      .select('car_plate, car_model, car_color, current_lat, current_lng')
+      .eq('id', trip.driver_id)
+      .single();
+    if (driverRow) {
+      driverInfo.car_plate = driverRow.car_plate;
+      driverInfo.car_model = driverRow.car_model;
+      driverInfo.car_color = driverRow.car_color;
+      driverInfo.current_lat = driverRow.current_lat;
+      driverInfo.current_lng = driverRow.current_lng;
+    }
+
+    const { data: ratingAgg } = await admin
+      .from('ratings')
+      .select('score')
+      .eq('driver_id', trip.driver_id);
+    if (ratingAgg && ratingAgg.length > 0) {
+      const sum = ratingAgg.reduce((a: number, r: { score: number }) => a + r.score, 0);
+      driverInfo.avg_rating = Math.round((sum / ratingAgg.length) * 10) / 10;
+      driverInfo.total_ratings = ratingAgg.length;
+    }
+  }
 
   const { data: locations } = await admin
     .from('trip_locations')
@@ -66,11 +99,13 @@ Deno.serve(async (req) => {
   return jsonResponse({
     trip_id: trip.id,
     driver_id: trip.driver_id,
+    passenger_id: trip.passenger_id,
     trip: {
       id: trip.id,
       status: trip.status,
       driver_id: trip.driver_id,
-      driver_name: driver?.full_name || 'سائق',
+      passenger_id: trip.passenger_id,
+      driver_name: driverInfo.full_name as string,
       total_fare: trip.total_fare,
       distance_km: trip.distance_km,
       duration_min: trip.duration_min,
@@ -80,7 +115,10 @@ Deno.serve(async (req) => {
       join_code: trip.join_code,
       last_lat: trip.last_lat,
       last_lng: trip.last_lng,
+      waypoints: trip.waypoints,
+      completed_at: trip.completed_at,
     },
+    driver: driverInfo,
     locations: locations || [],
   });
 });

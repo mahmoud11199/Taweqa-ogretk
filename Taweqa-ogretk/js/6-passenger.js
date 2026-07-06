@@ -1,5 +1,7 @@
 ﻿  var trackInterval = null;
   var trackMap = null;
+  var trackWaypoints = [];
+  var trackCurrentTripData = null;
 
   var lastTrackedTripId = null;
   var lastTrackedDriverId = null;
@@ -111,16 +113,25 @@
     if (!code || (code.length < 4 && code.length < 20)) { showToast('يرجى إدخال كود صحيح'); return; }
     if (!supabase) { showToast('خدمة التتبع غير متاحة'); return; }
     var statusEl = document.getElementById('track-status');
-    statusEl.innerHTML = '<div class="spinner"></div><p style="color:var(--text-muted);font-size:13px;">جاري البحث...</p>';
+    if (!optCode) statusEl.innerHTML = '<div class="spinner"></div><p style="color:var(--text-muted);font-size:13px;">جاري البحث...</p>';
     var body = code.length > 10 ? { trip_id: code } : { code: code };
     try {
       var { data, error } = await supabase.functions.invoke('track-trip', { body: body });
-      if (error || !data || !data.trip) { statusEl.innerHTML = '<p style="color:var(--error);font-size:14px;">❌ لا توجد رحلة بهذا الكود</p>'; return; }
+      if (error || !data || !data.trip) {
+        if (!optCode) statusEl.innerHTML = '<p style="color:var(--error);font-size:14px;">❌ لا توجد رحلة بهذا الكود</p>';
+        if (trackInterval) { clearInterval(trackInterval); trackInterval = null; }
+        return;
+      }
       var trip = data.trip;
+      var driver = data.driver || {};
       var locations = data.locations || [];
+      var waypointsList = trip.waypoints || [];
+      trackCurrentTripData = data;
+      trackWaypoints = waypointsList;
+
       document.getElementById('track-fare-display').textContent = (trip.total_fare || 0).toFixed(2) + ' ج';
-      document.getElementById('track-status-val').textContent = trip.status === 'started' ? 'جارية 🟢' : trip.status === 'assigned' ? 'السائق في الطريق 🚗' : trip.status === 'completed' ? 'مكتملة ✅' : trip.status;
-      document.getElementById('track-driver-name').textContent = trip.driver_name || 'سائق';
+      var statusText = trip.status === 'started' ? 'جارية 🟢' : trip.status === 'assigned' ? 'السائق في الطريق 🚗' : trip.status === 'completed' ? 'مكتملة ✅' : trip.status;
+      document.getElementById('track-status-val').textContent = statusText;
       document.getElementById('track-distance').textContent = (trip.distance_km || 0).toFixed(2) + ' كم';
       document.getElementById('track-duration').textContent = (trip.duration_min || 0).toFixed(0) + ' د';
       document.getElementById('track-wait').textContent = (trip.wait_minutes || 0).toFixed(0) + ' د';
@@ -128,25 +139,116 @@
       document.getElementById('track-passengers').textContent = (trip.passenger_count || 1) + ' راكب';
       if (trip.created_at) document.getElementById('track-start-time').textContent = new Date(trip.created_at).toLocaleString('ar-EG');
       else document.getElementById('track-start-time').textContent = '-';
+      document.getElementById('track-code').value = trip.join_code || code;
+
+      // --- Driver card ---
+      document.getElementById('track-driver-name').textContent = driver.full_name || 'سائق';
+      if (driver.avatar_url) document.getElementById('track-driver-avatar').src = driver.avatar_url;
+      if (driver.avg_rating) {
+        document.getElementById('track-driver-rating').style.display = 'inline';
+        document.getElementById('track-driver-rating-val').textContent = driver.avg_rating;
+        document.getElementById('track-driver-rating-count').textContent = driver.total_ratings || 0;
+      } else {
+        document.getElementById('track-driver-rating-val').textContent = 'جديد';
+        document.getElementById('track-driver-rating-count').textContent = '';
+      }
+      if (driver.phone) {
+        document.getElementById('track-driver-phone-row').style.display = 'block';
+        document.getElementById('track-driver-phone-link').href = 'tel:' + driver.phone;
+        document.getElementById('track-driver-phone-link').textContent = driver.phone;
+      } else {
+        document.getElementById('track-driver-phone-row').style.display = 'none';
+      }
+      if (driver.car_model || driver.car_plate) {
+        document.getElementById('track-driver-car').style.display = 'block';
+        var carText = '';
+        if (driver.car_model) carText += driver.car_model;
+        if (driver.car_plate) carText += (carText ? ' · ' : '') + driver.car_plate;
+        if (driver.car_color) carText = driver.car_color + ' ' + carText;
+        document.getElementById('track-driver-car-text').textContent = carText;
+      } else {
+        document.getElementById('track-driver-car').style.display = 'none';
+      }
+      document.getElementById('track-driver-card').style.display = 'flex';
+
+      // --- Progress bar ---
+      document.getElementById('track-progress').style.display = 'block';
+      var steps = document.querySelectorAll('#trackProgressBar .progress-step');
+      steps.forEach(function(s) { s.classList.remove('active'); });
+      if (trip.status === 'assigned') {
+        document.querySelector('#trackProgressBar .progress-step[data-step="assigned"]').classList.add('active');
+      } else if (trip.status === 'started') {
+        document.querySelector('#trackProgressBar .progress-step[data-step="assigned"]').classList.add('active');
+        document.querySelector('#trackProgressBar .progress-step[data-step="started"]').classList.add('active');
+      } else if (trip.status === 'completed') {
+        document.querySelector('#trackProgressBar .progress-step[data-step="assigned"]').classList.add('active');
+        document.querySelector('#trackProgressBar .progress-step[data-step="started"]').classList.add('active');
+        document.querySelector('#trackProgressBar .progress-step[data-step="completed"]').classList.add('active');
+      }
+
+      // --- ETA ---
+      updateETA(trip, driver);
+
+      // --- Actions ---
+      if (trip.status === 'assigned' || trip.status === 'started') {
+        document.getElementById('track-actions').style.display = 'flex';
+        document.getElementById('track-end-trip-btn').style.display = '';
+        document.getElementById('track-chat-section').style.display = 'block';
+        if (trip.id) { currentChatTripId = trip.id; loadChat('track', trip.id); }
+      } else {
+        document.getElementById('track-actions').style.display = 'none';
+        document.getElementById('track-chat-section').style.display = 'none';
+      }
+      if (trip.status === 'completed') {
+        document.getElementById('track-end-trip-btn').style.display = 'none';
+        document.getElementById('track-actions').style.display = 'flex';
+      }
+
       document.getElementById('track-info').style.display = 'block';
       document.getElementById('track-map-card').style.display = 'block';
-      document.getElementById('track-code').value = trip.join_code || code;
-      statusEl.innerHTML = '<p style="color:var(--success);font-size:14px;">✅ تم العثور على الرحلة</p>';
+      if (!optCode) statusEl.innerHTML = '<p style="color:var(--success);font-size:14px;">✅ تم العثور على الرحلة</p>';
+
+      // --- Map ---
       if (trackMap) { trackMap.remove(); trackMap = null; }
       try {
         trackMap = L.map('track-map').setView([30.0444, 31.2357], 14);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(trackMap);
+
+        // Draw waypoints if available
+        if (waypointsList.length >= 2) {
+          var wpLatLngs = waypointsList.map(function(wp) { return [wp.lat, wp.lng]; });
+          waypointsList.forEach(function(wp, i) {
+            var color = i === 0 ? '#22c55e' : '#3b82f6';
+            var marker = L.circleMarker([wp.lat, wp.lng], {
+              radius: 7, color: color, fillColor: color, fillOpacity: 0.8, weight: 2
+            }).addTo(trackMap);
+            marker.bindTooltip(i === 0 ? 'انطلاق' : String(i), { permanent: false, direction: 'top', className: 'waypoint-tooltip' });
+          });
+          L.polyline(wpLatLngs, { color: '#f59e0b', weight: 3, dashArray: '6, 8' }).addTo(trackMap);
+          try { trackMap.fitBounds(L.polyline(wpLatLngs).getBounds(), { padding: [30, 30] }); } catch(e) {}
+        }
+
+        // Draw live locations
         if (locations.length) {
-          var points = locations.map(function(p) { return [p.lat, p.lng]; });
-          L.polyline(points, {color: '#22d3ee', weight: 4}).addTo(trackMap);
-          L.circleMarker(points[points.length - 1], {radius: 6, color: '#22c55e', fillColor: '#22c55e', fillOpacity: 1}).addTo(trackMap);
-          try { trackMap.fitBounds(L.polyline(points).getBounds(), {padding: [20, 20]}); } catch(e) {}
+          var locPoints = locations.map(function(p) { return [p.lat, p.lng]; });
+          L.polyline(locPoints, {color: '#22d3ee', weight: 4}).addTo(trackMap);
+          L.circleMarker(locPoints[locPoints.length - 1], {radius: 6, color: '#22c55e', fillColor: '#22c55e', fillOpacity: 1}).addTo(trackMap);
+          try { trackMap.fitBounds(L.polyline(locPoints).getBounds(), {padding: [20, 20]}); } catch(e) {}
         } else if (trip.last_lat && trip.last_lng) {
           trackMap.setView([trip.last_lat, trip.last_lng], 15);
           L.marker([trip.last_lat, trip.last_lng]).addTo(trackMap);
         }
+
+        // Show driver location on map if available
+        if (driver.current_lat && driver.current_lng) {
+          var drvIcon = L.divIcon({ className: 'driver-marker', html: '🚗', iconSize: [24, 24], iconAnchor: [12, 12] });
+          L.marker([driver.current_lat, driver.current_lng], { icon: drvIcon }).addTo(trackMap).bindTooltip('موقع السائق', { direction: 'top' });
+        }
+
         setTimeout(function() { if (trackMap) trackMap.invalidateSize(); }, 300);
       } catch(e) { console.error(e); }
+
+      // --- Polling or cleanup ---
       if (trip.status === 'started' || trip.status === 'assigned') {
         if (trackInterval) clearInterval(trackInterval);
         trackInterval = setInterval(function() { trackTrip(code); }, 5000);
@@ -156,13 +258,110 @@
           if (data.trip_id) { lastTrackedTripId = data.trip_id; }
           else if (trip.id) { lastTrackedTripId = trip.id; }
           if (data.driver_id) { lastTrackedDriverId = data.driver_id; }
-          else { lastTrackedDriverId = trip.driver_id || null; }
+          else if (trip.driver_id) { lastTrackedDriverId = trip.driver_id; }
+          else { lastTrackedDriverId = data.driver?.id || driver.id || null; }
           lastTrackedCode = code;
           showTrackRating();
         }
       }
-    } catch (e) { console.error(e); document.getElementById('track-status').innerHTML = '<p style="color:var(--error);font-size:14px;">❌ حدث خطأ</p>'; }
+    } catch (e) { console.error(e); if (!optCode) document.getElementById('track-status').innerHTML = '<p style="color:var(--error);font-size:14px;">❌ حدث خطأ</p>'; }
   };
+
+  function updateETA(trip, driver) {
+    var etaRow = document.getElementById('track-eta-row');
+    var etaVal = document.getElementById('track-eta-val');
+    if (!etaRow || !etaVal) return;
+    if (!driver || !driver.current_lat || !driver.current_lng || trip.status === 'completed') {
+      etaRow.style.display = 'none';
+      return;
+    }
+    var destLat, destLng;
+    if (trip.status === 'assigned') {
+      // ETA to pickup = first waypoint or last known location
+      var wps = trip.waypoints || [];
+      if (wps.length > 0) { destLat = wps[0].lat; destLng = wps[0].lng; }
+      else if (trip.last_lat && trip.last_lng) { destLat = trip.last_lat; destLng = trip.last_lng; }
+    } else if (trip.status === 'started') {
+      // ETA to destination = last waypoint or last known
+      var wps = trip.waypoints || [];
+      if (wps.length > 1) { var last = wps[wps.length - 1]; destLat = last.lat; destLng = last.lng; }
+      else if (trip.last_lat && trip.last_lng) { destLat = trip.last_lat; destLng = trip.last_lng; }
+    }
+    if (!destLat || !destLng) { etaRow.style.display = 'none'; return; }
+    var dist = haversineDistance(driver.current_lat, driver.current_lng, destLat, destLng);
+    // Assume avg speed 25 km/h in city
+    var minutes = Math.max(1, Math.round((dist / 25) * 60));
+    etaRow.style.display = 'flex';
+    etaVal.textContent = '~' + minutes + ' دقيقة (' + dist.toFixed(1) + ' كم)';
+  }
+
+  window.endTrip = async function() {
+    if (!trackCurrentTripData) { showToast('لا توجد رحلة نشطة'); return; }
+    var tripId = trackCurrentTripData.trip_id || (trackCurrentTripData.trip && trackCurrentTripData.trip.id);
+    if (!tripId) { showToast('بيانات الرحلة غير متوفرة'); return; }
+    if (!confirm('هل أنت متأكد من إنهاء الرحلة؟')) return;
+    try {
+      var { data, error } = await supabase.rpc('passenger_end_trip', { p_trip_id: tripId });
+      if (error) { showToast('❌ فشل إنهاء الرحلة: ' + error.message); return; }
+      if (data && data.success) {
+        showToast('✅ تم إنهاء الرحلة بنجاح');
+        trackTrip(lastTrackedCode);
+      } else {
+        showToast('❌ ' + (data?.error || 'فشل إنهاء الرحلة'));
+      }
+    } catch (e) { showToast('❌ حدث خطأ'); console.error(e); }
+  };
+
+  window.shareTripLink = function() {
+    var code = document.getElementById('track-code').value;
+    if (!code) { showToast('لا يوجد كود رحلة'); return; }
+    var shareUrl = window.location.origin + '?track=' + encodeURIComponent(code);
+    document.getElementById('share-link-input').value = shareUrl;
+    document.getElementById('share-dialog').style.display = 'flex';
+  };
+
+  window.copyShareLink = function() {
+    var input = document.getElementById('share-link-input');
+    if (!input) return;
+    input.select();
+    input.setSelectionRange(0, 99999);
+    try { navigator.clipboard.writeText(input.value); showToast('✅ تم نسخ الرابط'); } catch(e) { document.execCommand('copy'); showToast('✅ تم نسخ الرابط'); }
+  };
+
+  window.shareWhatsApp = function() {
+    var input = document.getElementById('share-link-input');
+    if (!input || !input.value) return;
+    var text = encodeURIComponent('🚖 تتبع رحلتي على توقع أجرتك: ' + input.value);
+    window.open('https://wa.me/?text=' + text, '_blank');
+  };
+
+  window.closeShareDialog = function() {
+    document.getElementById('share-dialog').style.display = 'none';
+  };
+
+  window.sosAlert = function() {
+    if (!confirm('🚨 هل تريد إرسال تنبيه SOS؟\nسيتم إشعار فريق الدعم والطوارئ.')) return;
+    showToast('🆘 تم إرسال تنبيه SOS، فريق الدعم سيتم التواصل معك فوراً');
+    // Attempt to log SOS event if user is logged in
+    if (supabase && currentUser) {
+      var tripId = trackCurrentTripData?.trip_id || trackCurrentTripData?.trip?.id;
+      supabase.from('ride_requests').insert({
+        passenger_id: currentUser.id,
+        classification: 'private',
+        status: 'cancelled',
+        passenger_count: 1,
+        note: '🚨 SOS from tracking screen' + (tripId ? ' (trip: ' + tripId + ')' : '')
+      }).then(function(r) { if (r.error) console.error('SOS log error:', r.error); });
+    }
+  };
+
+  // Click outside dialog to close
+  document.addEventListener('click', function(e) {
+    var dialog = document.getElementById('share-dialog');
+    if (dialog && dialog.style.display === 'flex' && e.target === dialog) {
+      dialog.style.display = 'none';
+    }
+  });
 
   function showTrackRating() {
     var section = document.getElementById('track-rating-section');

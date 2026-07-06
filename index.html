@@ -326,10 +326,31 @@
       </div>
       <div id="track-status" style="text-align:center;color:var(--text-muted);font-size:13px;">أدخل الكود واضغط بحث</div>
     </div>
+
+    <div id="track-progress" style="display:none">
+      <div class="track-progress-bar" id="trackProgressBar">
+        <div class="progress-step" data-step="assigned"><div class="step-icon">🚗</div><div class="step-label">في الطريق</div></div>
+        <div class="progress-connector"></div>
+        <div class="progress-step" data-step="started"><div class="step-icon">🟢</div><div class="step-label">جارية</div></div>
+        <div class="progress-connector"></div>
+        <div class="progress-step" data-step="completed"><div class="step-icon">✅</div><div class="step-label">مكتملة</div></div>
+      </div>
+    </div>
+
+    <div id="track-driver-card" style="display:none">
+      <div class="driver-card-avatar"><img id="track-driver-avatar" src="Taweqa-ogretk/icons/Icon-192.png" alt="driver"></div>
+      <div class="driver-card-info">
+        <div class="driver-card-name" id="track-driver-name">-</div>
+        <div class="driver-card-rating" id="track-driver-rating"><i class="fas fa-star" style="color:#facc15;font-size:12px;"></i> <span id="track-driver-rating-val">-</span> (<span id="track-driver-rating-count">0</span>)</div>
+        <div class="driver-card-phone" id="track-driver-phone-row" style="display:none"><i class="fas fa-phone"></i> <a id="track-driver-phone-link" href="tel:">اتصال</a></div>
+        <div class="driver-card-car" id="track-driver-car" style="display:none"><i class="fas fa-car"></i> <span id="track-driver-car-text">-</span></div>
+      </div>
+    </div>
+
     <div class="track-info" id="track-info">
       <div class="track-fare" id="track-fare-display">0.00 ج</div>
       <div class="info-row"><span class="label">حالة الرحلة</span><span class="val" id="track-status-val">-</span></div>
-      <div class="info-row"><span class="label">اسم السائق</span><span class="val" id="track-driver-name">-</span></div>
+      <div class="info-row" id="track-eta-row" style="display:none"><span class="label">الوصول المتوقع</span><span class="val" id="track-eta-val">-</span></div>
       <div class="info-row"><span class="label">المسافة</span><span class="val" id="track-distance">0.00 كم</span></div>
       <div class="info-row"><span class="label">المدة</span><span class="val" id="track-duration">0 د</span></div>
       <div class="info-row"><span class="label">انتظار</span><span class="val" id="track-wait">0 د</span></div>
@@ -337,6 +358,15 @@
       <div class="info-row"><span class="label">عدد الركاب</span><span class="val" id="track-passengers">-</span></div>
       <div class="info-row"><span class="label">وقت البدء</span><span class="val" id="track-start-time">-</span></div>
     </div>
+
+    <div id="track-actions" style="display:none">
+      <button class="btn btn-accent" id="track-end-trip-btn" onclick="endTrip()" style="flex:1;"><i class="fas fa-stop-circle"></i> إنهاء الرحلة</button>
+      <button class="btn btn-primary" id="track-share-btn" onclick="shareTripLink()" style="flex:1;"><i class="fas fa-share-alt"></i> مشاركة</button>
+      <button class="btn btn-danger" id="track-sos-btn" onclick="sosAlert()" style="flex:1;"><i class="fas fa-exclamation-triangle"></i> SOS</button>
+    </div>
+
+    <div class="card" id="track-map-card" style="display:none"><div id="track-map" style="height:220px;border-radius:14px;"></div></div>
+
     <div class="card" id="track-rating-section" style="display:none">
       <div id="trackRatingForm">
         <h4 style="text-align:center;margin-bottom:4px;">⭐ قيّم رحلتك</h4>
@@ -356,13 +386,28 @@
         <p style="color:var(--meter-muted);font-size:12px;">تقييمك يساعد في تحسين الخدمة</p>
       </div>
     </div>
-    <div class="card" id="track-map-card" style="display:none"><div id="track-map" style="height:200px;border-radius:14px;"></div></div>
+
     <div class="card chat-panel" id="track-chat-section" style="display:none">
       <h4><i class="fas fa-comments"></i> محادثة مع السائق</h4>
       <div class="chat-messages" id="chatMessagesTrack"></div>
       <div class="chat-input-row">
         <input type="text" id="chatInputTrack" placeholder="اكتب رسالة..." onkeydown="if(event.key==='Enter')sendChatMessage('track')">
         <button class="btn btn-primary btn-sm" onclick="sendChatMessage('track')"><i class="fas fa-paper-plane"></i></button>
+      </div>
+    </div>
+
+    <div id="share-dialog" class="dialog-overlay" style="display:none">
+      <div class="dialog-content">
+        <h3><i class="fas fa-share-alt"></i> مشاركة الرحلة</h3>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px;">شارك رابط التتبع مع عائلتك لتتبع رحلتك</p>
+        <div class="share-link-box" id="share-link-box">
+          <input type="text" id="share-link-input" readonly style="width:100%;padding:10px;border:1px solid var(--glass-border);border-radius:8px;background:rgba(255,255,255,0.05);color:#fff;font-size:12px;text-align:center;direction:ltr;">
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="btn btn-primary btn-sm" onclick="copyShareLink()" style="flex:1;"><i class="fas fa-copy"></i> نسخ</button>
+          <button class="btn btn-success btn-sm" onclick="shareWhatsApp()" style="flex:1;"><i class="fab fa-whatsapp"></i> واتساب</button>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="closeShareDialog()" style="width:100%;margin-top:8px;">إغلاق</button>
       </div>
     </div>
   </div>
