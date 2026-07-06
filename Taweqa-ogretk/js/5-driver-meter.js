@@ -48,6 +48,12 @@
       clearInterval(window.passengerRequestPollTimer);
       window.passengerRequestPollTimer = null;
     }
+    if (tab === 'request') {
+      setTimeout(function() {
+        if (typeof initRequestMap === 'function') initRequestMap();
+        if (requestMap) requestMap.invalidateSize();
+      }, 300);
+    }
     if (tab === 'track') { setTimeout(autoLoadActiveTrip, 200); }
   }
   window.switchPassengerTab = switchPassengerTab;
@@ -824,9 +830,9 @@
     if (!supabase || !currentUser) return;
     var list = document.getElementById('driverRequestsList');
     try {
-      var { data: requests, error } = await supabase.from('ride_requests').select('id, passenger_id, passenger_count, classification, status, pickup_address, destination_address, pickup_lat, pickup_lng, adult_count, child_count, created_at').eq('status', 'pending').eq('offered_to', currentUser.id).order('created_at', { ascending: false }).limit(20);
+      var { data: requests, error } = await supabase.from('ride_requests').select('id, passenger_id, passenger_count, classification, status, pickup_address, destination_address, pickup_lat, pickup_lng, adult_count, child_count, created_at, waypoints, note').eq('status', 'pending').eq('offered_to', currentUser.id).order('created_at', { ascending: false }).limit(20);
       if (error || !requests || !requests.length) {
-        list.innerHTML = '<div class="empty-state">لا توجد طلبات موجهة إليك حالياً</div>';
+        list.innerHTML = '<div class="empty-state">لا تطلبات موجهة إليك حالياً</div>';
         return;
       }
       list.innerHTML = requests.map(function(r) {
@@ -834,7 +840,15 @@
         var hasLoc = r.pickup_lat && r.pickup_lng;
         var timeAgo = Math.floor((Date.now() - new Date(r.created_at).getTime()) / 1000);
         var timeText = timeAgo < 60 ? 'منذ ' + timeAgo + ' ثانية' : timeAgo < 3600 ? 'منذ ' + Math.floor(timeAgo / 60) + ' دقيقة' : 'منذ ' + Math.floor(timeAgo / 3600) + ' ساعة';
-        return '<div class="driver-request-item"><div class="top"><span class="name"><i class="fas fa-user"></i> راكب</span><span class="req-badge pending">جديد</span></div><div class="info"><i class="fas fa-tag"></i> ' + typeText + ' | <i class="fas fa-users"></i> ' + (r.passenger_count || 1) + ' راكب</div><div class="info"><i class="fas fa-map-pin"></i> ' + escapeHTML(r.pickup_address || 'بدون موقع') + '</div>' + (r.destination_address ? '<div class="info"><i class="fas fa-flag"></i> ' + escapeHTML(r.destination_address) + '</div>' : '') + '<div class="info"><i class="fas fa-clock"></i> ' + timeText + '</div><div class="req-actions">' + (hasLoc ? '<button class="btn btn-sm btn-outline" onclick="showPickupOnMap(' + r.pickup_lat + ', ' + r.pickup_lng + ')" style="padding:6px 10px;font-size:11px;"><i class="fas fa-map-marker-alt"></i> موقع</button>' : '') + '<button class="btn btn-success btn-sm" onclick="acceptRequest(\'' + r.id + '\')"><i class="fas fa-check"></i> قبول</button><button class="btn btn-danger btn-sm" onclick="rejectRequest(\'' + r.id + '\')"><i class="fas fa-times"></i> رفض</button></div></div>';
+        var wpHtml = '';
+        if (r.waypoints && Array.isArray(r.waypoints) && r.waypoints.length > 1) {
+          var waypointIcons = ['<i class="fas fa-play" style="color:#22c55e;"></i>'];
+          for (var wi = 1; wi < r.waypoints.length - 1; wi++) waypointIcons.push('<i class="fas fa-circle" style="color:#3b82f6;font-size:8px;"></i>');
+          waypointIcons.push('<i class="fas fa-flag-checkered" style="color:#ef4444;"></i>');
+          wpHtml = '<div class="info" style="font-size:11px;"><i class="fas fa-route"></i> ' + r.waypoints.length + ' محطة: ' + waypointIcons.join(' ') + '</div>';
+        }
+        var noteHtml = r.note ? '<div class="info" style="font-size:11px;color:var(--accent);"><i class="fas fa-comment"></i> ' + escapeHTML(r.note) + '</div>' : '';
+        return '<div class="driver-request-item"><div class="top"><span class="name"><i class="fas fa-user"></i> راكب</span><span class="req-badge pending">جديد</span></div><div class="info"><i class="fas fa-tag"></i> ' + typeText + ' | <i class="fas fa-users"></i> ' + (r.passenger_count || 1) + ' راكب</div><div class="info"><i class="fas fa-map-pin"></i> ' + escapeHTML(r.pickup_address || 'بدون موقع') + '</div>' + (r.destination_address ? '<div class="info"><i class="fas fa-flag"></i> ' + escapeHTML(r.destination_address) + '</div>' : '') + wpHtml + noteHtml + '<div class="info"><i class="fas fa-clock"></i> ' + timeText + '</div><div class="req-actions">' + (hasLoc ? '<button class="btn btn-sm btn-outline" onclick="showPickupOnMap(' + r.pickup_lat + ', ' + r.pickup_lng + ')" style="padding:6px 10px;font-size:11px;"><i class="fas fa-map-marker-alt"></i> موقع</button>' : '') + (r.waypoints && Array.isArray(r.waypoints) && r.waypoints.length > 1 ? '<button class="btn btn-sm btn-outline" onclick="showWaypointsOnMap(\'' + r.id + '\')" style="padding:6px 10px;font-size:11px;"><i class="fas fa-route"></i> المسار</button>' : '') + '<button class="btn btn-success btn-sm" onclick="acceptRequest(\'' + r.id + '\')"><i class="fas fa-check"></i> قبول</button><button class="btn btn-danger btn-sm" onclick="rejectRequest(\'' + r.id + '\')"><i class="fas fa-times"></i> رفض</button></div></div>';
       }).join('');
       // Notify if there are new requests
       if ('Notification' in window && Notification.permission === 'granted' && typeof driverLastRequestCount !== 'undefined' && requests.length > driverLastRequestCount) {
@@ -856,6 +870,33 @@
     } else {
       showToast('الخريطة غير متاحة');
     }
+  };
+
+  window.showWaypointsOnMap = async function(requestId) {
+    if (!driverMap) { showToast('الخريطة غير متاحة'); return; }
+    try {
+      var { data: req } = await supabase.from('ride_requests').select('waypoints').eq('id', requestId).single();
+      if (!req || !req.waypoints || !Array.isArray(req.waypoints) || req.waypoints.length < 2) { showToast('لا توجد نقاط مسار'); return; }
+      // Clear old waypoint layers
+      if (window._wpMarkers) { window._wpMarkers.forEach(function(m) { driverMap.removeLayer(m); }); }
+      if (window._wpPolyline) { driverMap.removeLayer(window._wpPolyline); }
+      window._wpMarkers = [];
+      var latlngs = [];
+      req.waypoints.forEach(function(wp, i) {
+        var ll = [wp.lat, wp.lng];
+        latlngs.push(ll);
+        var color = i === 0 ? '#22c55e' : (i === req.waypoints.length - 1 ? '#ef4444' : '#3b82f6');
+        var m = L.circleMarker(ll, { radius: 7, color: color, fillColor: color, fillOpacity: 0.8, weight: 2 }).addTo(driverMap);
+        m.bindTooltip(i === 0 ? 'انطلاق' : (i === req.waypoints.length - 1 ? 'وجهة' : String(i + 1)), { permanent: true, direction: 'top' });
+        window._wpMarkers.push(m);
+      });
+      if (latlngs.length > 1) {
+        window._wpPolyline = L.polyline(latlngs, { color: '#f59e0b', weight: 3, dashArray: '6, 8' }).addTo(driverMap);
+      }
+      try { driverMap.fitBounds(L.polyline(latlngs).getBounds(), { padding: [30, 30] }); } catch(e) {}
+      showToast('📍 تم عرض مسار الرحلة');
+      switchDriverTab('meter', document.querySelector('#driver-app .tab-btn'));
+    } catch(e) { showToast('فشل تحميل المسار'); console.error(e); }
   };
 
   var acceptedTripData = null;

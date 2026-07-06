@@ -9,21 +9,21 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="توقع أجرتك">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
-  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="apple-touch-icon" href="Taweqa-ogretk/icons/Icon-192.png">
+  <link rel="icon" type="image/png" href="Taweqa-ogretk/favicon.png">
   <title>توقع أجرتك - تطبيق التوك توك الذكي</title>
-  <link rel="manifest" href="manifest.json">
+  <link rel="manifest" href="Taweqa-ogretk/manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script type="module">import{createClient}from'https://esm.sh/@supabase/supabase-js@2';window.__supa=createClient;</script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/supabase-lite.js"></script>
-  <link rel="stylesheet" href="css/1-variables.css">
-  <link rel="stylesheet" href="css/2-landing.css">
-  <link rel="stylesheet" href="css/3-auth.css">
-  <link rel="stylesheet" href="css/4-app.css">
+  <script src="Taweqa-ogretk/js/supabase-lite.js"></script>
+  <link rel="stylesheet" href="Taweqa-ogretk/css/1-variables.css">
+  <link rel="stylesheet" href="Taweqa-ogretk/css/2-landing.css">
+  <link rel="stylesheet" href="Taweqa-ogretk/css/3-auth.css">
+  <link rel="stylesheet" href="Taweqa-ogretk/css/4-app.css">
 </head>
 <body>
 <div id="loading-screen"><div style="text-align:center"><div class="spinner"></div><p style="color:var(--text-muted);font-size:16px;margin-top:8px;">توقع أجرتك</p></div></div>
@@ -360,14 +360,22 @@
   </div>
 
   <div id="passenger-request-section" style="display:none">
-    <div class="meter-header"><h1>طلب رحلة</h1><p>أرسل طلب رحلة لسائق قريب</p></div>
-    <div class="card">
+    <div class="meter-header"><h1>طلب رحلة</h1><p>حدد نقاط رحلتك على الخريطة (اضغط على الخريطة لإضافة نقاط)</p></div>
+    <div class="card" style="padding:10px;">
       <div class="auth-alert" id="request-alert"></div>
+      <div id="request-map" style="height:260px;border-radius:12px;margin-bottom:8px;border:1px solid var(--meter-border);"></div>
+      <div id="request-waypoints-info" style="font-size:12px;color:var(--meter-muted);margin-bottom:8px;text-align:center;">
+        <span id="request-waypoints-count">0 نقطة</span> · المسافة التقريبية: <span id="request-est-distance">0</span> كم
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;">
+        <button class="btn btn-sm btn-outline" onclick="clearRequestWaypoints()" style="flex:1;font-size:11px;padding:6px;"><i class="fas fa-trash"></i> مسح الكل</button>
+        <button class="btn btn-sm btn-outline" onclick="undoLastWaypoint()" style="flex:1;font-size:11px;padding:6px;"><i class="fas fa-undo"></i> تراجع</button>
+        <button class="btn btn-sm btn-outline" onclick="setMyLocationAsFirst()" style="flex:1;font-size:11px;padding:6px;"><i class="fas fa-location-dot"></i> موقعي</button>
+      </div>
       <div class="request-form">
-        <div class="field"><label>موقع pickup</label><div style="display:flex;gap:8px;"><input type="text" id="request-pickup" placeholder="العنوان أو المنطقة" style="flex:1;"><button class="btn btn-sm btn-outline" onclick="getCurrentLocation()" style="white-space:nowrap;"><i class="fas fa-location-dot"></i></button></div></div>
-        <div class="field"><label>الوجهة</label><input type="text" id="request-destination" placeholder="الوجهة (اختياري)"></div>
         <div class="field"><label>نوع الرحلة</label><select id="request-type" onchange="updateFareEstimate()"><option value="private">مخصوص</option><option value="shared">أفراد (مشترك)</option></select></div>
         <div class="field"><label>عدد الركاب</label><input type="number" id="request-passengers" value="1" min="1" max="10" onchange="updateFareEstimate()"></div>
+        <div class="field"><label>ملاحظة للسائق (اختياري)</label><textarea id="request-note" placeholder="مثلاً: استنى عند بوابة 3..." maxlength="200" style="width:100%;padding:8px;border-radius:10px;border:1px solid var(--meter-border);background:rgba(255,255,255,0.05);color:#fff;font-family:inherit;font-size:12px;resize:none;height:50px;"></textarea></div>
         <div id="fare-estimate" style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);border-radius:10px;padding:10px 14px;margin:12px 0;font-size:13px;text-align:center;">
           <span style="color:var(--meter-muted);">تقدير الأجرة: </span>
           <strong id="fareEstimateValue" style="color:var(--success);">15 - 35 ج.م</strong>
@@ -550,15 +558,15 @@
 <div class="toast" id="toast"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-<script src="js/1-config.js"></script>
-<script src="js/2-utils.js"></script>
-<script src="js/3-auth.js"></script>
-<script src="js/4-landing.js"></script>
-<script src="js/5-driver-meter.js"></script>
-<script src="js/6-passenger.js"></script>
-<script src="js/7-chat.js"></script>
-<script src="js/8-wallet.js"></script>
-<script src="js/9-paymob.js"></script>
-<script src="js/9-init.js"></script>
+<script src="Taweqa-ogretk/js/1-config.js"></script>
+<script src="Taweqa-ogretk/js/2-utils.js"></script>
+<script src="Taweqa-ogretk/js/3-auth.js"></script>
+<script src="Taweqa-ogretk/js/4-landing.js"></script>
+<script src="Taweqa-ogretk/js/5-driver-meter.js"></script>
+<script src="Taweqa-ogretk/js/6-passenger.js"></script>
+<script src="Taweqa-ogretk/js/7-chat.js"></script>
+<script src="Taweqa-ogretk/js/8-wallet.js"></script>
+<script src="Taweqa-ogretk/js/9-paymob.js"></script>
+<script src="Taweqa-ogretk/js/9-init.js"></script>
 </body>
 </html>

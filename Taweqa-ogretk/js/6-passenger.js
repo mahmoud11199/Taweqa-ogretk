@@ -4,6 +4,107 @@
   var lastTrackedTripId = null;
   var lastTrackedDriverId = null;
   var lastTrackedCode = null;
+  var requestWaypoints = [];
+  var requestMap = null;
+  var requestMarkers = [];
+  var requestPolyline = null;
+
+  window.initRequestMap = function() {
+    var container = document.getElementById('request-map');
+    if (!container || requestMap) return;
+    try {
+      requestMap = L.map('request-map').setView([30.0444, 31.2357], 14);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(requestMap);
+      requestMap.on('click', onRequestMapClick);
+      setTimeout(function() { if (requestMap) requestMap.invalidateSize(); }, 500);
+    } catch(e) { console.error(e); }
+  };
+
+  function onRequestMapClick(e) {
+    if (requestWaypoints.length >= 20) { showToast('الحد الأقصى 20 نقطة'); return; }
+    requestWaypoints.push({ lat: e.latlng.lat, lng: e.latlng.lng });
+    updateRequestWaypointsUI();
+  }
+
+  function updateRequestWaypointsUI() {
+    requestMarkers.forEach(function(m) { if (requestMap) requestMap.removeLayer(m); });
+    requestMarkers = [];
+    if (requestPolyline) { requestMap.removeLayer(requestPolyline); requestPolyline = null; }
+    if (requestWaypoints.length === 0) {
+      document.getElementById('request-waypoints-count').textContent = '0 نقطة';
+      document.getElementById('request-est-distance').textContent = '0';
+      updateFareEstimate();
+      return;
+    }
+    var latlngs = [];
+    requestWaypoints.forEach(function(wp, i) {
+      var latlng = [wp.lat, wp.lng];
+      latlngs.push(latlng);
+      var color = i === 0 ? '#22c55e' : '#3b82f6';
+      var marker = L.circleMarker(latlng, { radius: 8, color: color, fillColor: color, fillOpacity: 0.8, weight: 2 }).addTo(requestMap);
+      marker.bindTooltip(String(i + 1), { permanent: true, direction: 'top', className: 'waypoint-tooltip' });
+      marker._wpIdx = i;
+      marker.on('click', function() { removeRequestWaypoint(this._wpIdx); });
+      requestMarkers.push(marker);
+    });
+    if (latlngs.length > 1) {
+      requestPolyline = L.polyline(latlngs, { color: '#f59e0b', weight: 3, dashArray: '6, 8' }).addTo(requestMap);
+    }
+    try { requestMap.fitBounds(L.polyline(latlngs).getBounds(), { padding: [30, 30] }); } catch(e) {}
+    document.getElementById('request-waypoints-count').textContent = requestWaypoints.length + ' نقطة';
+    document.getElementById('request-est-distance').textContent = calculateWaypointsDistance().toFixed(1);
+    updateFareEstimate();
+  }
+
+  function calculateWaypointsDistance() {
+    if (requestWaypoints.length < 2) return 0;
+    var total = 0;
+    for (var i = 1; i < requestWaypoints.length; i++) {
+      total += haversineDistance(requestWaypoints[i-1].lat, requestWaypoints[i-1].lng, requestWaypoints[i].lat, requestWaypoints[i].lng);
+    }
+    return total;
+  }
+
+  function haversineDistance(lat1, lon1, lat2, lon2) {
+    var R = 6371;
+    var dLat = (lat2 - lat1) * Math.PI / 180;
+    var dLon = (lon2 - lon1) * Math.PI / 180;
+    var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }
+
+  window.clearRequestWaypoints = function() {
+    requestWaypoints = [];
+    updateRequestWaypointsUI();
+  };
+
+  window.undoLastWaypoint = function() {
+    if (requestWaypoints.length === 0) return;
+    requestWaypoints.pop();
+    updateRequestWaypointsUI();
+  };
+
+  function removeRequestWaypoint(idx) {
+    requestWaypoints.splice(idx, 1);
+    // Rebind click handlers with correct indices
+    updateRequestWaypointsUI();
+  }
+
+  window.setMyLocationAsFirst = function() {
+    if (!navigator.geolocation) { showToast('GPS غير متاح'); return; }
+    navigator.geolocation.getCurrentPosition(function(pos) {
+      var loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      if (requestWaypoints.length === 0) {
+        requestWaypoints.push(loc);
+      } else {
+        requestWaypoints[0] = loc;
+      }
+      updateRequestWaypointsUI();
+      if (requestMap) requestMap.setView([loc.lat, loc.lng], 16);
+      showToast('تم تحديد موقعك الحالي كنقطة انطلاق');
+    }, function() { showToast('فشل تحديد الموقع'); });
+  };
 
   window.trackTrip = async function(optCode) {
     var code = optCode || document.getElementById('track-code').value.trim();
@@ -152,23 +253,25 @@
   window.requestRide = async function() {
     if (!supabase || !currentUser) { showToast('يجب تسجيل الدخول أولاً'); return; }
     if (typeof requireSubscription === 'function' && !(await requireSubscription())) return;
-    var pickup = document.getElementById('request-pickup').value.trim();
-    var destination = document.getElementById('request-destination').value.trim();
+    if (requestWaypoints.length < 2) { showAlert('request-alert', 'يرجى تحديد نقطتين على الأقل على الخريطة (نقطة انطلاق ووجهة)'); return; }
     var type = document.getElementById('request-type').value;
     var passengers = Math.round(clampNumber(document.getElementById('request-passengers').value, 1, 10, 1));
-    if (!pickup) { showAlert('request-alert', 'يرجى إدخال موقع pickup'); return; }
+    var note = document.getElementById('request-note').value.trim();
     document.getElementById('request-btn').disabled = true;
     document.getElementById('request-loading').classList.remove('hidden-el');
     try {
-      var payload = { passenger_id: currentUser.id, passenger_count: passengers, classification: type === 'private' ? 'private' : 'shared', status: 'pending', adult_count: passengers, child_count: 0, pickup_address: pickup };
-      if (destination) payload.destination_address = destination;
-      if (navigator.geolocation) {
-        try {
-          var pos = await new Promise(function(res, rej) { navigator.geolocation.getCurrentPosition(res, rej, { timeout: 5000 }); });
-          payload.pickup_lat = pos.coords.latitude;
-          payload.pickup_lng = pos.coords.longitude;
-        } catch (e) {}
-      }
+      var first = requestWaypoints[0];
+      var last = requestWaypoints[requestWaypoints.length - 1];
+      var payload = {
+        passenger_id: currentUser.id, passenger_count: passengers,
+        classification: type === 'private' ? 'private' : 'shared',
+        status: 'pending', adult_count: passengers, child_count: 0,
+        pickup_address: 'نقطة ' + first.lat.toFixed(5) + ', ' + first.lng.toFixed(5),
+        destination_address: 'نقطة ' + last.lat.toFixed(5) + ', ' + last.lng.toFixed(5),
+        pickup_lat: first.lat, pickup_lng: first.lng,
+        waypoints: requestWaypoints,
+        note: note || null
+      };
       var { data, error } = await supabase.from('ride_requests').insert(payload).select('id, pickup_lat, pickup_lng').single();
       if (error) { showAlert('request-alert', error.message); document.getElementById('request-btn').disabled = false; document.getElementById('request-loading').classList.add('hidden-el'); return; }
       showAlert('request-alert', 'تم إرسال الطلب! جاري البحث عن سائق...', 'success');
@@ -342,19 +445,20 @@
     var type = document.getElementById('request-type').value;
     var count = parseInt(document.getElementById('request-passengers').value) || 1;
     var el = document.getElementById('fareEstimateValue');
-    if (type === 'private') {
-      el.textContent = '15 - 35 ج.م';
+    var distKm = calculateWaypointsDistance();
+    if (distKm > 0 && requestWaypoints.length >= 2) {
+      var baseFare = type === 'private' ? 10 : 5;
+      var perKm = type === 'private' ? 3.5 : 2;
+      var minFare = baseFare + distKm * perKm;
+      var maxFare = minFare * 1.3;
+      el.textContent = minFare.toFixed(0) + ' - ' + maxFare.toFixed(0) + ' ج.م' + (type === 'shared' ? ' للفرد' : '');
     } else {
-      el.textContent = (count * 3) + ' - ' + (count * 8) + ' ج.م للفرد';
+      el.textContent = type === 'private' ? '15 - 35 ج.م' : (count * 3) + ' - ' + (count * 8) + ' ج.م للفرد';
     }
   };
 
   window.getCurrentLocation = function() {
-    if (!navigator.geolocation) { showToast('GPS غير متاح'); return; }
-    navigator.geolocation.getCurrentPosition(function(pos) {
-      document.getElementById('request-pickup').value = pos.coords.latitude.toFixed(5) + ', ' + pos.coords.longitude.toFixed(5);
-      showToast('تم تحديد الموقع الحالي');
-    }, function() { showToast('فشل تحديد الموقع'); });
+    setMyLocationAsFirst();
   };
 
   async function loadPassengerHistory() {
