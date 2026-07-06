@@ -158,7 +158,7 @@ function makeQueryBuilder(url, anonKey, table, method, body, opts) {
 
   function getAuthHeaders() {
     var s = loadSession();
-    var h = { apikey: anonKey, Prefer: 'return=representation' };
+    var h = { apikey: anonKey, 'Content-Type': 'application/json', Prefer: 'return=representation' };
     if (s && s.access_token) h.Authorization = 'Bearer ' + s.access_token;
     Object.assign(h, query.headers);
     return h;
@@ -229,7 +229,7 @@ window.__supaLiteCreateClient = function(url, anonKey) {
       var b = makeQueryBuilder(url, anonKey, table);
       b.upsert = function(data) {
         var s = loadSession();
-        var h = { apikey: anonKey, Prefer: 'resolution=merge-duplicates' };
+        var h = { apikey: anonKey, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates' };
         if (s && s.access_token) h.Authorization = 'Bearer ' + s.access_token;
         var tableUrl = url + '/rest/v1/' + table;
         return sbFetch(tableUrl, { method: 'POST', headers: h, body: JSON.stringify(data) }).then(function(r) {
@@ -241,7 +241,7 @@ window.__supaLiteCreateClient = function(url, anonKey) {
       };
       b.update = function(data) {
         var s = loadSession();
-        var h = { apikey: anonKey, Prefer: 'return=representation' };
+        var h = { apikey: anonKey, 'Content-Type': 'application/json', Prefer: 'return=representation' };
         if (s && s.access_token) h.Authorization = 'Bearer ' + s.access_token;
         var queryBuilder = makeQueryBuilder(url, anonKey, table, 'PATCH', data, { headers: h });
         return queryBuilder;
@@ -277,7 +277,7 @@ window.__supaLiteCreateClient = function(url, anonKey) {
 
 function getAuthHeaders(qb) {
   var s = loadSession();
-  var h = { apikey: qb.apikey || '', Prefer: 'return=representation' };
+  var h = { apikey: qb.apikey || '', 'Content-Type': 'application/json', Prefer: 'return=representation' };
   if (s && s.access_token) h.Authorization = 'Bearer ' + s.access_token;
   if (qb && qb.headers) Object.assign(h, qb.headers);
   return h;
