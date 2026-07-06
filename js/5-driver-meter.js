@@ -44,6 +44,10 @@
       document.querySelectorAll('#passenger-app .app-nav .tab-btn').forEach(function(b) { b.classList.remove('active'); });
       btn.classList.add('active');
     }
+    if (tab !== 'request-status' && window.passengerRequestPollTimer) {
+      clearInterval(window.passengerRequestPollTimer);
+      window.passengerRequestPollTimer = null;
+    }
     if (tab === 'track') { setTimeout(autoLoadActiveTrip, 200); }
   }
   window.switchPassengerTab = switchPassengerTab;

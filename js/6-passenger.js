@@ -195,7 +195,7 @@
   var currentPassengerOfferedDrivers = [];
 
   var currentPassengerRequestId = null;
-  var passengerRequestPollTimer = null;
+  window.passengerRequestPollTimer = null;
 
   function showPassengerRequestStatus(requestId, payload) {
     document.getElementById('reqTypeDisplay').textContent = payload.classification === 'private' ? 'مخصوص' : 'أفراد';
@@ -208,8 +208,8 @@
     document.getElementById('requestStatusCard').style.display = 'block';
     document.getElementById('cancelRequestBtn').style.display = 'block';
     switchPassengerTab('request-status', document.querySelector('#passenger-app .tab-btn'));
-    if (passengerRequestPollTimer) clearInterval(passengerRequestPollTimer);
-    passengerRequestPollTimer = setInterval(function() { pollPassengerRequest(requestId); }, 3000);
+    if (window.passengerRequestPollTimer) clearInterval(window.passengerRequestPollTimer);
+    window.passengerRequestPollTimer = setInterval(function() { pollPassengerRequest(requestId); }, 3000);
   }
 
   var acceptedDriverMap = null;
@@ -265,14 +265,14 @@
     if (!supabase || !requestId) return;
     try {
       var { data, error } = await supabase.from('ride_requests').select('id, status, driver_id, responded_at, pickup_lat, pickup_lng, offered_at').eq('id', requestId).single();
-      if (error || !data) { clearInterval(passengerRequestPollTimer); return; }
+      if (error || !data) { clearInterval(window.passengerRequestPollTimer); return; }
       // Auto-cancel after 5 minutes with no acceptance
       if (currentPassengerRequestCreatedAt && Date.now() - currentPassengerRequestCreatedAt > 300000) {
         if (data.status === 'pending') {
           await supabase.from('ride_requests').update({ status: 'cancelled' }).eq('id', requestId);
           showToast('تم إلغاء الطلب تلقائياً لعدم وجود سائق');
         }
-        clearInterval(passengerRequestPollTimer);
+        clearInterval(window.passengerRequestPollTimer);
         document.getElementById('reqStatusIcon').textContent = '\u23F0';
         document.getElementById('reqStatusText').textContent = 'انتهى وقت الطلب';
         document.getElementById('reqStatusSub').textContent = 'لم يتم العثور على سائق، حاول مرة أخرى';
@@ -303,7 +303,7 @@
         }
       }
       if (data.status === 'accepted') {
-        clearInterval(passengerRequestPollTimer);
+        clearInterval(window.passengerRequestPollTimer);
         document.getElementById('reqStatusIcon').textContent = '\u2705';
         document.getElementById('reqStatusText').textContent = 'تم قبول طلبك!';
         document.getElementById('reqStatusSub').textContent = 'السائق في طريقه إليك';
@@ -330,7 +330,7 @@
           }
         }
       } else if (data.status === 'cancelled') {
-        clearInterval(passengerRequestPollTimer);
+        clearInterval(window.passengerRequestPollTimer);
         document.getElementById('reqStatusIcon').textContent = '\u274C';
         document.getElementById('reqStatusText').textContent = 'تم إلغاء الطلب';
         document.getElementById('reqStatusSub').textContent = 'يمكنك إرسال طلب جديد';

@@ -52,7 +52,7 @@ window.handleLogout = async function() {
   if (!supabase) return;
   stopGlobalGPS();
   if (typeof trackInterval !== 'undefined' && trackInterval) { clearInterval(trackInterval); trackInterval = null; }
-  if (typeof passengerRequestPollTimer !== 'undefined' && passengerRequestPollTimer) { clearInterval(passengerRequestPollTimer); passengerRequestPollTimer = null; }
+  if (window.passengerRequestPollTimer) { clearInterval(window.passengerRequestPollTimer); window.passengerRequestPollTimer = null; }
   if (typeof acceptedDriverLocTimer !== 'undefined' && acceptedDriverLocTimer) { clearInterval(acceptedDriverLocTimer); acceptedDriverLocTimer = null; }
   if (typeof driverRequestPollTimer !== 'undefined' && driverRequestPollTimer) { clearInterval(driverRequestPollTimer); driverRequestPollTimer = null; }
   if (typeof chatPollTimer !== 'undefined' && chatPollTimer) { clearInterval(chatPollTimer); chatPollTimer = null; }

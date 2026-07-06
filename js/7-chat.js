@@ -6,7 +6,7 @@
     if (!confirm('هل أنت متأكد من إلغاء الطلب؟')) return;
     try {
       await supabase.from('ride_requests').update({ status: 'cancelled' }).eq('id', currentPassengerRequestId);
-      clearInterval(passengerRequestPollTimer);
+      clearInterval(window.passengerRequestPollTimer);
       showToast('تم إلغاء الطلب');
       switchPassengerTab('request', document.querySelector('#passenger-app .tab-btn'));
     } catch (e) { showToast('فشل الإلغاء'); }
