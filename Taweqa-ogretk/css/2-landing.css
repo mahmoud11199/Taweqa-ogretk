@@ -89,6 +89,12 @@
 .feature-card:nth-child(3) .feat-icon { background: linear-gradient(135deg, var(--accent), #fbbf24); }
 .feature-card:nth-child(4) .feat-icon { background: linear-gradient(135deg, var(--pink), #f472b6); }
 .feature-card:nth-child(5) .feat-icon { background: linear-gradient(135deg, var(--blue), #60a5fa); }
+.feature-card:nth-child(6) .feat-icon { background: linear-gradient(135deg, #f59e0b, #fb923c); }
+.feature-card:nth-child(7) .feat-icon { background: linear-gradient(135deg, #22d3ee, #06b6d4); }
+.feature-card:nth-child(8) .feat-icon { background: linear-gradient(135deg, #a78bfa, #8b5cf6); }
+.feature-card:nth-child(9) .feat-icon { background: linear-gradient(135deg, #34d399, #10b981); }
+.feature-card:nth-child(10) .feat-icon { background: linear-gradient(135deg, #fb923c, #f97316); }
+.feature-card:nth-child(11) .feat-icon { background: linear-gradient(135deg, #f472b6, #ec4899); }
 .feature-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
 .feature-card p { font-size: 13px; color: var(--text-muted); line-height: 1.7; }
 .faq-section { padding: 40px 0 60px; }
