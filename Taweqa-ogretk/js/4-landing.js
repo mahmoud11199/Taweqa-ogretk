@@ -40,9 +40,10 @@ async function loadStatsFromDB() {
   if (!supabase) throw new Error('No supabase');
   try {
     var { data, error } = await supabase.rpc('get_public_stats');
-    if (!error && data) return data;
-  } catch(e) {}
-  async function safeQuery(promise) { try { return await promise; } catch(e) { return { data: [] }; } }
+    if (!error && data) { console.log('Stats: RPC success', data); return data; }
+    console.warn('Stats: RPC returned error or null', error, data);
+  } catch(e) { console.warn('Stats: RPC threw', e); }
+  async function safeQuery(promise) { try { return await promise; } catch(e) { console.warn('Stats: query failed', e); return { data: [] }; } }
   var q1 = safeQuery(supabase.from('profiles').select('id, role').limit(1000));
   var q2 = safeQuery(supabase.from('trips').select('total_fare, distance_km, status, created_at').limit(1000));
   var q3 = safeQuery(supabase.from('ratings').select('score').limit(1000));
