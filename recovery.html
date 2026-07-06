@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>إعادة تعيين كلمة السر - توقع أجرتك</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script type="module">import{createClient}from'https://esm.sh/@supabase/supabase-js@2';window.__supa=createClient;</script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="Taweqa-ogretk/js/supabase-lite.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Cairo', sans-serif; background: #0f172a; color: #fff; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .card { background: rgba(255,255,255,0.05); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 32px 24px; width: 100%; max-width: 400px; text-align: center; }
+    .card h1 { font-size: 22px; font-weight: 900; margin-bottom: 6px; background: linear-gradient(90deg, #22d3ee, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .card p { color: #94a3b8; font-size: 14px; margin-bottom: 20px; }
+    .card input { width: 100%; padding: 12px 16px; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; font-size: 14px; background: rgba(255,255,255,0.04); color: #fff; outline: none; font-family: inherit; margin-bottom: 12px; text-align: center; }
+    .card input:focus { border-color: #22d3ee; }
+    .card button { width: 100%; padding: 12px; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; background: linear-gradient(135deg, #22d3ee, #818cf8); color: #0f172a; transition: all 0.2s; }
+    .card button:active { transform: scale(0.97); }
+    .card button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .card .error { color: #ef4444; font-size: 13px; margin-top: 8px; display: none; }
+    .card .success { color: #22c55e; font-size: 13px; margin-top: 8px; display: none; }
+    .card .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; margin-bottom: 10px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .card .processing { display: none; }
+    .card .form { display: none; }
+    .card .done { display: none; }
+    .card .strength-bar { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-bottom: 12px; overflow: hidden; }
+    .card .strength-bar .fill { height: 100%; width: 0; transition: all 0.2s; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🔐 إعادة تعيين كلمة السر</h1>
+    <div id="processing">
+      <div class="spinner"></div>
+      <p>جاري التحقق من الرابط...</p>
+    </div>
+    <div id="form" class="form">
+      <p>أدخل كلمة السر الجديدة</p>
+      <input type="password" id="new-password" placeholder="كلمة السر الجديدة (6 أحرف على الأقل)" autocomplete="new-password">
+      <div class="strength-bar"><div class="fill" id="strength-fill"></div></div>
+      <input type="password" id="confirm-password" placeholder="تأكيد كلمة السر" autocomplete="new-password">
+      <div class="error" id="error-msg"></div>
+      <div class="success" id="success-msg"></div>
+      <button id="reset-btn" onclick="handleReset()">حفظ كلمة السر الجديدة</button>
+      <p style="margin-top:14px;font-size:12px;color:#64748b;"><a href="https://mahmoud11199.github.io/Taweqa-ogretk/" style="color:#22d3ee;">العودة للتطبيق</a></p>
+    </div>
+    <div id="done" class="done">
+      <div style="font-size:48px;margin-bottom:10px;">✅</div>
+      <p style="color:#22c55e;font-weight:700;">تم تغيير كلمة السر بنجاح!</p>
+      <p style="font-size:13px;color:#94a3b8;margin-top:4px;">يمكنك الآن تسجيل الدخول بكلمة السر الجديدة</p>
+      <a href="https://mahmoud11199.github.io/Taweqa-ogretk/" style="display:inline-block;margin-top:16px;padding:10px 24px;border-radius:12px;background:linear-gradient(135deg,#22d3ee,#818cf8);color:#0f172a;font-weight:700;text-decoration:none;">فتح التطبيق</a>
+    </div>
+  </div>
+  <script>
+    var supabase = null;
+    var recoveryToken = null;
+
+    function initSupa() {
+      if (window.__supa && window.__supa.createClient) {
+        supabase = window.__supa.createClient(
+          'https://hhuiseftzbqssswnuwrv.supabase.co',
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhodWlzZWZ0emJxc3Nzd251d3J2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk2NjUxNjIsImV4cCI6MjEwNTI0MTE2Mn0.VBmFGnQphDN4QMRjIeVr3iAn2xqPBxoYfYHZP1X8Nn4'
+        );
+        return true;
+      }
+      return false;
+    }
+    initSupa();
+
+    function parseHash() {
+      var h = window.location.hash.replace('#', '');
+      if (!h) return null;
+      var params = {};
+      h.split('&').forEach(function(p) {
+        var kv = p.split('=');
+        if (kv.length === 2) params[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1]);
+      });
+      return params;
+    }
+
+    async function initRecovery() {
+      var el = document.getElementById('processing');
+      var form = document.getElementById('form');
+      var params = parseHash();
+      if (!params || params.type !== 'recovery' || !params.access_token) {
+        el.style.display = 'none';
+        form.style.display = 'block';
+        document.getElementById('error-msg').textContent = 'رابط غير صالح أو منتهي الصلاحية';
+        document.getElementById('error-msg').style.display = 'block';
+        document.getElementById('reset-btn').disabled = true;
+        return;
+      }
+      try {
+        var { error } = await supabase.auth.setSession({
+          access_token: params.access_token,
+          refresh_token: params.refresh_token || ''
+        });
+        if (error) throw error;
+        el.style.display = 'none';
+        form.style.display = 'block';
+      } catch (e) {
+        el.style.display = 'none';
+        form.style.display = 'block';
+        document.getElementById('error-msg').textContent = e.message || 'فشل التحقق من الرابط';
+        document.getElementById('error-msg').style.display = 'block';
+      }
+    }
+
+    initRecovery();
+
+    document.getElementById('new-password').addEventListener('input', function() {
+      var len = this.value.length;
+      var fill = document.getElementById('strength-fill');
+      fill.style.width = '100%';
+      if (len === 0) fill.style.width = '0';
+      else if (len < 6) fill.style.background = '#ef4444';
+      else if (len < 10) fill.style.background = '#f59e0b';
+      else fill.style.background = '#22c55e';
+    });
+
+    document.getElementById('new-password').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') document.getElementById('confirm-password').focus();
+    });
+
+    document.getElementById('confirm-password').addEventListener('input', function() {
+      var np = document.getElementById('new-password').value;
+      var errorEl = document.getElementById('error-msg');
+      if (this.value.length > 0 && this.value !== np) {
+        errorEl.textContent = 'كلمة السر غير متطابقة';
+        errorEl.style.display = 'block';
+      } else {
+        errorEl.style.display = 'none';
+      }
+    });
+
+    document.getElementById('confirm-password').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') handleReset();
+    });
+
+    window.handleReset = async function() {
+      var np = document.getElementById('new-password');
+      var cp = document.getElementById('confirm-password');
+      var errorEl = document.getElementById('error-msg');
+      var successEl = document.getElementById('success-msg');
+      var btn = document.getElementById('reset-btn');
+
+      errorEl.style.display = 'none';
+      successEl.style.display = 'none';
+
+      if (np.value.length < 6) { errorEl.textContent = 'كلمة السر يجب أن تكون 6 أحرف على الأقل'; errorEl.style.display = 'block'; return; }
+      if (np.value !== cp.value) { errorEl.textContent = 'كلمة السر غير متطابقة'; errorEl.style.display = 'block'; return; }
+
+      btn.disabled = true;
+      btn.textContent = 'جاري الحفظ...';
+
+      try {
+        var { error } = await supabase.auth.updateUser({ password: np.value });
+        if (error) { errorEl.textContent = error.message; errorEl.style.display = 'block'; btn.disabled = false; btn.textContent = 'حفظ كلمة السر الجديدة'; return; }
+        document.getElementById('form').style.display = 'none';
+        document.getElementById('done').style.display = 'block';
+      } catch (e) {
+        errorEl.textContent = e.message || 'حدث خطأ';
+        errorEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'حفظ كلمة السر الجديدة';
+      }
+    };
+  </script>
+</body>
+</html>
