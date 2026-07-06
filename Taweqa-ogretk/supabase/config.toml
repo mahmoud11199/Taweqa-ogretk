@@ -160,6 +160,7 @@ additional_redirect_urls = [
   "https://mahmoud11199.github.io/Taweqa-ogretk",
   "https://mahmoud11199.github.io/Taweqa-ogretk/index.html",
   "https://mahmoud11199.github.io/Taweqa-ogretk/recovery.html",
+  "https://hhuiseftzbqssswnuwrv.supabase.co/functions/v1/auth-callback",
   "http://127.0.0.1:3000",
   "https://127.0.0.1:3000",
   "http://localhost:*",

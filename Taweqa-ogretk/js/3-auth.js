@@ -88,9 +88,7 @@ window.handleForgotPasswordSend = async function() {
   if (!email) { showAlert('forgot-alert', 'يرجى إدخال البريد الإلكتروني'); return; }
   setLoading('forgot', true);
   try {
-    var baseUrl = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/');
-    var redirectUrl = baseUrl + 'recovery.html';
-    var { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: redirectUrl });
+    var { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: SUPABASE_URL + '/functions/v1/auth-callback' });
     if (error) { showAlert('forgot-alert', error.message); setLoading('forgot', false); return; }
     showAlert('forgot-alert', 'تم إرسال رابط إعادة التعيين إلى بريدك', 'success');
     setLoading('forgot', false);
