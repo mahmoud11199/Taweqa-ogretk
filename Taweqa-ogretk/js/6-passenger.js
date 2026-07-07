@@ -493,7 +493,7 @@
       if (data.pickup_lat && data.pickup_lng) {
         try {
           var { data: nearest } = await supabase.rpc('find_nearest_available_driver', { pickup_lat: data.pickup_lat, pickup_lng: data.pickup_lng, exclude_ids: [] });
-          if (nearest && nearest.found) {
+          if (nearest && nearest.found && nearest.driver_id) {
             currentPassengerOfferedDrivers.push(nearest.driver_id);
             await supabase.from('ride_requests').update({ offered_to: nearest.driver_id, offered_at: new Date().toISOString(), offered_drivers: currentPassengerOfferedDrivers }).eq('id', data.id).select('offered_drivers').maybeSingle();
           } else {
@@ -611,7 +611,7 @@
             var mergedExclude = currentPassengerOfferedDrivers.slice();
             offeredOnServer.forEach(function(did) { if (!mergedExclude.includes(did)) mergedExclude.push(did); });
             var { data: nearest } = await supabase.rpc('find_nearest_available_driver', { pickup_lat: data.pickup_lat, pickup_lng: data.pickup_lng, exclude_ids: mergedExclude });
-            if (nearest && nearest.found) {
+            if (nearest && nearest.found && nearest.driver_id) {
               if (!mergedExclude.includes(nearest.driver_id)) mergedExclude.push(nearest.driver_id);
               currentPassengerOfferedDrivers = mergedExclude;
               await supabase.from('ride_requests').update({ offered_to: nearest.driver_id, offered_at: new Date().toISOString(), offered_drivers: currentPassengerOfferedDrivers }).eq('id', requestId);

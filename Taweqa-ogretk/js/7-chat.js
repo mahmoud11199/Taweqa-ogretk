@@ -5,19 +5,24 @@
     if (!supabase || !currentPassengerRequestId) return;
     if (!confirm('هل أنت متأكد من إلغاء الطلب؟')) return;
     try {
-      var { data: req } = await supabase.from('ride_requests').select('status, driver_id, passenger_id').eq('id', currentPassengerRequestId).single();
-      if (!req) { showToast('الطلب غير موجود'); return; }
+      var { data: req, error: reqErr } = await supabase.from('ride_requests').select('status, driver_id, passenger_id').eq('id', currentPassengerRequestId).single();
+      if (reqErr || !req) { showToast('الطلب غير موجود'); return; }
       if (req.status === 'accepted' && req.driver_id) {
         var fine = 10;
         var { data: wal } = await supabase.from('wallets').select('balance').eq('user_id', req.passenger_id).single();
-        if (!wal || wal.balance < fine) {
-          if (!confirm('رصيد محفظتك غير كافٍ (' + (wal ? wal.balance : 0) + ' ج). الغرامة ' + fine + ' ج. سيتم خصمها عند شحن المحفظة. هل تريد الإلغاء؟')) return;
-        } else {
+        if (wal && wal.balance >= fine) {
           await supabase.rpc('apply_wallet_charge', { p_user_id: req.passenger_id, p_amount: -fine });
           showToast('تم خصم غرامة ' + fine + ' ج من المحفظة');
+        } else {
+          showToast('رصيد غير كافٍ (' + (wal ? wal.balance : 0) + ' ج). سيتم تسجيل الغرامة كدين');
+          await supabase.rpc('apply_wallet_charge', { p_user_id: req.passenger_id, p_amount: -fine });
         }
         await supabase.from('ride_requests').update({ status: 'cancelled', driver_id: null, offered_to: null }).eq('id', currentPassengerRequestId);
-        await supabase.from('trips').update({ status: 'cancelled' }).eq('passenger_id', req.passenger_id).eq('driver_id', req.driver_id).in('status', ['assigned', 'started']).limit(1);
+        var { data: tripToCancel } = await supabase.from('trips').select('id').eq('passenger_id', req.passenger_id).eq('driver_id', req.driver_id).in('status', ['assigned', 'started']).order('created_at', { ascending: false }).limit(1).maybeSingle();
+        if (tripToCancel) {
+          await supabase.from('trips').update({ status: 'cancelled' }).eq('id', tripToCancel.id);
+          await supabase.from('drivers').update({ is_available: true }).eq('id', req.driver_id).maybeSingle();
+        }
       } else {
         await supabase.from('ride_requests').update({ status: 'cancelled', offered_to: null }).eq('id', currentPassengerRequestId);
       }

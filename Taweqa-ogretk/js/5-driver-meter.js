@@ -986,7 +986,8 @@
     if (!supabase) return;
     if (!confirm('رفض هذا الطلب؟')) return;
     try {
-      var { data: req } = await supabase.from('ride_requests').select('offered_drivers').eq('id', requestId).eq('offered_to', currentUser.id).single();
+      var { data: req, error: reqErr } = await supabase.from('ride_requests').select('offered_drivers').eq('id', requestId).eq('offered_to', currentUser.id).single();
+      if (reqErr || !req) { showToast('الطلب لم يعد متاحاً'); return; }
       var excludeList = (req && req.offered_drivers) || [];
       if (!excludeList.includes(currentUser.id)) excludeList.push(currentUser.id);
       await supabase.from('ride_requests').update({ offered_to: null, offered_at: null, offered_drivers: excludeList }).eq('id', requestId).eq('offered_to', currentUser.id);
