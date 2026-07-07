@@ -933,12 +933,17 @@
     if (!supabase || !currentUser) return;
     if (!confirm('قبول هذا الطلب؟')) return;
     try {
-      var joinCode = String(Math.floor(100000 + Math.random() * 900000));
       var { data: requestData, error: reqError } = await supabase.from('ride_requests').update({ driver_id: currentUser.id, status: 'accepted', responded_at: new Date().toISOString() }).eq('id', requestId).eq('status', 'pending').select('passenger_id, passenger_count, classification, pickup_address, destination_address, pickup_lat, pickup_lng, waypoints').single();
       if (reqError) { showToast('فشل قبول الطلب: ' + reqError.message); return; }
       var wp = requestData.waypoints || [];
-      var { data: tripData, error: tripError } = await supabase.from('trips').insert({ driver_id: currentUser.id, passenger_id: requestData.passenger_id, status: 'assigned', classification: requestData.classification === 'private' ? 'private' : 'shared', passenger_count: requestData.passenger_count || 1, adult_count: requestData.passenger_count || 1, join_code: joinCode, start_address: requestData.pickup_address || '', end_address: requestData.destination_address || '', waypoints: wp }).select('id, join_code').single();
-      if (tripError) { showToast('فشل إنشاء الرحلة: ' + tripError.message); return; }
+      var joinCode, tripData, tripError;
+      for (var attempt = 0; attempt < 5; attempt++) {
+        joinCode = String(Math.floor(100000 + Math.random() * 900000));
+        var result = await supabase.from('trips').insert({ driver_id: currentUser.id, passenger_id: requestData.passenger_id, status: 'assigned', classification: requestData.classification === 'private' ? 'private' : 'shared', passenger_count: requestData.passenger_count || 1, adult_count: requestData.passenger_count || 1, join_code: joinCode, start_address: requestData.pickup_address || '', end_address: requestData.destination_address || '', waypoints: wp }).select('id, join_code').maybeSingle();
+        if (result.data) { tripData = result.data; tripError = null; break; }
+        tripError = result.error;
+      }
+      if (tripError || !tripData) { showToast('فشل إنشاء الرحلة: ' + (tripError ? tripError.message : 'تعذر إنشاء كود الرحلة')); return; }
       acceptedTripData = { tripId: tripData.id, joinCode: joinCode, passengerName: 'راكب', pickupAddress: requestData.pickup_address, pickupLat: requestData.pickup_lat, pickupLng: requestData.pickup_lng, waypoints: wp };
       document.getElementById('pending-trip-banner').style.display = 'block';
       document.getElementById('pending-trip-code').textContent = joinCode;
