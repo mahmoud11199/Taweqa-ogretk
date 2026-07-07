@@ -52,7 +52,7 @@
     if (latlngs.length > 1) {
       requestPolyline = L.polyline(latlngs, { color: '#f59e0b', weight: 3, dashArray: '6, 8' }).addTo(requestMap);
     }
-    try { requestMap.fitBounds(L.polyline(latlngs).getBounds(), { padding: [30, 30] }); } catch(e) {}
+    try { requestMap.fitBounds(L.polyline(latlngs).getBounds(), { padding: [30, 30] }); } catch(e) { console.error('Request map fitBounds error:', e); }
     document.getElementById('request-waypoints-count').textContent = requestWaypoints.length + ' نقطة';
     document.getElementById('request-est-distance').textContent = calculateWaypointsDistance().toFixed(1);
     updateFareEstimate();
@@ -225,7 +225,7 @@
             marker.bindTooltip(i === 0 ? 'انطلاق' : String(i), { permanent: false, direction: 'top', className: 'waypoint-tooltip' });
           });
           L.polyline(wpLatLngs, { color: '#f59e0b', weight: 3, dashArray: '6, 8' }).addTo(trackMap);
-          try { trackMap.fitBounds(L.polyline(wpLatLngs).getBounds(), { padding: [30, 30] }); } catch(e) {}
+          try { trackMap.fitBounds(L.polyline(wpLatLngs).getBounds(), { padding: [30, 30] }); } catch(e) { console.error('Track map waypoints fitBounds error:', e); }
         }
 
         // Draw live locations
@@ -233,7 +233,7 @@
           var locPoints = locations.map(function(p) { return [p.lat, p.lng]; });
           L.polyline(locPoints, {color: '#22d3ee', weight: 4}).addTo(trackMap);
           L.circleMarker(locPoints[locPoints.length - 1], {radius: 6, color: '#22c55e', fillColor: '#22c55e', fillOpacity: 1}).addTo(trackMap);
-          try { trackMap.fitBounds(L.polyline(locPoints).getBounds(), {padding: [20, 20]}); } catch(e) {}
+          try { trackMap.fitBounds(L.polyline(locPoints).getBounds(), {padding: [20, 20]}); } catch(e) { console.error('Track map locPoints fitBounds error:', e); }
         } else if (trip.last_lat && trip.last_lng) {
           trackMap.setView([trip.last_lat, trip.last_lng], 15);
           L.marker([trip.last_lat, trip.last_lng]).addTo(trackMap);
@@ -535,7 +535,7 @@
             driverMarker.setLatLng([driverLoc.current_lat, driverLoc.current_lng]);
             acceptedDriverMap.setView([driverLoc.current_lat, driverLoc.current_lng], 15);
           }
-        } catch(e) {}
+        } catch(e) { console.error('Driver location poll error:', e); }
         var { data: tripUpd } = await supabase.from('trips').select('id, status').eq('join_code', tripCode).order('created_at', { ascending: false }).limit(1).maybeSingle();
         if (tripUpd) {
           if (tripUpd.status === 'started') {

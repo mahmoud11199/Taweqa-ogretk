@@ -300,12 +300,14 @@
      }
 
      document.getElementById('settlementModal').style.display = 'none';
-     generateReceipt(m);
-     saveTripToHistory(m);
-     await saveTripToSupabase(m);
-     setDriverAvailable(true);
-     meters[activeMeterId] = createEmptyMeterObject(activeMeterId);
-     updateDotsUI(); renderMeterDataToUI(); redrawActiveRouteLine(); saveDataToStorage();
+      var receiptSnapshot = JSON.parse(JSON.stringify(m));
+      generateReceipt(m);
+      saveTripToHistory(m);
+      await saveTripToSupabase(m);
+      setDriverAvailable(true);
+      window._lastReceiptData = receiptSnapshot;
+      meters[activeMeterId] = createEmptyMeterObject(activeMeterId);
+      updateDotsUI(); renderMeterDataToUI(); redrawActiveRouteLine(); saveDataToStorage();
    };
 
    window.cancelSettlement = function() {
@@ -621,7 +623,7 @@
 
   var lastReceiptText = '';
   function shareWhatsApp() {
-    var m = meters[activeMeterId];
+    var m = window._lastReceiptData || meters[activeMeterId];
     if (!m) { showToast('لا توجد بيانات رحلة'); return; }
     var waitingMinutes = m.totalWaitSeconds / 60;
     var typeLabel = m.tripType === 'makhsoos' ? 'مخصوص' : 'أفراد';
@@ -704,7 +706,7 @@
               L.polyline(points, {color: '#e11d48', weight: 3, dashArray: '4, 4'}).addTo(hMap);
               L.circleMarker(points[0], {radius: 5, color: '#10b981', fillColor: '#10b981', fillOpacity: 1}).addTo(hMap);
               L.circleMarker(points[points.length-1], {radius: 5, color: '#ef4444', fillColor: '#ef4444', fillOpacity: 1}).addTo(hMap);
-              try { hMap.fitBounds(L.polyline(points).getBounds(), {padding: [10, 10]}); } catch(e) {}
+              try { hMap.fitBounds(L.polyline(points).getBounds(), {padding: [10, 10]}); } catch(e) { console.error('History map fitBounds error:', e); }
             }
           } catch(e) { console.error(e); }
         });
@@ -893,7 +895,7 @@
       if (latlngs.length > 1) {
         window._wpPolyline = L.polyline(latlngs, { color: '#f59e0b', weight: 3, dashArray: '6, 8' }).addTo(driverMap);
       }
-      try { driverMap.fitBounds(L.polyline(latlngs).getBounds(), { padding: [30, 30] }); } catch(e) {}
+      try { driverMap.fitBounds(L.polyline(latlngs).getBounds(), { padding: [30, 30] }); } catch(e) { console.error('Driver map fitBounds error:', e); }
       showToast('📍 تم عرض مسار الرحلة');
       switchDriverTab('meter', document.querySelector('#driver-app .tab-btn'));
     } catch(e) { showToast('فشل تحميل المسار'); console.error(e); }

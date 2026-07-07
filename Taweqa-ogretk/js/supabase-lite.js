@@ -3,7 +3,7 @@ var STORAGE_KEY = 'taweqe_sb_session';
 var _authCbs = [];
 
 function loadSession() {
-  try { var d = JSON.parse(localStorage.getItem(STORAGE_KEY)); if (d && d.access_token && d.expires_at > Date.now() / 1000) return d; } catch(e) {}
+  try { var d = JSON.parse(localStorage.getItem(STORAGE_KEY)); if (d && d.access_token && d.expires_at > Date.now() / 1000) return d; } catch(e) { console.error('Session load error:', e); }
   return null;
 }
 function saveSession(s) {
@@ -11,10 +11,10 @@ function saveSession(s) {
   try {
     s.expires_at = s.expires_at || (Date.now() / 1000 + (s.expires_in || 3600));
     localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
-  } catch(e) {}
+  } catch(e) { console.error('Session save error:', e); }
 }
 function clearSession() {
-  try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+  try { localStorage.removeItem(STORAGE_KEY); } catch(e) { console.error('Session clear error:', e); }
 }
 
 function sbFetch(url, opts) {
@@ -39,7 +39,7 @@ function makeAuth(url, anonKey) {
     return t;
   }
   function notifyAuth(event, session) {
-    _authCbs.forEach(function(cb) { try { cb(event, session); } catch(e) {} });
+    _authCbs.forEach(function(cb) { try { cb(event, session); } catch(e) { console.error('Auth callback error:', e); } });
   }
   function handleResp(resp) {
     if (resp.error) return { data: null, error: resp.error };

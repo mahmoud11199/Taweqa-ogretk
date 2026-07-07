@@ -8,6 +8,7 @@ window.handleRegister = async function() {
   var refCode = document.getElementById('reg-ref').value.trim().toUpperCase();
   if (!name) { showAlert('register-alert', 'يرجى إدخال الاسم الكامل'); return; }
   if (!email) { showAlert('register-alert', 'يرجى إدخال البريد الإلكتروني'); return; }
+  if (!phone || !/^01[0-9]{9}$/.test(phone)) { showAlert('register-alert', 'يرجى إدخال رقم هاتف مصري صحيح (01XXXXXXXXX)'); return; }
   if (!pass || pass.length < 6) { showAlert('register-alert', 'كلمة السر يجب أن تكون 6 أحرف على الأقل'); return; }
   if (pass !== confirm) { showAlert('register-alert', 'كلمة السر غير متطابقة'); return; }
   setLoading('register', true);
@@ -74,7 +75,7 @@ window.handleLogout = async function() {
   if (typeof acceptedDriverLocTimer !== 'undefined' && acceptedDriverLocTimer) { clearInterval(acceptedDriverLocTimer); acceptedDriverLocTimer = null; }
   if (typeof driverRequestPollTimer !== 'undefined' && driverRequestPollTimer) { clearInterval(driverRequestPollTimer); driverRequestPollTimer = null; }
   if (typeof chatPollTimer !== 'undefined' && chatPollTimer) { clearInterval(chatPollTimer); chatPollTimer = null; }
-  try { localStorage.removeItem('taweqe_last_activity'); } catch(e) {}
+  try { localStorage.removeItem('taweqe_last_activity'); } catch(e) { console.error('LocalStorage remove error:', e); }
   await supabase.auth.signOut();
   currentUser = null; currentProfile = null;
   showLandingPage();

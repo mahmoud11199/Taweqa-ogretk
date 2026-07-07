@@ -56,7 +56,7 @@
       // Save return URL in session storage
       try {
         sessionStorage.setItem('paymob_pending', JSON.stringify({ amount: amount, intention_id: data.intention_id }));
-      } catch(e) {}
+      } catch(e) { console.error('Session storage error:', e); }
 
       showToast('🔄 جاري تحويلك إلى بوابة الدفع...');
       window.location.href = data.redirect_url;
@@ -66,15 +66,23 @@
   // Check for Paymob return
   window.checkPaymobReturn = async function() {
     var params = new URLSearchParams(window.location.search);
-    var paymobStatus = params.get('paymob');
-    if (paymobStatus === 'success') {
-      showToast('✅ تم شحن المحفظة بنجاح!');
-      loadWallet();
-      checkSubscription();
-      // Clean URL
-      window.history.replaceState({}, '', window.location.pathname);
-    } else if (paymobStatus === 'failed') {
-      showToast('❌ فشلت عملية الدفع. حاول مرة أخرى');
+    if (params.get('paymob_callback') === '1') {
+      var success = params.get('success');
+      var intentionId = params.get('id');
+      if (success === 'true' && intentionId) {
+        try {
+          if (supabase && currentUser) {
+            var { data } = await supabase.functions.invoke('paymob-charge', {
+              body: { action: 'verify', intention_id: intentionId }
+            });
+            if (data && data.success) showToast('✅ تم شحن المحفظة بنجاح!');
+          }
+        } catch(e) { console.error('Paymob verify error:', e); }
+        loadWallet();
+        checkSubscription();
+      } else if (success === 'false') {
+        showToast('❌ فشلت عملية الدفع. حاول مرة أخرى');
+      }
       window.history.replaceState({}, '', window.location.pathname);
     }
   };
@@ -295,7 +303,7 @@
   var SESSION_INACTIVITY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
   function updateLastActivity() {
-    try { localStorage.setItem('taweqe_last_activity', Date.now()); } catch(e) {}
+    try { localStorage.setItem('taweqe_last_activity', Date.now()); } catch(e) { console.error('LocalStorage error:', e); }
   }
 
   function checkSessionInactivity() {

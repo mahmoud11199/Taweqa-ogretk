@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
 	  <meta http-equiv="X-UA-Compatible" content="IE=Edge">
-	  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://esm.sh; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co https://router.project-osrm.org https://unpkg.com; worker-src 'self'; base-uri 'self'; form-action 'self';">
+	  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://esm.sh; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://router.project-osrm.org https://unpkg.com; worker-src 'self'; base-uri 'self'; form-action 'self';">
 	  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="توقع أجرتك - تطبيق التوك توك الذكي لحساب الأجرة، إدارة الرحلات، والمحفظة الإلكترونية">
   <meta name="mobile-web-app-capable" content="yes">
@@ -112,7 +112,7 @@
     </div>
     <div class="field"><label>الاسم الكامل</label><input type="text" id="reg-name" placeholder="الاسم ثلاثي" autocomplete="name"></div>
     <div class="field"><label>البريد الإلكتروني</label><input type="email" id="reg-email" placeholder="example@email.com" autocomplete="email"></div>
-    <div class="field"><label>رقم الهاتف</label><input type="tel" id="reg-phone" placeholder="01XXXXXXXXX" autocomplete="tel"></div>
+    <div class="field"><label>رقم الهاتف</label><input type="tel" id="reg-phone" placeholder="01XXXXXXXXX" pattern="^01[0-9]{9}$" title="أدخل رقم هاتف مصري صحيح (01XXXXXXXXX)" autocomplete="tel"></div>
     <div class="field"><label>كلمة السر (6 أحرف على الأقل)</label><input type="password" id="reg-password" placeholder="كلمة السر" minlength="6" autocomplete="new-password"><div class="password-strength" id="reg-password-strength"></div></div>
     <div class="field"><label>تأكيد كلمة السر</label><input type="password" id="reg-confirm" placeholder="أعد إدخال كلمة السر"><div class="error-msg" id="reg-password-error">كلمة السر غير متطابقة</div></div>
     <div class="field"><label>كود الإحالة (اختياري)</label><input type="text" id="reg-ref" placeholder="مثلاً: ABC12345" maxlength="10" style="text-transform:uppercase;letter-spacing:2px;"></div>
@@ -636,5 +636,12 @@
 <script src="Taweqa-ogretk/js/8-wallet.js"></script>
 <script src="Taweqa-ogretk/js/9-paymob.js"></script>
 <script src="Taweqa-ogretk/js/9-init.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/sw.js').catch(function(e) { console.error('SW registration error:', e); });
+  });
+}
+</script>
 </body>
 </html>

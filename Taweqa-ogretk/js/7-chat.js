@@ -91,7 +91,7 @@
           try {
             var { data: userTrip } = await supabase.from('trips').select('id').eq('join_code', code).eq('passenger_id', currentUser.id).maybeSingle();
             if (userTrip) currentChatTripId = userTrip.id;
-          } catch(e) {}
+          } catch(e) { console.error('Trip lookup error:', e); }
         }
       }
       if (currentChatTripId) {
