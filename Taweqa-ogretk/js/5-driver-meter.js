@@ -161,7 +161,6 @@
     }
     if (m.tripId) {
       try {
-        await supabase.from('trips').update({ status: 'started', started_at: new Date().toISOString() }).eq('id', m.tripId);
         await invokeTripEvent('start', m);
         m.lastSupabaseSync = Date.now();
         saveDataToStorage();
@@ -445,7 +444,7 @@
     var lng = m?.lastLng;
     if (lat == null || lng == null) return;
     var now = Date.now();
-    if (now - lastDriverLocSync < 10000) return;
+    if (now - lastDriverLocSync < 4000) return;
     lastDriverLocSync = now;
     try {
       await supabase.from('drivers').update({ current_lat: lat, current_lng: lng }).eq('id', currentUser.id);

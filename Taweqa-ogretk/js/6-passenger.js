@@ -18,6 +18,15 @@
       requestMap = L.map('request-map').setView([30.0444, 31.2357], 14);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(requestMap);
       requestMap.on('click', onRequestMapClick);
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(pos) {
+          if (requestMap) requestMap.setView([pos.coords.latitude, pos.coords.longitude], 15);
+          if (requestWaypoints.length === 0) {
+            requestWaypoints.push({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+            updateRequestWaypointsUI();
+          }
+        }, function() {}, { enableHighAccuracy: true, timeout: 10000 });
+      }
       setTimeout(function() { if (requestMap) requestMap.invalidateSize(); }, 500);
     } catch(e) { console.error(e); }
   };
@@ -267,6 +276,7 @@
     } catch (e) { console.error(e); if (!optCode) document.getElementById('track-status').innerHTML = '<p style="color:var(--error);font-size:14px;">❌ حدث خطأ</p>'; }
   };
 
+  var lastETA = { text: '', driverLat: 0, driverLng: 0, destLat: 0, destLng: 0, ts: 0 };
   function updateETA(trip, driver) {
     var etaRow = document.getElementById('track-eta-row');
     var etaVal = document.getElementById('track-eta-val');
@@ -287,24 +297,34 @@
     }
     if (!destLat || !destLng) { etaRow.style.display = 'none'; return; }
     etaRow.style.display = 'flex';
+    // Cache: reuse if positions haven't changed significantly (< 50m)
+    var moved = haversineDistance(driver.current_lat, driver.current_lng, lastETA.driverLat, lastETA.driverLng) > 0.05
+            || haversineDistance(destLat, destLng, lastETA.destLat, lastETA.destLng) > 0.05;
+    var stale = Date.now() - lastETA.ts > 30000;
+    if (!moved && !stale && lastETA.text) { etaVal.textContent = lastETA.text; return; }
     etaVal.textContent = 'جاري حساب الوقت...';
-    // Use OSRM for route-based ETA
+    lastETA.driverLat = driver.current_lat; lastETA.driverLng = driver.current_lng;
+    lastETA.destLat = destLat; lastETA.destLng = destLng;
     var url = 'https://router.project-osrm.org/route/v1/driving/' + driver.current_lng + ',' + driver.current_lat + ';' + destLng + ',' + destLat + '?overview=false&alternatives=false';
     fetch(url).then(function(r) { return r.json(); }).then(function(data) {
       if (data.code === 'Ok' && data.routes && data.routes[0]) {
         var routeDistKm = data.routes[0].distance / 1000;
         var routeSeconds = data.routes[0].duration;
         var minutes = Math.max(1, Math.round(routeSeconds / 60));
-        etaVal.textContent = '~' + minutes + ' دقيقة (' + routeDistKm.toFixed(1) + ' كم)';
+        lastETA.text = '~' + minutes + ' دقيقة (' + routeDistKm.toFixed(1) + ' كم)';
       } else {
         var dist = haversineDistance(driver.current_lat, driver.current_lng, destLat, destLng);
         var minutes = Math.max(1, Math.round((dist / 25) * 60));
-        etaVal.textContent = '~' + minutes + ' دقيقة (' + dist.toFixed(1) + ' كم)';
+        lastETA.text = '~' + minutes + ' دقيقة (' + dist.toFixed(1) + ' كم)';
       }
+      lastETA.ts = Date.now();
+      etaVal.textContent = lastETA.text;
     }).catch(function() {
       var dist = haversineDistance(driver.current_lat, driver.current_lng, destLat, destLng);
       var minutes = Math.max(1, Math.round((dist / 25) * 60));
-      etaVal.textContent = '~' + minutes + ' دقيقة (' + dist.toFixed(1) + ' كم)';
+      lastETA.text = '~' + minutes + ' دقيقة (' + dist.toFixed(1) + ' كم)';
+      lastETA.ts = Date.now();
+      etaVal.textContent = lastETA.text;
     });
   }
 
@@ -418,8 +438,12 @@
     try {
       var tripId = lastTrackedTripId;
       if (!tripId && lastTrackedCode) {
-        var { data: td } = await supabase.from('trips').select('id, driver_id').eq('join_code', lastTrackedCode).order('created_at', { ascending: false }).limit(1).single();
+        var { data: td } = await supabase.from('trips').select('id, driver_id').eq('join_code', lastTrackedCode).order('created_at', { ascending: false }).limit(1).maybeSingle();
         if (td) { tripId = td.id; lastTrackedDriverId = td.driver_id; }
+      }
+      if (!lastTrackedDriverId && tripId) {
+        var { data: td2 } = await supabase.from('trips').select('driver_id').eq('id', tripId).maybeSingle();
+        if (td2) lastTrackedDriverId = td2.driver_id;
       }
       if (!tripId || !lastTrackedDriverId) { showToast('بيانات الرحلة غير متوفرة'); return; }
       var { error } = await supabase.from('ratings').upsert({
@@ -558,7 +582,7 @@
             clearInterval(acceptedDriverLocTimer);
             document.getElementById('acceptedTripStatus').textContent = 'جارية 🟢';
             if (tripUpd.id) currentChatTripId = tripUpd.id;
-            // Auto-redirect to tracking view after 1.5s
+            try { var ctx = new (window.AudioContext || window.webkitAudioContext)(); var osc = ctx.createOscillator(); osc.frequency.value = 880; osc.type = 'sine'; var gain = ctx.createGain(); gain.gain.value = 0.4; osc.connect(gain); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.5); } catch(e) {}
             setTimeout(function() {
               switchPassengerTab('track', document.querySelector('#passenger-app .tab-btn'));
               document.getElementById('track-code').value = tripCode;
@@ -771,7 +795,7 @@
     if (proposed === null) return;
     var fareNum = parseFloat(proposed);
     if (!fareNum || fareNum < 0 || fareNum > 100000) { showToast('قيمة غير صالحة'); return; }
-    if (fareNum >= currentFare) { showToast('السعر المقترح يجب أن يكون أقل من السعر الحالي'); return; }
+    if (fareNum > currentFare) { showToast('السعر المقترح يجب أن لا يزيد عن السعر الحالي'); return; }
     var note = prompt('سبب التعديل (اختياري):', '');
     if (note === null) return;
     supabase.rpc('propose_trip_price', { p_trip_id: tripId, p_proposed_fare: fareNum, p_note: note || '' }).then(function(r) {
