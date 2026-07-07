@@ -136,6 +136,7 @@ function showDriverDashboard() {
   document.getElementById('driver-profile-name').textContent = currentProfile.full_name || currentUser.email;
   loadDriverStats();
   loadDriverRating();
+  loadDriverCarInfo();
   loadDataFromStorage();
   switchActiveMeterUI(1);
   updateDotsUI();
@@ -242,3 +243,33 @@ async function handleAuthRedirect() {
   } catch (e) { console.error('Auth redirect error:', e); return false; }
   return true;
 }
+
+async function loadDriverCarInfo() {
+  if (!supabase || !currentUser) return;
+  var modelEl = document.getElementById('driver-car-model');
+  var plateEl = document.getElementById('driver-car-plate');
+  var colorEl = document.getElementById('driver-car-color');
+  if (!modelEl) return;
+  try {
+    var { data: drv } = await supabase.from('drivers').select('car_model,car_plate,car_color').eq('id', currentUser.id).single();
+    if (drv) {
+      modelEl.value = drv.car_model || '';
+      plateEl.value = drv.car_plate || '';
+      colorEl.value = drv.car_color || '';
+    }
+  } catch(e) { console.error('Load car info error:', e); }
+}
+
+window.saveDriverCarInfo = async function() {
+  if (!supabase || !currentUser) return;
+  var model = document.getElementById('driver-car-model').value.trim();
+  var plate = document.getElementById('driver-car-plate').value.trim();
+  var color = document.getElementById('driver-car-color').value.trim();
+  var statusEl = document.getElementById('driver-car-status');
+  try {
+    var { error } = await supabase.from('drivers').update({ car_model: model || null, car_plate: plate || null, car_color: color || null }).eq('id', currentUser.id);
+    if (error) throw error;
+    statusEl.style.display = 'block';
+    setTimeout(function() { statusEl.style.display = 'none'; }, 3000);
+  } catch(e) { console.error('Save car info error:', e); alert('فشل حفظ بيانات المركبة'); }
+};

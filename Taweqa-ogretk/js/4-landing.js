@@ -44,9 +44,9 @@ async function loadStatsFromDB() {
     console.warn('Stats: RPC returned error or null', error, data);
   } catch(e) { console.warn('Stats: RPC threw', e); }
   async function safeQuery(promise) { try { return await promise; } catch(e) { console.warn('Stats: query failed', e); return { data: [] }; } }
-  var q1 = safeQuery(supabase.from('profiles').select('id, role').limit(1000));
-  var q2 = safeQuery(supabase.from('trips').select('total_fare, distance_km, status, created_at').limit(1000));
-  var q3 = safeQuery(supabase.from('ratings').select('score').limit(1000));
+  var q1 = safeQuery(supabase.from('profiles').select('id, role'));
+  var q2 = safeQuery(supabase.from('trips').select('total_fare, distance_km, status, created_at'));
+  var q3 = safeQuery(supabase.from('ratings').select('score'));
   var q4 = safeQuery(supabase.from('drivers').select('id, is_available'));
   var q5 = safeQuery(supabase.from('referrals').select('id, status'));
   var results = await Promise.all([q1, q2, q3, q4, q5]);
@@ -131,4 +131,20 @@ window.toggleFaq = function(el) {
   el.classList.toggle('open');
   var a = el.nextElementSibling;
   if (a) a.classList.toggle('open');
+};
+
+var installPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  installPrompt = e;
+});
+window.installApp = function() {
+  if (installPrompt) {
+    installPrompt.prompt();
+    installPrompt.userChoice.then(function(choice) {
+      if (choice.outcome === 'accepted') installPrompt = null;
+    });
+  } else {
+    window.open('https://github.com/mahmoud11199/Taweqa-ogretk/releases', '_blank');
+  }
 };
