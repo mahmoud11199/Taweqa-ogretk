@@ -136,6 +136,12 @@ Deno.serve(async (req) => {
     server_calculated: true,
   };
 
+  // Include waypoints from meter
+  const meterWaypoints = meter.waypoints;
+  if (Array.isArray(meterWaypoints) && meterWaypoints.length > 1) {
+    payload.waypoints = meterWaypoints;
+  }
+
   // Include payment info on complete
   if (body.action === 'complete') {
     payload.payment_method = body.payment_method || meter.payment_method || 'cash';
@@ -144,9 +150,14 @@ Deno.serve(async (req) => {
 
   let tripId = body.tripId || null;
   if (body.action === 'start') {
-    const { data, error } = await admin.from('trips').insert(payload).select('id').single();
-    if (error) return jsonResponse({ error: error.message }, 400);
-    tripId = data.id;
+    if (tripId) {
+      const { error } = await admin.from('trips').update(payload).eq('id', tripId).eq('driver_id', userId);
+      if (error) return jsonResponse({ error: error.message }, 400);
+    } else {
+      const { data, error } = await admin.from('trips').insert(payload).select('id').single();
+      if (error) return jsonResponse({ error: error.message }, 400);
+      tripId = data.id;
+    }
   } else if (body.action === 'adjust_prices') {
     if (!tripId) return jsonResponse({ error: 'tripId is required' }, 400);
     const adjustPayload: Record<string, unknown> = {
@@ -174,6 +185,44 @@ Deno.serve(async (req) => {
       .eq('id', tripId)
       .eq('driver_id', userId);
     if (error) return jsonResponse({ error: error.message }, 400);
+  }
+
+  // --- Wallet auto-payment + ride_requests cleanup on complete ---
+  if (body.action === 'complete' && tripId) {
+    const { data: tripRow } = await admin.from('trips').select('passenger_id, join_code').eq('id', tripId).single();
+    const passengerId = tripRow?.passenger_id as string | undefined;
+    const joinCode = tripRow?.join_code as string | undefined;
+
+    // Mark ride_request as completed
+    if (joinCode) {
+      const { data: rrId } = await admin
+        .from('ride_requests')
+        .select('id')
+        .eq('passenger_id', passengerId)
+        .in('status', ['accepted'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (rrId) {
+        await admin.from('ride_requests').update({ status: 'completed' }).eq('id', (rrId as { id: string }).id);
+      }
+    }
+
+    // Auto-deduct from wallet if payment_method is wallet
+    const payMethod = String(payload.payment_method || 'cash');
+    const payStatus = String(payload.payment_status || 'unpaid');
+    if (payMethod === 'wallet' && payStatus !== 'paid_wallet' && passengerId) {
+      const fare = payload.total_fare as number || 0;
+      if (fare > 0) {
+        const { data: deductResult } = await admin.rpc('apply_wallet_charge', {
+          p_user_id: passengerId,
+          p_amount: -fare,
+        }).maybeSingle();
+        if (deductResult && (deductResult as { success?: boolean }).success !== false) {
+          await admin.from('trips').update({ payment_status: 'paid_wallet' }).eq('id', tripId);
+        }
+      }
+    }
   }
 
   const eventType = body.action === 'complete' ? 'completed'

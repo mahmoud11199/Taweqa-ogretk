@@ -143,6 +143,7 @@
     m.durationPrice = clampNumber(document.getElementById('durationPriceInput').value, 0, 10, 0.50);
     m.shareCode = acceptedTripData.joinCode;
     m.tripId = acceptedTripData.tripId;
+    if (acceptedTripData.waypoints) m.waypoints = acceptedTripData.waypoints;
     m.lastSupabaseSync = 0;
     m.totalDistance = 0; m.totalWaitSeconds = 0; m.waitingStartedAt = null; m.waitingBaseSeconds = 0;
     m.passengerCount = 1;
@@ -412,6 +413,24 @@
     if (updated) { renderMeterDataToUI(); saveDataToStorage(); }
     syncDriverLocation();
   }, 1000);
+
+  // Poll active trip status to detect passenger_end_trip
+  var activeTripPollTimer = setInterval(async function() {
+    for (var id in meters) {
+      var m = meters[id];
+      if (!m.tripId || !m.isActive) continue;
+      try {
+        var { data: tr } = await supabase.from('trips').select('status').eq('id', m.tripId).single();
+        if (tr && (tr.status === 'completed' || tr.status === 'cancelled')) {
+          showToast('⏹️ تم إنهاء الرحلة بواسطة الراكب');
+          m.isActive = false;
+          m.isPaused = false;
+          await setDriverAvailable(true);
+          updateDotsUI(); renderMeterDataToUI(); redrawActiveRouteLine(); saveDataToStorage();
+        }
+      } catch(e) { console.error('Active trip poll error:', e); }
+    }
+  }, 5000);
 
   var lastDriverLocSync = 0;
 
@@ -908,11 +927,12 @@
     if (!confirm('قبول هذا الطلب؟')) return;
     try {
       var joinCode = String(Math.floor(100000 + Math.random() * 900000));
-      var { data: requestData, error: reqError } = await supabase.from('ride_requests').update({ driver_id: currentUser.id, status: 'accepted', responded_at: new Date().toISOString() }).eq('id', requestId).eq('status', 'pending').select('passenger_id, passenger_count, classification, pickup_address, destination_address, pickup_lat, pickup_lng').single();
+      var { data: requestData, error: reqError } = await supabase.from('ride_requests').update({ driver_id: currentUser.id, status: 'accepted', responded_at: new Date().toISOString() }).eq('id', requestId).eq('status', 'pending').select('passenger_id, passenger_count, classification, pickup_address, destination_address, pickup_lat, pickup_lng, waypoints').single();
       if (reqError) { showToast('فشل قبول الطلب: ' + reqError.message); return; }
-      var { data: tripData, error: tripError } = await supabase.from('trips').insert({ driver_id: currentUser.id, passenger_id: requestData.passenger_id, status: 'assigned', classification: requestData.classification === 'private' ? 'private' : 'shared', passenger_count: requestData.passenger_count || 1, adult_count: requestData.passenger_count || 1, join_code: joinCode, start_address: requestData.pickup_address || '', end_address: requestData.destination_address || '' }).select('id, join_code').single();
+      var wp = requestData.waypoints || [];
+      var { data: tripData, error: tripError } = await supabase.from('trips').insert({ driver_id: currentUser.id, passenger_id: requestData.passenger_id, status: 'assigned', classification: requestData.classification === 'private' ? 'private' : 'shared', passenger_count: requestData.passenger_count || 1, adult_count: requestData.passenger_count || 1, join_code: joinCode, start_address: requestData.pickup_address || '', end_address: requestData.destination_address || '', waypoints: wp }).select('id, join_code').single();
       if (tripError) { showToast('فشل إنشاء الرحلة: ' + tripError.message); return; }
-      acceptedTripData = { tripId: tripData.id, joinCode: joinCode, passengerName: 'راكب', pickupAddress: requestData.pickup_address, pickupLat: requestData.pickup_lat, pickupLng: requestData.pickup_lng };
+      acceptedTripData = { tripId: tripData.id, joinCode: joinCode, passengerName: 'راكب', pickupAddress: requestData.pickup_address, pickupLat: requestData.pickup_lat, pickupLng: requestData.pickup_lng, waypoints: wp };
       document.getElementById('pending-trip-banner').style.display = 'block';
       document.getElementById('pending-trip-code').textContent = joinCode;
       switchDriverTab('meter', document.querySelector('#driver-app .tab-btn'));

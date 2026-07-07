@@ -277,22 +277,35 @@
     }
     var destLat, destLng;
     if (trip.status === 'assigned') {
-      // ETA to pickup = first waypoint or last known location
       var wps = trip.waypoints || [];
       if (wps.length > 0) { destLat = wps[0].lat; destLng = wps[0].lng; }
       else if (trip.last_lat && trip.last_lng) { destLat = trip.last_lat; destLng = trip.last_lng; }
     } else if (trip.status === 'started') {
-      // ETA to destination = last waypoint or last known
       var wps = trip.waypoints || [];
       if (wps.length > 1) { var last = wps[wps.length - 1]; destLat = last.lat; destLng = last.lng; }
       else if (trip.last_lat && trip.last_lng) { destLat = trip.last_lat; destLng = trip.last_lng; }
     }
     if (!destLat || !destLng) { etaRow.style.display = 'none'; return; }
-    var dist = haversineDistance(driver.current_lat, driver.current_lng, destLat, destLng);
-    // Assume avg speed 25 km/h in city
-    var minutes = Math.max(1, Math.round((dist / 25) * 60));
     etaRow.style.display = 'flex';
-    etaVal.textContent = '~' + minutes + ' دقيقة (' + dist.toFixed(1) + ' كم)';
+    etaVal.textContent = 'جاري حساب الوقت...';
+    // Use OSRM for route-based ETA
+    var url = 'https://router.project-osrm.org/route/v1/driving/' + driver.current_lng + ',' + driver.current_lat + ';' + destLng + ',' + destLat + '?overview=false&alternatives=false';
+    fetch(url).then(function(r) { return r.json(); }).then(function(data) {
+      if (data.code === 'Ok' && data.routes && data.routes[0]) {
+        var routeDistKm = data.routes[0].distance / 1000;
+        var routeSeconds = data.routes[0].duration;
+        var minutes = Math.max(1, Math.round(routeSeconds / 60));
+        etaVal.textContent = '~' + minutes + ' دقيقة (' + routeDistKm.toFixed(1) + ' كم)';
+      } else {
+        var dist = haversineDistance(driver.current_lat, driver.current_lng, destLat, destLng);
+        var minutes = Math.max(1, Math.round((dist / 25) * 60));
+        etaVal.textContent = '~' + minutes + ' دقيقة (' + dist.toFixed(1) + ' كم)';
+      }
+    }).catch(function() {
+      var dist = haversineDistance(driver.current_lat, driver.current_lng, destLat, destLng);
+      var minutes = Math.max(1, Math.round((dist / 25) * 60));
+      etaVal.textContent = '~' + minutes + ' دقيقة (' + dist.toFixed(1) + ' كم)';
+    });
   }
 
   window.endTrip = async function() {
