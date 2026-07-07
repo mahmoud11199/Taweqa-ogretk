@@ -219,6 +219,10 @@ Deno.serve(async (req) => {
           p_amount: -fare,
         }).maybeSingle();
         if (deductResult && (deductResult as { success?: boolean }).success !== false) {
+          await admin.rpc('apply_wallet_charge', {
+            p_user_id: userId,
+            p_amount: fare,
+          }).maybeSingle();
           await admin.from('trips').update({ payment_status: 'paid_wallet' }).eq('id', tripId);
         }
       }

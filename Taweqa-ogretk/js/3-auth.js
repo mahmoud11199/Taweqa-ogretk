@@ -21,6 +21,7 @@ window.handleRegister = async function() {
     if (error) { showAlert('register-alert', error.message || 'فشل التسجيل'); setLoading('register', false); return; }
     if (data && data.user && requestedRole === 'driver') {
       await supabase.from('driver_applications').upsert({ user_id: data.user.id, status: 'pending', payload: { full_name: name, phone: phone } });
+      await supabase.from('drivers').upsert({ id: data.user.id, is_available: false });
     }
     showAlert('register-alert', 'تم إنشاء الحساب بنجاح! جاري تحويلك...', 'success');
     setTimeout(function() {
@@ -141,6 +142,15 @@ async function initSession() {
           await supabase.from('referral_codes').insert({ user_id: currentUser.id, code: code });
         }
       } catch(e) { console.error('Profile upsert error:', e); }
+    }
+    // Ensure drivers row exists for driver accounts
+    if (profile && profile.role === 'driver') {
+      try {
+        var { data: drv } = await supabase.from('drivers').select('id').eq('id', currentUser.id).maybeSingle();
+        if (!drv) {
+          await supabase.from('drivers').insert({ id: currentUser.id, is_available: false });
+        }
+      } catch(e) { console.error('Drivers row ensure error:', e); }
     }
     currentProfile = profile;
     if (!profile) { clearTimeout(loadingFallback); showLandingPage(); return; }

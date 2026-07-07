@@ -981,8 +981,10 @@
     if (!supabase) return;
     if (!confirm('رفض هذا الطلب؟')) return;
     try {
-      // Just clear offered_to so the request can be reassigned to another driver
-      await supabase.from('ride_requests').update({ offered_to: null, offered_at: null }).eq('id', requestId).eq('offered_to', currentUser.id);
+      var { data: req } = await supabase.from('ride_requests').select('offered_drivers').eq('id', requestId).eq('offered_to', currentUser.id).single();
+      var excludeList = (req && req.offered_drivers) || [];
+      if (!excludeList.includes(currentUser.id)) excludeList.push(currentUser.id);
+      await supabase.from('ride_requests').update({ offered_to: null, offered_at: null, offered_drivers: excludeList }).eq('id', requestId).eq('offered_to', currentUser.id);
       showToast('تم رفض الطلب');
       loadDriverRequests();
     } catch (e) { showToast('فشل'); }

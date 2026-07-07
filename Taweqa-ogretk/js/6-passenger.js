@@ -495,7 +495,7 @@
           var { data: nearest } = await supabase.rpc('find_nearest_available_driver', { pickup_lat: data.pickup_lat, pickup_lng: data.pickup_lng, exclude_ids: [] });
           if (nearest && nearest.found) {
             currentPassengerOfferedDrivers.push(nearest.driver_id);
-            await supabase.from('ride_requests').update({ offered_to: nearest.driver_id, offered_at: new Date().toISOString(), offered_drivers: currentPassengerOfferedDrivers }).eq('id', data.id);
+            await supabase.from('ride_requests').update({ offered_to: nearest.driver_id, offered_at: new Date().toISOString(), offered_drivers: currentPassengerOfferedDrivers }).eq('id', data.id).select('offered_drivers').maybeSingle();
           } else {
             document.getElementById('reqStatusSub').textContent = 'لا يوجد سائقين قريبين حالياً، سيتم التحقق مرة أخرى';
           }
@@ -594,7 +594,7 @@
         document.getElementById('cancelRequestBtn').style.display = 'none';
         return;
       }
-      // Auto-reassign if no driver offered, or offered driver hasn't responded within 50 seconds
+      // Auto-reassign if no driver offered, or offered driver hasn't responded
       var shouldReassign = false;
       if (data.status === 'pending' && data.pickup_lat && data.pickup_lng) {
         if (!data.offered_to) {
@@ -606,9 +606,14 @@
         }
         if (shouldReassign) {
           try {
-            var { data: nearest } = await supabase.rpc('find_nearest_available_driver', { pickup_lat: data.pickup_lat, pickup_lng: data.pickup_lng, exclude_ids: currentPassengerOfferedDrivers });
+            // Merge server-side rejected drivers with client-side list
+            var offeredOnServer = data.offered_drivers || [];
+            var mergedExclude = currentPassengerOfferedDrivers.slice();
+            offeredOnServer.forEach(function(did) { if (!mergedExclude.includes(did)) mergedExclude.push(did); });
+            var { data: nearest } = await supabase.rpc('find_nearest_available_driver', { pickup_lat: data.pickup_lat, pickup_lng: data.pickup_lng, exclude_ids: mergedExclude });
             if (nearest && nearest.found) {
-              currentPassengerOfferedDrivers.push(nearest.driver_id);
+              if (!mergedExclude.includes(nearest.driver_id)) mergedExclude.push(nearest.driver_id);
+              currentPassengerOfferedDrivers = mergedExclude;
               await supabase.from('ride_requests').update({ offered_to: nearest.driver_id, offered_at: new Date().toISOString(), offered_drivers: currentPassengerOfferedDrivers }).eq('id', requestId);
               document.getElementById('reqStatusSub').textContent = 'جاري عرض الطلب على سائق آخر...';
             } else {
