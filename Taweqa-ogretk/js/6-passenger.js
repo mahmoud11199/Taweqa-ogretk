@@ -524,7 +524,7 @@
     document.getElementById('cancelRequestBtn').style.display = 'block';
     switchPassengerTab('request-status', document.querySelector('#passenger-app .tab-btn'));
     if (window.passengerRequestPollTimer) clearInterval(window.passengerRequestPollTimer);
-    window.passengerRequestPollTimer = setInterval(function() { pollPassengerRequest(requestId); }, 3000);
+    window.passengerRequestPollTimer = setInterval(function() { pollPassengerRequest(requestId); }, 2500);
   }
 
   var acceptedDriverMap = null;
@@ -602,7 +602,7 @@
           document.getElementById('reqStatusSub').textContent = 'جاري البحث عن سائق آخر...';
         } else if (data.offered_at) {
           var elapsed = Date.now() - new Date(data.offered_at).getTime();
-          if (elapsed > 50000) shouldReassign = true;
+          if (elapsed > 20000) shouldReassign = true;
         }
         if (shouldReassign) {
           try {

@@ -855,7 +855,7 @@
     if (!supabase || !currentUser) return;
     var list = document.getElementById('driverRequestsList');
     try {
-      var { data: requests, error } = await supabase.from('ride_requests').select('id, passenger_id, passenger_count, classification, status, pickup_address, destination_address, pickup_lat, pickup_lng, adult_count, child_count, created_at, waypoints, note').eq('status', 'pending').is('driver_id', null).order('created_at', { ascending: false }).limit(50);
+      var { data: requests, error } = await supabase.from('ride_requests').select('id, passenger_id, passenger_count, classification, status, pickup_address, destination_address, pickup_lat, pickup_lng, adult_count, child_count, created_at, waypoints, note').eq('status', 'pending').eq('offered_to', currentUser.id).order('created_at', { ascending: false }).limit(20);
       if (error || !requests || !requests.length) {
         list.innerHTML = '<div class="empty-state">لا تطلبات موجهة إليك حالياً</div>';
         return;
@@ -876,8 +876,11 @@
         return '<div class="driver-request-item"><div class="top"><span class="name"><i class="fas fa-user"></i> راكب</span><span class="req-badge pending">جديد</span></div><div class="info"><i class="fas fa-tag"></i> ' + typeText + ' | <i class="fas fa-users"></i> ' + (r.passenger_count || 1) + ' راكب</div><div class="info"><i class="fas fa-map-pin"></i> ' + escapeHTML(r.pickup_address || 'بدون موقع') + '</div>' + (r.destination_address ? '<div class="info"><i class="fas fa-flag"></i> ' + escapeHTML(r.destination_address) + '</div>' : '') + wpHtml + noteHtml + '<div class="info"><i class="fas fa-clock"></i> ' + timeText + '</div><div class="req-actions">' + (hasLoc ? '<button class="btn btn-sm btn-outline" onclick="showPickupOnMap(' + r.pickup_lat + ', ' + r.pickup_lng + ')" style="padding:6px 10px;font-size:11px;"><i class="fas fa-map-marker-alt"></i> موقع</button>' : '') + (r.waypoints && Array.isArray(r.waypoints) && r.waypoints.length > 1 ? '<button class="btn btn-sm btn-outline" onclick="showWaypointsOnMap(\'' + r.id + '\')" style="padding:6px 10px;font-size:11px;"><i class="fas fa-route"></i> المسار</button>' : '') + '<button class="btn btn-success btn-sm" onclick="acceptRequest(\'' + r.id + '\')"><i class="fas fa-check"></i> قبول</button><button class="btn btn-danger btn-sm" onclick="rejectRequest(\'' + r.id + '\')"><i class="fas fa-times"></i> رفض</button></div></div>';
       }).join('');
       // Notify if there are new requests
-      if ('Notification' in window && Notification.permission === 'granted' && typeof driverLastRequestCount !== 'undefined' && requests.length > driverLastRequestCount) {
-        new Notification('🚗 طلب رحلة جديد', { body: 'لديك طلب رحلة جديد من راكب', icon: '/favicon.png' });
+      if (typeof driverLastRequestCount !== 'undefined' && requests.length > driverLastRequestCount) {
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('🚗 طلب رحلة جديد', { body: 'لديك طلب رحلة جديد من راكب', icon: '/favicon.png' });
+        }
+        try { var ctx = new (window.AudioContext || window.webkitAudioContext)(); var osc = ctx.createOscillator(); osc.frequency.value = 800; osc.type = 'sine'; var gain = ctx.createGain(); gain.gain.value = 0.3; osc.connect(gain); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.3); setTimeout(function() { var osc2 = ctx.createOscillator(); osc2.frequency.value = 1000; osc2.type = 'sine'; var gain2 = ctx.createGain(); gain2.gain.value = 0.3; osc2.connect(gain2); gain2.connect(ctx.destination); osc2.start(); osc2.stop(ctx.currentTime + 0.3); }, 150); } catch(e) {}
       }
       driverLastRequestCount = requests.length;
     } catch (e) { list.innerHTML = '<div class="empty-state">خطأ في تحميل الطلبات</div>'; console.error(e); }
