@@ -185,7 +185,7 @@ function showDriverDashboard() {
 async function loadDriverAvailability() {
   if (!supabase || !currentUser) return;
   try {
-    var { data: drv } = await supabase.from('drivers').select('is_available').eq('id', currentUser.id).single();
+    var { data: drv } = await supabase.from('drivers').select('is_available').eq('id', currentUser.id).maybeSingle();
     if (drv) setDriverAvailableUI(drv.is_available);
   } catch(e) { console.error(e); }
 }

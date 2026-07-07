@@ -879,10 +879,17 @@
         if ('Notification' in window && Notification.permission === 'granted') {
           new Notification('🚗 طلب رحلة جديد', { body: 'لديك طلب رحلة جديد من راكب', icon: '/favicon.png' });
         }
-        try { var ctx = new (window.AudioContext || window.webkitAudioContext)(); var osc = ctx.createOscillator(); osc.frequency.value = 800; osc.type = 'sine'; var gain = ctx.createGain(); gain.gain.value = 0.3; osc.connect(gain); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.3); setTimeout(function() { var osc2 = ctx.createOscillator(); osc2.frequency.value = 1000; osc2.type = 'sine'; var gain2 = ctx.createGain(); gain2.gain.value = 0.3; osc2.connect(gain2); gain2.connect(ctx.destination); osc2.start(); osc2.stop(ctx.currentTime + 0.3); }, 150); } catch(e) {}
+        try {
+          var actx = new (window.AudioContext || window.webkitAudioContext)();
+          if (actx) {
+            var osc = actx.createOscillator(); osc.frequency.value = 800; osc.type = 'sine';
+            var gain = actx.createGain(); gain.gain.value = 0.3;
+            osc.connect(gain); gain.connect(actx.destination); osc.start(); osc.stop(actx.currentTime + 0.3);
+          }
+        } catch(e) { /* audio not supported */ }
       }
       driverLastRequestCount = requests.length;
-    } catch (e) { list.innerHTML = '<div class="empty-state">خطأ في تحميل الطلبات</div>'; console.error(e); }
+    } catch (e) { list.innerHTML = '<div class="empty-state">خطأ في تحميل الطلبات</div>'; console.error('loadDriverRequests error:', e); }
   };
   var driverLastRequestCount = 0;
   var driverRequestPollTimer = null;
