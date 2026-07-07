@@ -17,7 +17,7 @@
           showToast('تم خصم غرامة ' + fine + ' ج من المحفظة');
         }
         await supabase.from('ride_requests').update({ status: 'cancelled', driver_id: null, offered_to: null }).eq('id', currentPassengerRequestId);
-        await supabase.from('trips').update({ status: 'cancelled' }).eq('passenger_id', req.passenger_id).eq('driver_id', req.driver_id).in('status', ['assigned', 'pending']).limit(1);
+        await supabase.from('trips').update({ status: 'cancelled' }).eq('passenger_id', req.passenger_id).eq('driver_id', req.driver_id).in('status', ['assigned', 'started']).limit(1);
       } else {
         await supabase.from('ride_requests').update({ status: 'cancelled', offered_to: null }).eq('id', currentPassengerRequestId);
       }
