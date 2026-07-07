@@ -472,6 +472,9 @@
     document.getElementById('request-btn').disabled = true;
     document.getElementById('request-loading').classList.remove('hidden-el');
     try {
+      // Cancel any previous pending requests to avoid duplicates
+      await supabase.from('ride_requests').update({ status: 'cancelled', offered_to: null }).eq('passenger_id', currentUser.id).eq('status', 'pending');
+      if (window.passengerRequestPollTimer) { clearInterval(window.passengerRequestPollTimer); window.passengerRequestPollTimer = null; }
       var first = requestWaypoints[0];
       var last = requestWaypoints[requestWaypoints.length - 1];
       var payload = {

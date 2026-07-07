@@ -1,23 +1,8 @@
-var CACHE_NAME = 'taweqe-cache-v1';
+var CACHE_NAME = 'taweqe-cache-v2';
 var urlsToCache = [
   '/',
   '/index.html',
   '/recovery.html',
-  '/Taweqa-ogretk/js/1-config.js',
-  '/Taweqa-ogretk/js/2-utils.js',
-  '/Taweqa-ogretk/js/3-auth.js',
-  '/Taweqa-ogretk/js/4-landing.js',
-  '/Taweqa-ogretk/js/5-driver-meter.js',
-  '/Taweqa-ogretk/js/6-passenger.js',
-  '/Taweqa-ogretk/js/7-chat.js',
-  '/Taweqa-ogretk/js/8-wallet.js',
-  '/Taweqa-ogretk/js/9-paymob.js',
-  '/Taweqa-ogretk/js/9-init.js',
-  '/Taweqa-ogretk/js/supabase-lite.js',
-  '/Taweqa-ogretk/css/1-variables.css',
-  '/Taweqa-ogretk/css/2-landing.css',
-  '/Taweqa-ogretk/css/3-auth.css',
-  '/Taweqa-ogretk/css/4-app.css',
   '/Taweqa-ogretk/favicon.png',
   '/Taweqa-ogretk/manifest.json'
 ];
@@ -45,6 +30,22 @@ self.addEventListener('activate', function(event) {
 });
 
 self.addEventListener('fetch', function(event) {
+  var url = new URL(event.request.url);
+  // For JS and CSS files: network first, fall back to cache
+  if (url.pathname.match(/\.(js|css)$/)) {
+    event.respondWith(
+      fetch(event.request).then(function(response) {
+        return caches.open(CACHE_NAME).then(function(cache) {
+          cache.put(event.request, response.clone());
+          return response;
+        });
+      }).catch(function() {
+        return caches.match(event.request);
+      })
+    );
+    return;
+  }
+  // For everything else: cache first, fall back to network
   event.respondWith(
     caches.match(event.request).then(function(response) {
       return response || fetch(event.request);
