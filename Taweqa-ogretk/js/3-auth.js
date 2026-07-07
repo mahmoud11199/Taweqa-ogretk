@@ -122,7 +122,26 @@ async function initSession() {
     currentUser = session.user;
     if (checkSessionInactivity()) { clearTimeout(loadingFallback); showLandingPage(); return; }
     updateLastActivity();
-    var { data: profile } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
+    var { data: profile } = await supabase.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
+    if (!profile && currentUser.user_metadata) {
+      try {
+        var meta = currentUser.user_metadata;
+        var { data: newProfile } = await supabase.from('profiles').upsert({
+          id: currentUser.id, full_name: meta.full_name || 'مستخدم',
+          role: meta.role || 'passenger', phone: meta.phone || null
+        }).select().single();
+        profile = newProfile;
+        // Also create wallet if missing
+        var { data: wal } = await supabase.from('wallets').select('user_id').eq('user_id', currentUser.id).maybeSingle();
+        if (!wal) await supabase.from('wallets').insert({ user_id: currentUser.id, balance: 0 });
+        // Create referral code if missing
+        var { data: ref } = await supabase.from('referral_codes').select('code').eq('user_id', currentUser.id).maybeSingle();
+        if (!ref) {
+          var code = Math.random().toString(36).substring(2, 8).toUpperCase() + Math.random().toString(36).substring(2, 4).toUpperCase();
+          await supabase.from('referral_codes').insert({ user_id: currentUser.id, code: code });
+        }
+      } catch(e) { console.error('Profile upsert error:', e); }
+    }
     currentProfile = profile;
     if (!profile) { clearTimeout(loadingFallback); showLandingPage(); return; }
     clearTimeout(loadingFallback);
