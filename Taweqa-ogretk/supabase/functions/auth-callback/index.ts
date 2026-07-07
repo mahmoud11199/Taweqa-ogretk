@@ -1,5 +1,3 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -9,7 +7,7 @@ const corsHeaders = {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
-  const baseUrl = 'https://mahmoud11199.github.io/Taweqa-ogretk';
+  const baseUrl = Deno.env.get('SITE_URL') || 'https://mahmoud11199.github.io/Taweqa-ogretk';
 
   const html = `<!DOCTYPE html>
 <html dir="rtl" lang="ar">

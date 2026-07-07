@@ -6,8 +6,7 @@
   <title>إعادة تعيين كلمة السر - توقع أجرتك</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <script type="module">import{createClient}from'https://esm.sh/@supabase/supabase-js@2';window.__supa=createClient;</script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="Taweqa-ogretk/js/1-config.js"></script>
   <script src="Taweqa-ogretk/js/supabase-lite.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -56,20 +55,7 @@
     </div>
   </div>
   <script>
-    var supabase = null;
-    var recoveryToken = null;
-
-    function initSupa() {
-      if (window.__supa && window.__supa.createClient) {
-        supabase = window.__supa.createClient(
-          'https://hhuiseftzbqssswnuwrv.supabase.co',
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhodWlzZWZ0emJxc3Nzd251d3J2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk2NjUxNjIsImV4cCI6MjEwNTI0MTE2Mn0.VBmFGnQphDN4QMRjIeVr3iAn2xqPBxoYfYHZP1X8Nn4'
-        );
-        return true;
-      }
-      return false;
-    }
-    initSupa();
+    var supabase = window.supabase;
 
     function parseHash() {
       var h = window.location.hash.replace('#', '');

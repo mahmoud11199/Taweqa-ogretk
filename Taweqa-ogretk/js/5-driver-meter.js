@@ -424,7 +424,7 @@
     lastDriverLocSync = now;
     try {
       await supabase.from('drivers').update({ current_lat: lat, current_lng: lng }).eq('id', currentUser.id);
-    } catch(e) {}
+    } catch(e) { console.error('GPS sync error:', e); }
   }
 
   function initGlobalGPS() {
@@ -663,7 +663,7 @@
   window.shareWhatsApp = shareWhatsApp;
 
   // Storage
-  function saveDataToStorage() { try { localStorage.setItem('smart_meter_data', JSON.stringify(meters)); } catch(e) {} }
+  function saveDataToStorage() { try { localStorage.setItem('smart_meter_data', JSON.stringify(meters)); } catch(e) { console.error('Storage save error:', e); } }
   function loadDataFromStorage() {
     try {
       var saved = localStorage.getItem('smart_meter_data');
@@ -676,7 +676,7 @@
       var history = JSON.parse(localStorage.getItem('smart_meter_history')) || [];
       history.unshift({ id: m.shareCode || Math.floor(100000 + Math.random() * 900000).toString(), meterId: m.id, date: new Date().toLocaleString('ar-EG'), tripType: m.tripType, distance: m.totalDistance, duration: m.totalDurationMinutes, wait: m.totalWaitSeconds / 60, fare: m.finalFare, savedPath: m.pathCoords, paymentMethod: m.payment_method || 'cash', paymentStatus: m.payment_status || 'unpaid' });
       localStorage.setItem('smart_meter_history', JSON.stringify(history));
-    } catch(e) {}
+    } catch(e) { console.error('History save error:', e); }
   }
 
   function renderDriverHistory() {

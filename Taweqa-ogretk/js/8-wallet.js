@@ -155,7 +155,7 @@
           await supabase.rpc('renew_subscription', { p_user_id: currentUser.id });
         }
       }
-    } catch(e) {}
+    } catch(e) { console.error('Subscription check error:', e); }
   }
   window.checkSubscription = checkSubscription;
 
@@ -272,7 +272,7 @@
     setTimeout(function() {
       loadReferralInfo();
       checkSubscription();
-      supabase.rpc('check_referral_rewards').catch(function(){});
+      supabase.rpc('check_referral_rewards').catch(function(e){ console.error('Referral check error:', e); });
       checkPendingPriceProposals();
     }, 500);
     // Poll for proposals every 30s
@@ -288,7 +288,7 @@
     setTimeout(function() {
       loadReferralInfo();
       checkSubscription();
-      supabase.rpc('check_referral_rewards').catch(function(){});
+      supabase.rpc('check_referral_rewards').catch(function(e){ console.error('Referral check error:', e); });
     }, 500);
   };
 
@@ -310,7 +310,7 @@
         showToast('⌛ انتهت صلاحية الجلسة بسبب عدم النشاط. سجل دخول مرة أخرى');
         return true;
       }
-    } catch(e) {}
+    } catch(e) { console.error('Session check error:', e); }
     return false;
   }
 
