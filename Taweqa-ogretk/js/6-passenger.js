@@ -710,6 +710,35 @@
   }
   window.loadPassengerHistory = loadPassengerHistory;
 
+  async function loadPassengerRequests() {
+    if (!supabase || !currentUser) return;
+    var list = document.getElementById('passengerRequestList');
+    try {
+      var { data: requests, error } = await supabase.from('ride_requests').select('*').eq('passenger_id', currentUser.id).order('created_at', { ascending: false }).limit(30);
+      if (error || !requests || !requests.length) { list.innerHTML = '<div class="empty-state">لا توجد طلبات سابقة</div>'; return; }
+      list.innerHTML = requests.map(function(r) {
+        var statusText = r.status === 'pending' ? '🟡 قيد الانتظار' : r.status === 'accepted' ? '🟢 تم القبول' : r.status === 'cancelled' ? '🔴 ملغي' : r.status;
+        var timeAgo = Math.floor((Date.now() - new Date(r.created_at).getTime()) / 1000);
+        var timeText = timeAgo < 60 ? 'منذ ' + timeAgo + ' ثانية' : timeAgo < 3600 ? 'منذ ' + Math.floor(timeAgo / 60) + ' دقيقة' : 'منذ ' + Math.floor(timeAgo / 3600) + ' ساعة';
+        var cancelBtn = r.status === 'pending' ? '<button class="btn btn-danger btn-sm" onclick="cancelRequestFromHistory(\'' + r.id + '\')" style="padding:4px 10px;font-size:11px;"><i class="fas fa-times"></i> إلغاء</button>' : '';
+        var driverInfo = r.driver_id ? '<div style="font-size:10px;color:var(--meter-muted);">السائق: ' + r.driver_id.slice(0,8) + '...</div>' : '';
+        return '<div class="history-item"><div class="history-header"><span>' + escapeHTML(timeText) + '</span><span style="color:var(--meter-primary)">' + statusText + '</span></div><div class="history-details"><div>' + (r.classification === 'private' ? 'مخصوص' : 'أفراد') + '</div><div>' + (r.passenger_count || 1) + ' راكب</div><div style="font-size:10px;">' + escapeHTML(r.pickup_address || '-') + '</div></div><div style="display:flex;gap:6px;margin-top:4px;">' + cancelBtn + driverInfo + '</div></div>';
+      }).join('');
+    } catch (e) { list.innerHTML = '<div class="empty-state">خطأ في التحميل</div>'; console.error(e); }
+  }
+  window.loadPassengerRequests = loadPassengerRequests;
+
+  window.cancelRequestFromHistory = async function(requestId) {
+    if (!confirm('هل أنت متأكد من إلغاء هذا الطلب؟')) return;
+    try {
+      var { data: req } = await supabase.from('ride_requests').select('status, driver_id, passenger_id').eq('id', requestId).single();
+      if (!req || req.status !== 'pending') { showToast('لا يمكن إلغاء طلب في هذه الحالة'); return; }
+      await supabase.from('ride_requests').update({ status: 'cancelled', offered_to: null }).eq('id', requestId);
+      showToast('✅ تم إلغاء الطلب');
+      loadPassengerRequests();
+    } catch (e) { showToast('فشل الإلغاء'); console.error(e); }
+  };
+
   window.payTripFromWallet = async function(tripId, amount) {
     if (!confirm('تأكيد دفع ' + amount.toFixed(2) + ' ج من محفظتك لهذه الرحلة؟')) return;
     try {

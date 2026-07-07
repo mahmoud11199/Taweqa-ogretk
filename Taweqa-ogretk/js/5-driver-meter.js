@@ -55,6 +55,10 @@
       }, 300);
     }
     if (tab === 'track') { setTimeout(autoLoadActiveTrip, 200); }
+    if (tab === 'history') {
+      if (typeof loadPassengerRequests === 'function') loadPassengerRequests();
+      if (typeof loadPassengerHistory === 'function') loadPassengerHistory();
+    }
   }
   window.switchPassengerTab = switchPassengerTab;
 
@@ -851,7 +855,7 @@
     if (!supabase || !currentUser) return;
     var list = document.getElementById('driverRequestsList');
     try {
-      var { data: requests, error } = await supabase.from('ride_requests').select('id, passenger_id, passenger_count, classification, status, pickup_address, destination_address, pickup_lat, pickup_lng, adult_count, child_count, created_at, waypoints, note').eq('status', 'pending').eq('offered_to', currentUser.id).order('created_at', { ascending: false }).limit(20);
+      var { data: requests, error } = await supabase.from('ride_requests').select('id, passenger_id, passenger_count, classification, status, pickup_address, destination_address, pickup_lat, pickup_lng, adult_count, child_count, created_at, waypoints, note').eq('status', 'pending').is('driver_id', null).order('created_at', { ascending: false }).limit(50);
       if (error || !requests || !requests.length) {
         list.innerHTML = '<div class="empty-state">لا تطلبات موجهة إليك حالياً</div>';
         return;

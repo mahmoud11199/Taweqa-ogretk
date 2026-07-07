@@ -5,11 +5,27 @@
     if (!supabase || !currentPassengerRequestId) return;
     if (!confirm('هل أنت متأكد من إلغاء الطلب؟')) return;
     try {
-      await supabase.from('ride_requests').update({ status: 'cancelled' }).eq('id', currentPassengerRequestId);
+      var { data: req } = await supabase.from('ride_requests').select('status, driver_id, passenger_id').eq('id', currentPassengerRequestId).single();
+      if (!req) { showToast('الطلب غير موجود'); return; }
+      if (req.status === 'accepted' && req.driver_id) {
+        var fine = 10;
+        var { data: wal } = await supabase.from('wallets').select('balance').eq('user_id', req.passenger_id).single();
+        if (!wal || wal.balance < fine) {
+          if (!confirm('رصيد محفظتك غير كافٍ (' + (wal ? wal.balance : 0) + ' ج). الغرامة ' + fine + ' ج. سيتم خصمها عند شحن المحفظة. هل تريد الإلغاء؟')) return;
+        } else {
+          await supabase.rpc('apply_wallet_charge', { p_user_id: req.passenger_id, p_amount: -fine });
+          showToast('تم خصم غرامة ' + fine + ' ج من المحفظة');
+        }
+        await supabase.from('ride_requests').update({ status: 'cancelled', driver_id: null, offered_to: null }).eq('id', currentPassengerRequestId);
+        await supabase.from('trips').update({ status: 'cancelled' }).eq('passenger_id', req.passenger_id).eq('driver_id', req.driver_id).in('status', ['assigned', 'pending']).limit(1);
+      } else {
+        await supabase.from('ride_requests').update({ status: 'cancelled', offered_to: null }).eq('id', currentPassengerRequestId);
+      }
       clearInterval(window.passengerRequestPollTimer);
-      showToast('تم إلغاء الطلب');
+      window.passengerRequestPollTimer = null;
+      showToast('✅ تم إلغاء الطلب');
       switchPassengerTab('request', document.querySelector('#passenger-app .tab-btn'));
-    } catch (e) { showToast('فشل الإلغاء'); }
+    } catch (e) { showToast('فشل الإلغاء'); console.error(e); }
   };
 
   function openDriverChat() {
