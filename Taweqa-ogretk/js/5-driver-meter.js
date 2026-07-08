@@ -880,6 +880,7 @@
   window.loadDriverRequests = async function() {
     if (!supabase || !currentUser) return;
     var list = document.getElementById('driverRequestsList');
+    if (!list) return;
     try {
       var { data: requests, error } = await supabase.from('ride_requests').select('id, passenger_id, passenger_count, classification, status, pickup_address, destination_address, pickup_lat, pickup_lng, adult_count, child_count, created_at, waypoints, note').eq('status', 'pending').eq('offered_to', currentUser.id).order('created_at', { ascending: false }).limit(20);
       if (error || !requests || !requests.length) {
@@ -916,7 +917,7 @@
         } catch(e) { /* audio not supported */ }
       }
       driverLastRequestCount = requests.length;
-    } catch (e) { list.innerHTML = '<div class="empty-state">خطأ في تحميل الطلبات</div>'; console.error('loadDriverRequests error:', e); }
+    } catch (e) { list.innerHTML = '<div class="empty-state">خطأ في تحميل الطلبات</div>'; console.error('loadDriverRequests error:', e && e.message ? e.message : e, 'currentUser.id:', currentUser?.id, 'list:', !!list); }
   };
   var driverLastRequestCount = 0;
   var driverRequestPollTimer = null;
