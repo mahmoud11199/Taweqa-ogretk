@@ -208,8 +208,11 @@
       }
     }
     setDriverAvailable(false);
-	    await createStartedTripInSupabase(m);
-	    showToast('تم تشغيل عداد رقم ' + m.id + ' - كود المشاركة: ' + m.shareCode);
+    if (!(await createStartedTripInSupabase(m))) {
+      showToast('⚠️ العداد شغال محلياً لكن فشل ربطه بالسحابة، لن يتمكن الراكب من التتبع');
+    } else {
+      showToast('تم تشغيل عداد رقم ' + m.id + ' - كود المشاركة: ' + m.shareCode);
+    }
     updateDotsUI(); renderMeterDataToUI(); redrawActiveRouteLine(); saveDataToStorage();
   }
   window.startCurrentMeter = startCurrentMeter;
@@ -778,14 +781,16 @@
  	    return data || null;
  	  }
 
-	  async function createStartedTripInSupabase(m) {
-	    if (!supabase || !currentUser) return;
-	    try {
-	      calculateFare(m);
-	      var data = await invokeTripEvent('start', m);
-	      if (data && data.tripId) { m.tripId = data.tripId; m.lastSupabaseSync = Date.now(); saveDataToStorage(); }
-	    } catch (e) { console.error('Start trip error:', e); }
-	  }
+  async function createStartedTripInSupabase(m) {
+    if (!supabase || !currentUser) return false;
+    try {
+      calculateFare(m);
+      var data = await invokeTripEvent('start', m);
+      if (data && data.tripId) { m.tripId = data.tripId; m.lastSupabaseSync = Date.now(); saveDataToStorage(); return true; }
+      console.error('Start trip error: no tripId returned', data);
+      return false;
+    } catch (e) { console.error('Start trip error:', e); return false; }
+  }
 
 	  async function syncStartedTripToSupabase(m, force) {
 	    if (!supabase || !currentUser || !m.tripId || !m.isActive) return;
