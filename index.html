@@ -646,7 +646,7 @@
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('/sw.js').catch(function(e) { console.error('SW registration error:', e); });
+    navigator.serviceWorker.register('sw.js').catch(function(e) { console.error('SW registration error:', e); });
   });
 }
 </script>
