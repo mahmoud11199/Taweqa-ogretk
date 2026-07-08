@@ -630,7 +630,7 @@
           document.getElementById('reqStatusSub').textContent = 'جاري البحث عن سائق آخر...';
         } else if (data.offered_at) {
           var elapsed = Date.now() - new Date(data.offered_at).getTime();
-          if (elapsed > 20000) shouldReassign = true;
+          if (elapsed > 60000) shouldReassign = true;
         }
         if (shouldReassign) {
           try {

@@ -946,10 +946,11 @@
 
   window.acceptRequest = async function(requestId) {
     if (!supabase || !currentUser) return;
-    if (!confirm('قبول هذا الطلب؟')) return;
+    if (window._acceptingRequest) return;
+    window._acceptingRequest = true;
     try {
       var { data: requestData, error: reqError } = await supabase.from('ride_requests').update({ driver_id: currentUser.id, status: 'accepted', responded_at: new Date().toISOString() }).eq('id', requestId).eq('status', 'pending').select('passenger_id, passenger_count, classification, pickup_address, destination_address, pickup_lat, pickup_lng, waypoints').single();
-      if (reqError) { showToast('فشل قبول الطلب: ' + reqError.message); return; }
+      if (reqError) { showToast('فشل قبول الطلب: ' + reqError.message); window._acceptingRequest = false; return; }
       var wp = requestData.waypoints || [];
       var joinCode, tripData, tripError;
       for (var attempt = 0; attempt < 5; attempt++) {
@@ -958,7 +959,7 @@
         if (result.data) { tripData = result.data; tripError = null; break; }
         tripError = result.error;
       }
-      if (tripError || !tripData) { showToast('فشل إنشاء الرحلة: ' + (tripError ? tripError.message : 'تعذر إنشاء كود الرحلة')); return; }
+      if (tripError || !tripData) { showToast('فشل إنشاء الرحلة: ' + (tripError ? tripError.message : 'تعذر إنشاء كود الرحلة')); window._acceptingRequest = false; return; }
       acceptedTripData = { tripId: tripData.id, joinCode: joinCode, passengerName: 'راكب', pickupAddress: requestData.pickup_address, pickupLat: requestData.pickup_lat, pickupLng: requestData.pickup_lng, waypoints: wp };
       document.getElementById('pending-trip-banner').style.display = 'block';
       document.getElementById('pending-trip-code').textContent = joinCode;
@@ -967,7 +968,8 @@
       loadDriverRequests();
       // Auto-set unavailable when accepting a trip
       await setDriverAvailable(false);
-    } catch (e) { showToast('حدث خطأ'); console.error(e); }
+      window._acceptingRequest = false;
+    } catch (e) { showToast('حدث خطأ'); console.error(e); window._acceptingRequest = false; }
   };
 
   window.toggleDriverAvailability = async function() {
@@ -999,7 +1001,6 @@
 
   window.rejectRequest = async function(requestId) {
     if (!supabase) return;
-    if (!confirm('رفض هذا الطلب؟')) return;
     try {
       var { data: req, error: reqErr } = await supabase.from('ride_requests').select('offered_drivers').eq('id', requestId).eq('offered_to', currentUser.id).single();
       if (reqErr || !req) { showToast('الطلب لم يعد متاحاً'); return; }
