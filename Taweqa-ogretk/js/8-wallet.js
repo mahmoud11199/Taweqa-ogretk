@@ -175,7 +175,7 @@
     if (role === 'driver' && !driverRefEl) return;
     if (role === 'passenger' && !passengerRefEl) return;
     var targetEl = role === 'driver' ? driverRefEl : passengerRefEl;
-    supabase.from('referral_codes').select('code').eq('user_id', currentUser.id).single().then(function(r) {
+    supabase.from('referral_codes').select('code').eq('user_id', currentUser.id).maybeSingle().then(function(r) {
       if (!r.data) return;
       var code = r.data.code;
       var shareUrl = window.location.origin + '?ref=' + code;

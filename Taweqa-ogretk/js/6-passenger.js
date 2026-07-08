@@ -522,8 +522,8 @@
           var { data: nearest } = await supabase.rpc('find_nearest_available_driver', { pickup_lat: data.pickup_lat, pickup_lng: data.pickup_lng, exclude_ids: [] });
           if (nearest && nearest.found && nearest.driver_id) {
             currentPassengerOfferedDrivers.push(nearest.driver_id);
-            var { error: updateErr } = await supabase.from('ride_requests').update({ offered_to: nearest.driver_id, offered_at: new Date().toISOString(), offered_drivers: currentPassengerOfferedDrivers }).eq('id', data.id).select('offered_drivers').maybeSingle();
-            if (updateErr) console.error('initial offer update error:', updateErr);
+            var { error: offerErr } = await supabase.rpc('offer_request_to_driver', { p_request_id: data.id, p_driver_id: nearest.driver_id, p_offered_drivers: currentPassengerOfferedDrivers });
+            if (offerErr) console.error('initial offer RPC error:', offerErr);
           } else {
             document.getElementById('reqStatusSub').textContent = 'لا يوجد سائقين قريبين حالياً، سيتم التحقق مرة أخرى';
           }
@@ -642,8 +642,8 @@
             if (nearest && nearest.found && nearest.driver_id) {
               if (!mergedExclude.includes(nearest.driver_id)) mergedExclude.push(nearest.driver_id);
               currentPassengerOfferedDrivers = mergedExclude;
-              var { error: reassignErr } = await supabase.from('ride_requests').update({ offered_to: nearest.driver_id, offered_at: new Date().toISOString(), offered_drivers: currentPassengerOfferedDrivers }).eq('id', requestId);
-              if (reassignErr) console.error('reassign update error:', reassignErr);
+              var { error: reassignErr } = await supabase.rpc('offer_request_to_driver', { p_request_id: requestId, p_driver_id: nearest.driver_id, p_offered_drivers: currentPassengerOfferedDrivers });
+              if (reassignErr) console.error('reassign RPC error:', reassignErr);
               else document.getElementById('reqStatusSub').textContent = 'جاري عرض الطلب على سائق آخر...';
             } else {
               document.getElementById('reqStatusSub').textContent = 'لا يوجد سائقين متاحين قريباً';
