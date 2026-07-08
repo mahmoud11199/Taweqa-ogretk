@@ -165,7 +165,7 @@
         m.lastSupabaseSync = Date.now();
         saveDataToStorage();
         showToast('🚀 بدأت رحلة الراكب — كود: ' + m.shareCode);
-      } catch(e) { console.error(e); showToast('فشل بدء الرحلة'); return; }
+      } catch(e) { console.error('Trip start edge function error:', e); showToast('⚠️ بدأت الرحلة محلياً، خطأ في الاتصال بالسحابة'); }
     }
     acceptedTripData = null;
     document.getElementById('pending-trip-banner').style.display = 'none';
@@ -745,23 +745,24 @@
 	  }
 	  window.clearDriverHistory = clearDriverHistory;
 
-	  function buildTripPayload(m, status) {
-	    return {
-	      driver_id: currentUser.id,
-	      status: status,
-	      classification: m.tripType === 'makhsoos' ? 'private' : 'shared',
-	      distance_km: clampNumber(m.totalDistance, 0, 1000, 0),
-	      duration_min: clampNumber(m.totalDurationMinutes, 0, 1440, 0),
-	      wait_minutes: clampNumber(m.totalWaitSeconds / 60, 0, 1440, 0),
-	      total_fare: clampNumber(m.finalFare, 0, 100000, 0),
-	      meter_start_fee: clampNumber(m.bandira, 0, 1000, 5),
-	      km_price_used: clampNumber(m.kmPrice, 1, 50, 5),
-	      wait_price_used: clampNumber(m.waitPrice, 0, 20, 1),
-	      join_code: m.shareCode,
-	      passenger_count: clampNumber(m.passengerCount, 0, 20, 1),
-	      passenger_breakdown: JSON.stringify(m.passengersData || [])
-	    };
-		  }
+  function buildTripPayload(m, status) {
+    return {
+      driver_id: currentUser.id,
+      status: status,
+      classification: m.tripType === 'makhsoos' ? 'private' : 'shared',
+      distance_km: clampNumber(m.totalDistance, 0, 1000, 0),
+      duration_min: clampNumber(m.totalDurationMinutes, 0, 1440, 0),
+      wait_minutes: clampNumber(m.totalWaitSeconds / 60, 0, 1440, 0),
+      total_fare: clampNumber(m.finalFare, 0, 100000, 0),
+      meter_start_fee: clampNumber(m.bandira, 0, 1000, 5),
+      km_price_used: clampNumber(m.kmPrice, 1, 50, 5),
+      duration_price_used: clampNumber(m.durationPrice, 0, 10, 0.50),
+      wait_price_used: clampNumber(m.waitPrice, 0, 20, 1),
+      join_code: m.shareCode,
+      passenger_count: clampNumber(m.passengerCount, 0, 20, 1),
+      passenger_breakdown: JSON.stringify(m.passengersData || [])
+    };
+    }
 
  	  async function invokeTripEvent(action, m) {
  	    if (!supabase || !currentUser) return null;
@@ -785,9 +786,12 @@
     if (!supabase || !currentUser) return false;
     try {
       calculateFare(m);
-      var data = await invokeTripEvent('start', m);
-      if (data && data.tripId) { m.tripId = data.tripId; m.lastSupabaseSync = Date.now(); saveDataToStorage(); return true; }
-      console.error('Start trip error: no tripId returned', data);
+      var payload = buildTripPayload(m, 'started');
+      payload.adult_count = clampNumber(m.passengerCount || 1, 1, 20, 1);
+      payload.waypoints = m.pathCoords && m.pathCoords.length > 1 ? m.pathCoords : [];
+      var { data, error } = await supabase.from('trips').insert(payload).select('id').single();
+      if (error) { console.error('Direct trip insert error:', error); return false; }
+      if (data && data.id) { m.tripId = data.id; m.lastSupabaseSync = Date.now(); saveDataToStorage(); return true; }
       return false;
     } catch (e) { console.error('Start trip error:', e); return false; }
   }
