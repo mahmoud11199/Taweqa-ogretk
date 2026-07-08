@@ -194,7 +194,7 @@ Deno.serve(async (req) => {
     const joinCode = tripRow?.join_code as string | undefined;
 
     // Mark ride_request as completed
-    if (joinCode) {
+    if (joinCode && passengerId) {
       const { data: rrId } = await admin
         .from('ride_requests')
         .select('id')
@@ -214,15 +214,16 @@ Deno.serve(async (req) => {
     if (payMethod === 'wallet' && payStatus !== 'paid_wallet' && passengerId) {
       const fare = payload.total_fare as number || 0;
       if (fare > 0) {
-        const { data: deductResult } = await admin.rpc('apply_wallet_charge', {
+        const deductResult = await admin.rpc('apply_wallet_charge', {
           p_user_id: passengerId,
           p_amount: -fare,
-        }).maybeSingle();
-        if (deductResult && (deductResult as { success?: boolean }).success !== false) {
+        });
+        const deductData = deductResult?.data || deductResult;
+        if (deductData && (deductData as Record<string, unknown>)?.success !== false) {
           await admin.rpc('apply_wallet_charge', {
             p_user_id: userId,
             p_amount: fare,
-          }).maybeSingle();
+          });
           await admin.from('trips').update({ payment_status: 'paid_wallet' }).eq('id', tripId);
         }
       }

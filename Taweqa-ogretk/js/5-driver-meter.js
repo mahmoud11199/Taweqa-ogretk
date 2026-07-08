@@ -160,12 +160,26 @@
       }
     }
     if (m.tripId) {
+      var started = false;
       try {
         await invokeTripEvent('start', m);
+        started = true;
+      } catch(e) { console.error('Trip start edge function error:', e); }
+      if (!started) {
+        try {
+          var startedPayload = { status: 'started', last_synced_at: new Date().toISOString(), last_lat: null, last_lng: null };
+          if (m.shareCode) startedPayload.join_code = m.shareCode;
+          await supabase.from('trips').update(startedPayload).eq('id', m.tripId).eq('driver_id', currentUser.id);
+          started = true;
+        } catch(e2) { console.error('Trip start direct update error:', e2); }
+      }
+      if (started) {
         m.lastSupabaseSync = Date.now();
         saveDataToStorage();
         showToast('🚀 بدأت رحلة الراكب — كود: ' + m.shareCode);
-      } catch(e) { console.error('Trip start edge function error:', e); showToast('⚠️ بدأت الرحلة محلياً، خطأ في الاتصال بالسحابة'); }
+      } else {
+        showToast('⚠️ بدأت الرحلة محلياً، فشل ربطها بالسحابة');
+      }
     }
     acceptedTripData = null;
     document.getElementById('pending-trip-banner').style.display = 'none';
@@ -429,6 +443,10 @@
         var { data: tr } = await supabase.from('trips').select('status').eq('id', m.tripId).single();
         if (tr && (tr.status === 'completed' || tr.status === 'cancelled')) {
           showToast('⏹️ تم إنهاء الرحلة بواسطة الراكب');
+          calculateFare(m);
+          if (m.tripId && m.isActive) {
+            try { await saveTripToSupabase(m); } catch(e) { console.error('Final sync on passenger end error:', e); }
+          }
           m.isActive = false;
           m.isPaused = false;
           await setDriverAvailable(true);

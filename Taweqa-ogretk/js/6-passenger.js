@@ -119,7 +119,7 @@
 
   window.trackTrip = async function(optCode) {
     var code = optCode || document.getElementById('track-code').value.trim();
-    if (!code || (code.length < 4 && code.length < 20)) { showToast('يرجى إدخال كود صحيح'); return; }
+    if (!code || code.length < 4 || code.length > 20) { showToast('يرجى إدخال كود صحيح'); return; }
     if (!supabase) { showToast('خدمة التتبع غير متاحة'); return; }
     var statusEl = document.getElementById('track-status');
     if (!optCode) statusEl.innerHTML = '<div class="spinner"></div><p style="color:var(--text-muted);font-size:13px;">جاري البحث...</p>';
@@ -183,16 +183,17 @@
       // --- Progress bar ---
       document.getElementById('track-progress').style.display = 'block';
       var steps = document.querySelectorAll('#trackProgressBar .progress-step');
-      steps.forEach(function(s) { s.classList.remove('active'); });
+      if (steps) steps.forEach(function(s) { s.classList.remove('active'); });
+      function activateStep(step) { var el = document.querySelector('#trackProgressBar .progress-step[data-step="' + step + '"]'); if (el) el.classList.add('active'); }
       if (trip.status === 'assigned') {
-        document.querySelector('#trackProgressBar .progress-step[data-step="assigned"]').classList.add('active');
+        activateStep('assigned');
       } else if (trip.status === 'started') {
-        document.querySelector('#trackProgressBar .progress-step[data-step="assigned"]').classList.add('active');
-        document.querySelector('#trackProgressBar .progress-step[data-step="started"]').classList.add('active');
+        activateStep('assigned');
+        activateStep('started');
       } else if (trip.status === 'completed') {
-        document.querySelector('#trackProgressBar .progress-step[data-step="assigned"]').classList.add('active');
-        document.querySelector('#trackProgressBar .progress-step[data-step="started"]').classList.add('active');
-        document.querySelector('#trackProgressBar .progress-step[data-step="completed"]').classList.add('active');
+        activateStep('assigned');
+        activateStep('started');
+        activateStep('completed');
       }
 
       // --- ETA ---

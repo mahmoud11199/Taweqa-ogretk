@@ -93,8 +93,10 @@ Deno.serve(async (req) => {
     .from('trip_locations')
     .select('lat, lng, created_at')
     .eq('trip_id', String(trip.id))
-    .order('created_at', { ascending: true })
-    .limit(200);
+    .order('created_at', { ascending: false })
+    .limit(1000);
+
+  const sortedLocations = (locations || []).slice().reverse();
 
   return jsonResponse({
     trip_id: trip.id,
@@ -116,9 +118,10 @@ Deno.serve(async (req) => {
       last_lat: trip.last_lat,
       last_lng: trip.last_lng,
       waypoints: trip.waypoints,
+      created_at: trip.created_at,
       completed_at: trip.completed_at,
     },
     driver: driverInfo,
-    locations: locations || [],
+    locations: sortedLocations,
   });
 });
