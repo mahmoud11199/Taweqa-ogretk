@@ -176,7 +176,7 @@ function makeQueryBuilder(url, anonKey, table, method, body, opts) {
         }
       });
       if (query.orderBy) params += '&order=' + encodeURIComponent(query.orderBy) + (query.orderAsc ? '.asc' : '.desc');
-      if (query.singleResult || query.maybeSingleResult) params += '&limit=1';
+      if (query.singleResult || query.maybeSingleResult) { if (!query.limitCount) params += '&limit=1'; }
       if (query.limitCount) params += '&limit=' + query.limitCount;
       var h = getAuthHeaders();
       if (query.singleResult) h.Accept = 'application/vnd.pgrst.object+json';

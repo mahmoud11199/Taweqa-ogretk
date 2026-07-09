@@ -150,11 +150,11 @@
     if (!supabase || !currentUser) return;
     try {
       await supabase.rpc('check_subscription_expiry');
-      var { data: lastSub } = await supabase.from('subscriptions').select('auto_renew').eq('user_id', currentUser.id).order('end_date', { ascending: false }).limit(1).maybeSingle();
+      var { data: lastSub } = await supabase.from('subscriptions').select('auto_renew').eq('user_id', currentUser.id).order('end_date', { ascending: false }).maybeSingle();
       var shouldAutoRenew = !lastSub || lastSub.auto_renew === true;
       if (!shouldAutoRenew) return;
 
-      var { data: sub } = await supabase.from('subscriptions').select('*').eq('user_id', currentUser.id).eq('status', 'active').order('end_date', { ascending: false }).limit(1).maybeSingle();
+      var { data: sub } = await supabase.from('subscriptions').select('*').eq('user_id', currentUser.id).eq('status', 'active').order('end_date', { ascending: false }).maybeSingle();
       if (!sub) {
         var { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', currentUser.id).single();
         var role = currentProfile && currentProfile.role === 'driver' ? 'driver' : 'passenger';
@@ -213,7 +213,7 @@
     if (!supabase || !currentUser) return false;
     try {
       await supabase.rpc('check_subscription_expiry');
-      var { data: sub } = await supabase.from('subscriptions').select('id, end_date').eq('user_id', currentUser.id).eq('status', 'active').order('end_date', { ascending: false }).limit(1).maybeSingle();
+      var { data: sub } = await supabase.from('subscriptions').select('id, end_date').eq('user_id', currentUser.id).eq('status', 'active').order('end_date', { ascending: false }).maybeSingle();
       if (!sub) {
         // Warn but don't block — subscription pending feature
         return true;
