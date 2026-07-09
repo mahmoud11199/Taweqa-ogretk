@@ -554,7 +554,15 @@
     document.getElementById('cancelRequestBtn').style.display = 'block';
     switchPassengerTab('request-status', document.querySelector('#passenger-app .tab-btn'));
     if (window.passengerRequestPollTimer) clearInterval(window.passengerRequestPollTimer);
-    window.passengerRequestPollTimer = setInterval(function() { pollPassengerRequest(requestId); }, 2500);
+    // Real-time subscription for instant status change
+    if (window._passengerRequestChannel) { try { supabase.removeChannel(window._passengerRequestChannel); } catch(e) {} window._passengerRequestChannel = null; }
+    try {
+      window._passengerRequestChannel = supabase.channel('pass-req-' + requestId)
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'ride_requests', filter: 'id=eq.' + requestId }, function() { pollPassengerRequest(requestId); })
+        .subscribe(function(status) { if (status !== 'SUBSCRIBED') console.warn('Passenger RT status:', status); });
+    } catch(e) { console.error('Passenger Realtime error:', e); }
+    // Backup polling (15s) for auto-reassign logic (Realtime handles instant status changes)
+    window.passengerRequestPollTimer = setInterval(function() { pollPassengerRequest(requestId); }, 15000);
   }
 
   var acceptedDriverMap = null;

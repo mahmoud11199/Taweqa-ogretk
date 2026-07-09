@@ -76,6 +76,8 @@ window.handleLogout = async function() {
   if (typeof acceptedDriverLocTimer !== 'undefined' && acceptedDriverLocTimer) { clearInterval(acceptedDriverLocTimer); acceptedDriverLocTimer = null; }
   if (typeof driverRequestPollTimer !== 'undefined' && driverRequestPollTimer) { clearInterval(driverRequestPollTimer); driverRequestPollTimer = null; }
   if (typeof chatPollTimer !== 'undefined' && chatPollTimer) { clearInterval(chatPollTimer); chatPollTimer = null; }
+  // Cleanup realtime channels
+  try { supabase.removeAllChannels(); } catch(e) {}
   try { localStorage.removeItem('taweqe_last_activity'); } catch(e) { console.error('LocalStorage remove error:', e); }
   await supabase.auth.signOut();
   currentUser = null; currentProfile = null;
@@ -175,10 +177,18 @@ function showDriverDashboard() {
   if ('Notification' in window && Notification.permission === 'default') {
     Notification.requestPermission();
   }
+  // Real-time subscription for new ride requests
+  if (window._driverRequestChannel) { supabase.removeChannel(window._driverRequestChannel); }
+  if (typeof driverRequestPollTimer !== 'undefined' && driverRequestPollTimer) { clearInterval(driverRequestPollTimer); driverRequestPollTimer = null; }
+  try {
+    window._driverRequestChannel = supabase.channel('driver-req-' + currentUser.id)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'ride_requests', filter: 'offered_to=eq.' + currentUser.id }, function() { loadDriverRequests(); })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'ride_requests', filter: 'offered_to=eq.' + currentUser.id }, function() { loadDriverRequests(); })
+      .subscribe(function(status) { if (status !== 'SUBSCRIBED') console.warn('Driver realtime status:', status); });
+  } catch(e) { console.error('Realtime init error:', e); }
+  // Backup polling (30s) in case WebSocket fails
   if (driverRequestPollTimer) clearInterval(driverRequestPollTimer);
-  driverRequestPollTimer = setInterval(function() {
-    loadDriverRequests();
-  }, 8000);
+  driverRequestPollTimer = setInterval(function() { loadDriverRequests(); }, 30000);
   loadDriverAvailability();
 }
 

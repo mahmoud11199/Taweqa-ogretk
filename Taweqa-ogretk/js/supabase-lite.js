@@ -266,14 +266,144 @@ window.__supaLiteCreateClient = function(url, anonKey) {
         });
       }
     },
-    channel: function() { return { subscribe: function(cb) { if (cb) cb('SUBSCRIBED'); return { unsubscribe: function() {} }; } }; },
-    getChannels: function() { return []; },
-    removeChannel: function() {},
-    removeAllChannels: function() {}
+    // ======================== REALTIME (WebSocket) ========================
+    channel: function(name) {
+      if (!_rtChannels) _rtChannels = {};
+      if (!_rtChannels[name]) {
+        _rtChannels[name] = { name: name, cbs: [], configs: [], statusCb: null, topic: null, joinRef: null, joined: false };
+      }
+      var store = _rtChannels[name];
+      var api = {
+        _rtName: name,
+        on: function(evType, cfg, cb) {
+          if (evType === 'postgres_changes' && cfg && cb) {
+            store.configs.push(cfg);
+            store.cbs.push(cb);
+          }
+          return api;
+        },
+        subscribe: function(cb) {
+          store.statusCb = cb || null;
+          _rtConnect(url, anonKey);
+          if (store.configs.length === 0 && cb) setTimeout(function() { cb('SUBSCRIBED'); }, 0);
+          return { unsubscribe: function() { _rtLeave(name); } };
+        }
+      };
+      return api;
+    },
+    getChannels: function() {
+      if (!_rtChannels) return [];
+      return Object.keys(_rtChannels).map(function(k) { var s = _rtChannels[k]; return { topic: s.topic, configs: s.configs }; });
+    },
+    removeChannel: function(ch) {
+      if (ch && ch._rtName && _rtChannels && _rtChannels[ch._rtName]) { _rtLeave(ch._rtName); }
+    },
+    removeAllChannels: function() {
+      if (!_rtChannels) return;
+      for (var k in _rtChannels) { _rtLeave(k); }
+      _rtChannels = {}; _rtCloseWs();
+    }
   };
 
   return client;
 };
+
+// ======================== REALTIME SHARED STATE ========================
+var _rtWs = null, _rtGen = 0, _rtMsgRef = 1, _rtChannels = null, _rtHbTimer = null, _rtReconnTimer = null;
+
+function _rtGetWsUrl(url, anonKey) {
+  return url.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + encodeURIComponent(anonKey) + '&vsn=1.0.0';
+}
+
+function _rtConnect(url, anonKey) {
+  if (_rtWs && (_rtWs.readyState === WebSocket.OPEN || _rtWs.readyState === WebSocket.CONNECTING)) return;
+  var gen = ++_rtGen;
+  try { _rtWs = new WebSocket(_rtGetWsUrl(url, anonKey)); } catch(e) { return; }
+  _rtWs.onopen = function() {
+    if (gen !== _rtGen) return;
+    for (var k in _rtChannels) { _rtSendJoins(k); }
+    _rtStartHb();
+  };
+  _rtWs.onmessage = function(ev) {
+    if (gen !== _rtGen) return;
+    try {
+      var m = JSON.parse(ev.data);
+      if (m.event === 'postgres_changes' && m.payload && m.payload.data) {
+        var t = m.topic;
+        for (var k in _rtChannels) {
+          var s = _rtChannels[k];
+          if (s.topic === t) {
+            s.cbs.forEach(function(cb) { try { cb(m.payload.data); } catch(e) { console.error('Realtime cb error:', e); } });
+          }
+        }
+      } else if (m.event === 'phx_reply' && m.payload) {
+        for (var k in _rtChannels) {
+          var s = _rtChannels[k];
+          if (s.joinRef === m.join_ref) {
+            if (m.payload.status === 'ok') { s.joined = true; if (s.statusCb) s.statusCb('SUBSCRIBED'); }
+            else { if (s.statusCb) s.statusCb('CHANNEL_ERROR'); }
+          }
+        }
+      }
+    } catch(e) { /* ignore parse errors */ }
+  };
+  _rtWs.onclose = function() {
+    if (gen !== _rtGen) return;
+    _rtStopHb();
+    for (var k in _rtChannels) {
+      var s = _rtChannels[k]; s.joined = false;
+      if (s.statusCb) s.statusCb('CLOSED');
+    }
+    if (_rtReconnTimer) clearTimeout(_rtReconnTimer);
+    _rtReconnTimer = setTimeout(function() { _rtReconnTimer = null; _rtConnect(url, anonKey); }, 3000);
+  };
+}
+
+function _rtStartHb() {
+  _rtStopHb();
+  _rtHbTimer = setInterval(function() {
+    if (_rtWs && _rtWs.readyState === WebSocket.OPEN) {
+      _rtWs.send(JSON.stringify({ join_ref: null, ref: String(_rtMsgRef++), topic: 'phoenix', event: 'heartbeat', payload: {} }));
+    }
+  }, 30000);
+}
+function _rtStopHb() { if (_rtHbTimer) { clearInterval(_rtHbTimer); _rtHbTimer = null; } }
+
+function _rtSendJoins(name) {
+  var s = _rtChannels && _rtChannels[name];
+  if (!s || !s.configs.length || !_rtWs || _rtWs.readyState !== WebSocket.OPEN) return;
+  s.configs.forEach(function(cfg) {
+    var ref = String(_rtMsgRef++);
+    var topic = 'realtime:' + (cfg.schema || 'public');
+    s.topic = topic;
+    s.joinRef = ref;
+    _rtWs.send(JSON.stringify({
+      join_ref: ref, ref: ref, topic: topic, event: 'phx_join',
+      payload: { body: { event: cfg.event || '*', schema: cfg.schema || 'public', table: cfg.table || null, filter: cfg.filter || '' } }
+    }));
+  });
+}
+
+function _rtLeave(name) {
+  var s = _rtChannels && _rtChannels[name];
+  if (!s) return;
+  if (_rtWs && _rtWs.readyState === WebSocket.OPEN) {
+    s.configs.forEach(function(cfg) {
+      var ref = String(_rtMsgRef++);
+      _rtWs.send(JSON.stringify({
+        join_ref: ref, ref: ref, topic: 'realtime:' + (cfg.schema || 'public'), event: 'phx_leave',
+        payload: { body: {} }
+      }));
+    });
+  }
+  delete _rtChannels[name];
+}
+
+function _rtCloseWs() {
+  _rtStopHb();
+  if (_rtWs) { try { _rtWs.close(); } catch(e) {} _rtWs = null; }
+  _rtGen++;
+}
 
 function getAuthHeaders(qb) {
   var s = loadSession();

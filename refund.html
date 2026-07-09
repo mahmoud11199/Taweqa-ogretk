@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="سياسة الدفع والاسترجاع - تطبيق توقع أجرتك">
+  <title>سياسة الدفع والاسترجاع - توقع أجرتك</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    :root {
+      --bg-deep: #0b0e14; --bg-card: #131821; --bg-card2: #1a1f2b;
+      --text-primary: #f1f3f5; --text-muted: #8892a4;
+      --border: #252b38; --accent: #f59e0b; --accent-hover: #d97706;
+      --success: #22c55e; --error: #ef4444; --primary: #3b82f6;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: var(--bg-deep); color: var(--text-primary);
+      line-height: 1.8; padding: 0; min-height: 100vh;
+    }
+    .navbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px; background: var(--bg-card);
+      border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100;
+    }
+    .logo { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 800; }
+    .logo i { color: var(--accent); font-size: 22px; }
+    .container { max-width: 800px; margin: 0 auto; padding: 30px 20px; }
+    h1 { font-size: 28px; font-weight: 800; margin-bottom: 8px; }
+    h1 i { color: var(--accent); margin-left: 8px; }
+    .updated { color: var(--text-muted); font-size: 13px; margin-bottom: 30px; }
+    h2 { font-size: 18px; font-weight: 700; color: var(--accent); margin: 28px 0 12px; display: flex; align-items: center; gap: 8px; }
+    h2 i { font-size: 16px; }
+    p { margin-bottom: 12px; font-size: 14px; color: #d1d5db; }
+    ul, ol { margin: 8px 0 16px 20px; font-size: 14px; color: #d1d5db; }
+    li { margin-bottom: 6px; }
+    strong { color: var(--text-primary); }
+    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 24px; margin-bottom: 16px; }
+    .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); text-decoration: none; font-size: 14px; font-weight: 600; margin-bottom: 20px; }
+    .back-link:hover { color: var(--accent-hover); }
+    .highlight { background: rgba(245,158,11,0.08); border-right: 3px solid var(--accent); padding: 12px 16px; border-radius: 8px; margin: 16px 0; font-size: 14px; }
+    .highlight i { margin-left: 6px; }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+    th, td { border: 1px solid var(--border); padding: 10px 12px; text-align: right; }
+    th { background: var(--bg-card2); color: var(--accent); font-weight: 700; }
+    td { color: #d1d5db; }
+    footer { text-align: center; padding: 24px 20px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 13px; }
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+    @media (max-width: 600px) {
+      .container { padding: 20px 14px; }
+      h1 { font-size: 22px; }
+      .card { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="logo"><i class="fas fa-motorcycle"></i><span>توقع أجرتك</span></div>
+    <a href="index.html" class="back-link" style="margin:0;"><i class="fas fa-arrow-right"></i> العودة للرئيسية</a>
+  </nav>
+  <div class="container">
+    <h1><i class="fas fa-file-invoice-dollar"></i> سياسة الدفع والاسترجاع</h1>
+    <p class="updated">آخر تحديث: يوليو 2026</p>
+
+    <div class="card">
+      <h2><i class="fas fa-coins"></i> نظرة عامة</h2>
+      <p>تشرح هذه السياسة كيفية عمل الدفعات داخل تطبيق "توقع أجرتك"، بما في ذلك شحن المحفظة، خصم رسوم الرحلات، والإجراءات المتبعة في حالات الاسترجاع والإلغاء.</p>
+    </div>
+
+    <div class="card">
+      <h2><i class="fas fa-circle-plus"></i> شحن المحفظة</h2>
+      <p>يمكن للركاب شحن محفظتهم الإلكترونية عبر بوابة الدفع <strong>Paymob</strong> بالطرق التالية:</p>
+      <ul>
+        <li><strong>بطاقات الائتمان / الخصم:</strong> فيزا، ماستركارد</li>
+        <li><strong>المحافظ الإلكترونية:</strong> فودافون كاش، أورانج كاش، إتصلات كاش، وي (We)</li>
+        <li><strong>التحويل البنكي:</strong> عبر الحساب البنكي المحدد في التطبيق</li>
+      </ul>
+      <div class="highlight">
+        <i class="fas fa-info-circle"></i>
+        الحد الأدنى لشحن المحفظة: 20 جنيهاً مصرياً. الحد الأقصى: 5000 جنيه مصري لكل معاملة.
+      </div>
+      <p><strong>أوقات المعالجة:</strong></p>
+      <ul>
+        <li>بطاقات الائتمان والمحافظ الإلكترونية: فورية</li>
+        <li>التحويل البنكي: خلال 24 ساعة عمل من إيداع المبلغ</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2><i class="fas fa-percent"></i> رسوم الخدمة</h2>
+      <p>عند إتمام كل رحلة، يتم خصم نسبة <strong>9%</strong> كرسوم وساطة لتشغيل التطبيق. تُحتسب هذه النسبة من قيمة الرحلة الإجمالية قبل إضافة المبلغ إلى محفظة السائق.</p>
+      <p><strong>مثال توضيحي:</strong></p>
+      <table>
+        <tr><th>البيان</th><th>المبلغ</th></tr>
+        <tr><td>قيمة الرحلة</td><td>100 جنيه</td></tr>
+        <tr><td>رسوم الخدمة (9%)</td><td>- 9 جنيهات</td></tr>
+        <tr><td><strong>صافي ما يحصل عليه السائق</strong></td><td><strong>91 جنيهاً</strong></td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2><i class="fas fa-arrows-rotate"></i> استرجاع المبلغ (Refund)</h2>
+      <p><strong>حالات استرجاع المبلغ للراكب:</strong></p>
+      <table>
+        <tr><th>الحالة</th><th>سياسة الاسترجاع</th></tr>
+        <tr><td>إلغاء الرحلة قبل قبول السائق</td><td>استرجاع كامل المبلغ فوراً — لا يتم خصم أي رسوم</td></tr>
+        <tr><td>إلغاء الرحلة بعد قبول السائق وقبل بدء الرحلة</td><td>استرجاع كامل المبلغ — لا رسوم إلغاء</td></tr>
+        <tr><td>إلغاء الرحلة بعد بدء الرحلة (من قبل الراكب)</td><td>استرجاع المبلغ بعد خصم قيمة المسافة المقطوعة ورسوم خدمة بنسبة 9%</td></tr>
+        <tr><td>إلغاء الرحلة من قبل السائق بعد القبول</td><td>استرجاع كامل المبلغ فوراً للراكب</td></tr>
+        <tr><td>لم يحضر السائق (No-show)</td><td>استرجاع كامل المبلغ خلال 24 ساعة</td></tr>
+      </table>
+      <p><strong>حالات لا يُرد فيها المبلغ:</strong></p>
+      <ul>
+        <li>الرحلة تمت بنجاح ووصل الراكب إلى وجهته</li>
+        <li>الراكب لم يحضر في موقع الانطلاق بعد وصول السائق وانتظاره لمدة 5 دقائق</li>
+        <li>إلغاء الرحلة بعد 5 دقائق من بدئها دون سبب مقنع</li>
+      </ul>
+      <div class="highlight">
+        <i class="fas fa-clock"></i>
+        مدة معالجة الاسترجاع: 3-7 أيام عمل للبطاقات الائتمانية، وفورية للمحافظ الإلكترونية.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><i class="fas fa-hand-holding-dollar"></i> سحب الأموال (للسائقين)</h2>
+      <p>يمكن للسائقين سحب أرباحهم من المحفظة الإلكترونية وفق الآتي:</p>
+      <ul>
+        <li><strong>الحد الأدنى للسحب:</strong> 100 جنيه مصري</li>
+        <li><strong>الحد الأقصى للسحب:</strong> 10,000 جنيه مصري في اليوم الواحد</li>
+        <li><strong>طرق السحب:</strong> تحويل بنكي (2-3 أيام عمل)، محفظة إلكترونية (فوري)</li>
+        <li><strong>رسوم السحب:</strong> 5 جنيهات للتحويل البنكي، مجاناً للمحافظ الإلكترونية</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2><i class="fas fa-ban"></i> إلغاء الاشتراكات</h2>
+      <p>إذا كان التطبيق يقدم خدمات اشتراكية (مثل اشتراك شهري للسائقين للحصول على أولوية في استقبال الطلبات):</p>
+      <ul>
+        <li>يمكن إلغاء الاشتراك الشهري في أي وقت من صفحة "حسابي"</li>
+        <li>الإلغاء قبل انتهاء فترة الاشتراك الحالية يمنع تجديد الاشتراك للشهر التالي — لا يتم استرجاع قيمة الشهر الحالي</li>
+        <li>في حال وجود عطل تقني منع استخدام الاشتراك لمدة 48 ساعة متصلة، يتم تمديد الاشتراك لمدة مساوية مجاناً</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2><i class="fas fa-credit-card"></i> أمان الدفع</h2>
+      <ul>
+        <li>جميع معاملات الدفع تتم عبر بوابة <strong>Paymob</strong> — بوابة دفع مصرية معتمدة وآمنة</li>
+        <li>لا يتم تخزين بيانات بطاقات الائتمان على خوادم التطبيق</li>
+        <li>يتم تشفير جميع بيانات الدفع باستخدام TLS 1.2+</li>
+        <li>نحن لا نطلب أبداً معلومات بطاقة الائتمان عبر البريد الإلكتروني أو الهاتف</li>
+      </ul>
+      <div class="highlight">
+        <i class="fas fa-shield-alt"></i>
+        إذا لاحظت أي معاملة غير مصرح بها، يرجى التواصل معنا فوراً على support@taweqeogretk.app
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><i class="fas fa-envelope"></i> التواصل لدعم الدفع</h2>
+      <p>للاستفسارات المتعلقة بالدفع والاسترجاع:</p>
+      <p style="display:flex;align-items:center;gap:8px;margin-top:8px;"><i class="fas fa-envelope" style="color:var(--accent);"></i> <a href="mailto:support@taweqeogretk.app" style="color:var(--accent);">support@taweqeogretk.app</a></p>
+    </div>
+  </div>
+  <footer>
+    <p>&copy; 2026 توقع أجرتك — جميع الحقوق محفوظة</p>
+    <p style="margin-top:4px;"><a href="index.html">العودة للصفحة الرئيسية</a></p>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="سياسة الخصوصية - تطبيق توقع أجرتك">
+  <title>سياسة الخصوصية - توقع أجرتك</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    :root {
+      --bg-deep: #0b0e14; --bg-card: #131821; --bg-card2: #1a1f2b;
+      --text-primary: #f1f3f5; --text-muted: #8892a4;
+      --border: #252b38; --accent: #f59e0b; --accent-hover: #d97706;
+      --success: #22c55e; --error: #ef4444; --primary: #3b82f6;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: var(--bg-deep); color: var(--text-primary);
+      line-height: 1.8; padding: 0; min-height: 100vh;
+    }
+    .navbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px; background: var(--bg-card);
+      border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100;
+    }
+    .logo { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 800; }
+    .logo i { color: var(--accent); font-size: 22px; }
+    .container { max-width: 800px; margin: 0 auto; padding: 30px 20px; }
+    h1 { font-size: 28px; font-weight: 800; margin-bottom: 8px; }
+    h1 i { color: var(--accent); margin-left: 8px; }
+    .updated { color: var(--text-muted); font-size: 13px; margin-bottom: 30px; }
+    h2 { font-size: 18px; font-weight: 700; color: var(--accent); margin: 28px 0 12px; display: flex; align-items: center; gap: 8px; }
+    h2 i { font-size: 16px; }
+    p { margin-bottom: 12px; font-size: 14px; color: #d1d5db; }
+    ul, ol { margin: 8px 0 16px 20px; font-size: 14px; color: #d1d5db; }
+    li { margin-bottom: 6px; }
+    strong { color: var(--text-primary); }
+    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 24px; margin-bottom: 16px; }
+    .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); text-decoration: none; font-size: 14px; font-weight: 600; margin-bottom: 20px; }
+    .back-link:hover { color: var(--accent-hover); }
+    .highlight { background: rgba(245,158,11,0.08); border-right: 3px solid var(--accent); padding: 12px 16px; border-radius: 8px; margin: 16px 0; font-size: 14px; }
+    footer { text-align: center; padding: 24px 20px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 13px; }
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+    @media (max-width: 600px) {
+      .container { padding: 20px 14px; }
+      h1 { font-size: 22px; }
+      .card { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="logo"><i class="fas fa-motorcycle"></i><span>توقع أجرتك</span></div>
+    <a href="index.html" class="back-link" style="margin:0;"><i class="fas fa-arrow-right"></i> العودة للرئيسية</a>
+  </nav>
+  <div class="container">
+    <h1><i class="fas fa-shield-alt"></i> سياسة الخصوصية</h1>
+    <p class="updated">آخر تحديث: يوليو 2026</p>
+
+    <div class="card">
+      <h2><i class="fas fa-info-circle"></i> مقدمة</h2>
+      <p>نحن في "توقع أجرتك" نلتزم بحماية خصوصية مستخدمينا. توضح هذه السياسة كيفية جمع واستخدام وحماية البيانات الشخصية التي تقدمها عند استخدام التطبيق والموقع الإلكتروني.</p>
+      <p>باستخدامك للتطبيق، فإنك توافق على جمع ومعالجة بياناتك وفقاً لهذه السياسة.</p>
+    </div>
+
+    <div class="card">
+      <h2><i class="fas fa-database"></i> البيانات التي نجمعها</h2>
+      <p><strong>أولاً: بيانات التسجيل</strong></p>
+      <ul>
+        <li>الاسم الكامل</li>
+        <li>البريد الإلكتروني</li>
+        <li>رقم الهاتف</li>
+        <li>صورة الهوية الوطنية ورخصة القيادة (للسائقين)</li>
+        <li>بيانات المركبة (للسائقين): الموديل، اللون، رقم اللوحة</li>
+      </ul>
+      <p><strong>ثانياً: بيانات الموقع (GPS)</strong></p>
+      <ul>
+        <li>الموقع الحالي للسائق أثناء تشغيل العداد — يتم تحديثه كل 4 ثوانٍ أثناء الرحلة</li>
+        <li>مسار الرحلة الكامل (نقاط المسار) — يُحفظ في قاعدة البيانات لربط الرحلة بالفاتورة</li>
+        <li>نقاط الانطلاق والوجهة التي يحددها الراكب على الخريطة</li>
+        <li>يتم إيقاف تتبع الموقع فور انتهاء الرحلة أو إيقاف العداد</li>
+      </ul>
+      <p><strong>ثالثاً: بيانات الاستخدام</strong></p>
+      <ul>
+        <li>سجل الرحلات (التواريخ، المسافات، الأجور)</li>
+        <li>سجل المعاملات المالية (الشحن، السحب، الدفع)</li>
+        <li>التقييمات والتعليقات</li>
+        <li>سجل المحادثات بين السائق والراكب</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2><i class="fas fa-tasks"></i> كيفية استخدام بياناتك</h2>
+      <ul>
+        <li><strong>لتقديم الخدمة:</strong> حساب الأجرة، التتبع المباشر للرحلات، إدارة المحفظة الإلكترونية</li>
+        <li><strong>للتواصل:</strong> تمكين المحادثة بين السائق والراكب أثناء الرحلة</li>
+        <li><strong>للتحسين:</strong> تحليل استخدام التطبيق لتطوير الميزات وتحسين تجربة المستخدم</li>
+        <li><strong>للامتثال القانوني:</strong> الالتزام بالمتطلبات القانونية والتنظيمية</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2><i class="fas fa-lock"></i> حماية البيانات وأمانها</h2>
+      <p>نستخدم إجراءات أمنية معيارية في المجال لحماية بياناتك:</p>
+      <ul>
+        <li>تشفير الاتصالات عبر HTTPS</li>
+        <li>تخزين كلمات المرور بتقنية التشفير (hashing)</li>
+        <li>التحكم في الوصول إلى البيانات عبر صلاحيات RLS (Row Level Security) في قاعدة البيانات</li>
+        <li>استخدام Supabase كبنية تحتية آمنة مع تشفير AES-256 للبيانات المخزنة</li>
+        <li>لا يتم مشاركة بياناتك مع أطراف ثالثة لأغراض تسويقية</li>
+      </ul>
+      <div class="highlight">
+        <i class="fas fa-shield-alt" style="color:var(--accent);margin-left:6px;"></i>
+        جميع بيانات الموقع (GPS) تُستخدم فقط أثناء الرحلة النشطة. بعد انتهاء الرحلة، تُحفظ نقاط المسار لأغراض الفاتورة فقط ولا يتم تتبع الموقع بشكل مستمر.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><i class="fas fa-share-nodes"></i> مشاركة البيانات مع الغير</h2>
+      <p>نحن لا نبيع أو نؤجر بياناتك الشخصية للغير. قد نشارك بياناتك في الحالات التالية:</p>
+      <ul>
+        <li>مع مزودي الخدمة الذين يساعدوننا في تشغيل التطبيق (مثل Supabase لاستضافة قاعدة البيانات)</li>
+        <li>إذا تطلب القانون ذلك أو للامتثال للإجراءات القانونية</li>
+        <li>لحماية حقوقنا القانونية أو ممتلكاتنا أو سلامتنا</li>
+      </ul>
+    </div>
+
+    <div class="card" id="delete-account">
+      <h2><i class="fas fa-trash-alt"></i> حذف الحساب والبيانات</h2>
+      <p>لك الحق في حذف حسابك وجميع بياناتك المرتبطة به في أي وقت. يمكنك القيام بذلك بطريقتين:</p>
+      <p><strong>الطريقة الأولى — من داخل التطبيق:</strong></p>
+      <ol>
+        <li>سجل الدخول إلى حسابك</li>
+        <li>اذهب إلى تبويب "حسابي" (Profile)</li>
+        <li>اضغط على زر "حذف الحساب" الموجود في الأسفل</li>
+        <li>تأكيد الحذف — سيتم حذف جميع بياناتك فوراً</li>
+      </ol>
+      <p><strong>الطريقة الثانية — عبر البريد الإلكتروني:</strong></p>
+      <p>أرسل طلب حذف من البريد الإلكتروني المسجل في حسابك إلى: <a href="mailto:support@taweqeogretk.app" style="color:var(--accent);">support@taweqeogretk.app</a></p>
+      <div class="highlight">
+        <i class="fas fa-clock" style="color:var(--accent);margin-left:6px;"></i>
+        عند حذف الحساب، سيتم حذف: الملف الشخصي، سجل الرحلات، المحادثات، التقييمات، والمحفظة. البيانات المجهولة (مثل الإحصائيات الإجمالية) قد تبقى لأغراض تحليلية.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><i class="fas fa-cookie-bite"></i> ملفات تعريف الارتباط (Cookies)</h2>
+      <p>يستخدم التطبيق التخزين المحلي (localStorage) في المتصفح لحفظ جلسة تسجيل الدخول وتفضيلات المستخدم. لا نستخدم ملفات تعريف ارتباط الطرف الثالث لأغراض تتبع أو إعلانات.</p>
+    </div>
+
+    <div class="card">
+      <h2><i class="fas fa-gavel"></i> حقوقك</h2>
+      <ul>
+        <li><strong>حق الوصول:</strong> يمكنك طلب نسخة من بياناتك الشخصية</li>
+        <li><strong>حق التصحيح:</strong> يمكنك تحديث بياناتك من صفحة "حسابي"</li>
+        <li><strong>حق الحذف:</strong> يمكنك حذف حسابك وبياناتك كما هو موضح أعلاه</li>
+        <li><strong>حق الاعتراض:</strong> يمكنك الاعتراض على معالجة بياناتك لأغراض معينة</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2><i class="fas fa-envelope"></i> التواصل معنا</h2>
+      <p>إذا كانت لديك أي استفسارات أو مخاوف بخصوص سياسة الخصوصية هذه، يرجى التواصل معنا:</p>
+      <p style="display:flex;align-items:center;gap:8px;margin-top:8px;"><i class="fas fa-envelope" style="color:var(--accent);"></i> <a href="mailto:support@taweqeogretk.app" style="color:var(--accent);">support@taweqeogretk.app</a></p>
+    </div>
+  </div>
+  <footer>
+    <p>&copy; 2026 توقع أجرتك — جميع الحقوق محفوظة</p>
+    <p style="margin-top:4px;"><a href="index.html">العودة للصفحة الرئيسية</a></p>
+  </footer>
+</body>
+</html>
