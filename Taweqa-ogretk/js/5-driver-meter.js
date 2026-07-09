@@ -176,13 +176,17 @@
       if (started) {
         m.lastSupabaseSync = Date.now();
         saveDataToStorage();
+        // Update status to ongoing and show stage 3
+        try { await supabase.from('trips').update({ status: 'ongoing' }).eq('id', m.tripId).eq('driver_id', currentUser.id); } catch(e) {}
+        document.getElementById('ongoing-trip-code').textContent = m.shareCode;
+        document.getElementById('trip-stage-assigned').style.display = 'none';
+        document.getElementById('trip-stage-arrived').style.display = 'none';
+        document.getElementById('trip-stage-ongoing').style.display = 'block';
         showToast('🚀 بدأت رحلة الراكب — كود: ' + m.shareCode);
       } else {
         showToast('⚠️ بدأت الرحلة محلياً، فشل ربطها بالسحابة');
       }
     }
-    acceptedTripData = null;
-    document.getElementById('pending-trip-banner').style.display = 'none';
     updateDotsUI(); renderMeterDataToUI(); redrawActiveRouteLine(); saveDataToStorage();
   };
   window.dismissAcceptedTrip = function() {
@@ -979,9 +983,13 @@
         tripError = result.error;
       }
       if (tripError || !tripData) { showToast('فشل إنشاء الرحلة: ' + (tripError ? tripError.message : 'تعذر إنشاء كود الرحلة')); window._acceptingRequest = false; return; }
-      acceptedTripData = { tripId: tripData.id, joinCode: joinCode, passengerName: 'راكب', pickupAddress: requestData.pickup_address, pickupLat: requestData.pickup_lat, pickupLng: requestData.pickup_lng, waypoints: wp };
+      acceptedTripData = { requestId: requestId, tripId: tripData.id, joinCode: joinCode, passengerName: 'راكب', pickupAddress: requestData.pickup_address, pickupLat: requestData.pickup_lat, pickupLng: requestData.pickup_lng, waypoints: wp };
+      // Show stage 1 (arrival)
+      document.getElementById('trip-pickup-address').textContent = requestData.pickup_address || 'غير محدد';
+      document.getElementById('trip-stage-assigned').style.display = 'block';
+      document.getElementById('trip-stage-arrived').style.display = 'none';
+      document.getElementById('trip-stage-ongoing').style.display = 'none';
       document.getElementById('pending-trip-banner').style.display = 'block';
-      document.getElementById('pending-trip-code').textContent = joinCode;
       switchDriverTab('meter', document.querySelector('#driver-app .tab-btn'));
       showToast('✅ تم قبول الطلب! كود التتبع: ' + joinCode);
       loadDriverRequests();
@@ -989,6 +997,55 @@
       await setDriverAvailable(false);
       window._acceptingRequest = false;
     } catch (e) { showToast('حدث خطأ'); console.error(e); window._acceptingRequest = false; }
+  };
+
+  window.markArrived = async function() {
+    if (!acceptedTripData) { showToast('لا يوجد طلب منتظر'); return; }
+    try {
+      await supabase.from('trips').update({ status: 'arrived' }).eq('id', acceptedTripData.tripId).eq('driver_id', currentUser.id);
+      document.getElementById('trip-stage-assigned').style.display = 'none';
+      document.getElementById('trip-stage-arrived').style.display = 'block';
+      document.getElementById('pending-trip-code').textContent = acceptedTripData.joinCode;
+      showToast('📍 تم تأكيد الوصول إلى مكان الراكب');
+    } catch(e) { showToast('فشل تحديث حالة الوصول'); console.error(e); }
+  };
+
+  window.completeOngoingTrip = async function() {
+    if (!acceptedTripData) { showToast('لا توجد رحلة نشطة'); return; }
+    var m = meters[activeMeterId];
+    if (!m || !m.isActive) { showToast('العداد غير نشط'); return; }
+    try {
+      var fare = calculateFare(m);
+      var now = new Date().toISOString();
+      await supabase.from('trips').update({
+        status: 'completed', completed_at: now,
+        total_fare: fare, distance_km: m.totalDistance,
+        duration_min: m.totalDurationMinutes, wait_minutes: Math.round(m.totalWaitSeconds / 60),
+        last_lat: m.lastLat, last_lng: m.lastLng, last_synced_at: now
+      }).eq('id', acceptedTripData.tripId).eq('driver_id', currentUser.id);
+      await supabase.from('ride_requests').update({ status: 'completed' }).eq('id', acceptedTripData.requestId || '');
+      // Reset meter
+      m.isActive = false; m.isPaused = false; m.tripId = null; m.shareCode = '';
+      m.totalDistance = 0; m.totalDurationMinutes = 0; m.totalWaitSeconds = 0;
+      m.pathCoords = []; m.startTime = null; m.pausedTimeTotal = 0;
+      acceptedTripData = null;
+      document.getElementById('pending-trip-banner').style.display = 'none';
+      document.getElementById('trip-stage-assigned').style.display = 'none';
+      document.getElementById('trip-stage-arrived').style.display = 'none';
+      document.getElementById('trip-stage-ongoing').style.display = 'none';
+      updateDotsUI(); renderMeterDataToUI(); saveDataToStorage();
+      await setDriverAvailable(true);
+      showToast('✅ تم إنهاء الرحلة — الأجرة: ' + fare.toFixed(2) + ' ج');
+    } catch(e) { showToast('فشل إنهاء الرحلة'); console.error(e); }
+  };
+
+  window.dismissAcceptedTrip = function() {
+    acceptedTripData = null;
+    document.getElementById('pending-trip-banner').style.display = 'none';
+    document.getElementById('trip-stage-assigned').style.display = 'none';
+    document.getElementById('trip-stage-arrived').style.display = 'none';
+    document.getElementById('trip-stage-ongoing').style.display = 'none';
+    showToast('تم إلغاء الرحلة المنتظرة');
   };
 
   window.toggleDriverAvailability = async function() {

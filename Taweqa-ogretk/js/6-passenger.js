@@ -565,6 +565,46 @@
     window.passengerRequestPollTimer = setInterval(function() { pollPassengerRequest(requestId); }, 15000);
   }
 
+  function initPassengerTripRealtime(tripId, driverId, requestId) {
+    // Clean up existing subs
+    if (window._tripRealtimeChannel) { try { supabase.removeChannel(window._tripRealtimeChannel); } catch(e) {} }
+    if (window._driverLocChannel) { try { supabase.removeChannel(window._driverLocChannel); } catch(e) {} }
+    // Subscribe to trip status changes for arrival/ongoing/completed detection
+    try {
+      window._tripRealtimeChannel = supabase.channel('pass-trip-' + tripId)
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'trips', filter: 'id=eq.' + tripId },
+          function(change) {
+            var trip = change.new;
+            if (trip.status) updateAcceptedTripStatusUI(trip.status, trip.total_fare);
+          })
+        .subscribe();
+    } catch(e) { console.error('Trip Realtime error:', e); }
+    // Subscribe to driver location updates
+    if (driverId) {
+      try {
+        window._driverLocChannel = supabase.channel('pass-driver-' + driverId)
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'drivers', filter: 'id=eq.' + driverId },
+            function(change) {
+              var loc = change.new;
+              if (loc && loc.current_lat && loc.current_lng && window.acceptedDriverMarker) {
+                window.acceptedDriverMarker.setLatLng([loc.current_lat, loc.current_lng]);
+                if (window.acceptedDriverMap) window.acceptedDriverMap.setView([loc.current_lat, loc.current_lng], 15);
+              }
+            })
+          .subscribe();
+      } catch(e) { console.error('Driver loc Realtime error:', e); }
+    }
+  }
+
+  window.openRatingFromAccepted = function() {
+    if (currentChatTripId) {
+      document.getElementById('rateTripId').value = currentChatTripId;
+      document.getElementById('ratingModal').style.display = 'flex';
+    } else {
+      showToast('لا توجد رحلة للتقييم');
+    }
+  };
+
   var acceptedDriverMap = null;
   var acceptedDriverLocTimer = null;
 
@@ -577,16 +617,19 @@
       acceptedDriverMap = L.map('accepted-driver-map').setView([30.0444, 31.2357], 14);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(acceptedDriverMap);
       var driverMarker = L.marker([30.0444, 31.2357], { icon: L.divIcon({ className: 'driver-marker', html: '🚗', iconSize: [24, 24], iconAnchor: [12, 12] }) }).addTo(acceptedDriverMap);
+      window.acceptedDriverMarker = driverMarker;
       if (acceptedDriverLocTimer) clearInterval(acceptedDriverLocTimer);
       acceptedDriverLocTimer = setInterval(async function() {
         if (!driverId) return;
         try {
           var { data: driverLoc } = await supabase.from('drivers').select('current_lat, current_lng').eq('id', driverId).single();
           if (driverLoc && driverLoc.current_lat && driverLoc.current_lng) {
-            driverMarker.setLatLng([driverLoc.current_lat, driverLoc.current_lng]);
+            window.acceptedDriverMarker.setLatLng([driverLoc.current_lat, driverLoc.current_lng]);
             acceptedDriverMap.setView([driverLoc.current_lat, driverLoc.current_lng], 15);
           }
         } catch(e) { console.error('Driver location poll error:', e); }
+        // Also check trip status as backup to Realtime
+      }, 15000);
         var { data: tripUpd } = await supabase.from('trips').select('id, status').eq('join_code', tripCode).order('created_at', { ascending: false }).limit(1).maybeSingle();
         if (tripUpd) {
           if (tripUpd.status === 'started') {
@@ -675,16 +718,26 @@
           var { data: driverData } = await supabase.from('profiles').select('full_name').eq('id', data.driver_id).single();
           if (driverData) driverName = driverData.full_name || 'سائق';
           document.getElementById('acceptedDriverName').textContent = driverName;
+          // Fetch driver car info
+          var { data: driverCar } = await supabase.from('drivers').select('car_model, car_color, car_plate').eq('id', data.driver_id).single();
+          if (driverCar) {
+            var carStr = '';
+            if (driverCar.car_model) carStr += driverCar.car_model;
+            if (driverCar.car_color) carStr += (carStr ? ' — ' : '') + driverCar.car_color;
+            if (driverCar.car_plate) carStr += (carStr ? ' | ' : '') + driverCar.car_plate;
+            document.getElementById('acceptedCarInfo').textContent = carStr || 'مركبة';
+          }
         }
-        var { data: tripData } = await supabase.from('trips').select('join_code, status').eq('passenger_id', currentUser.id).eq('driver_id', data.driver_id).order('created_at', { ascending: false }).limit(1).maybeSingle();
+        var { data: tripData } = await supabase.from('trips').select('id, join_code, status, total_fare').eq('passenger_id', currentUser.id).eq('driver_id', data.driver_id).order('created_at', { ascending: false }).limit(1).maybeSingle();
         if (tripData) {
           document.getElementById('acceptedTripCode').textContent = tripData.join_code || '-';
-          document.getElementById('acceptedTripStatus').textContent = tripData.status === 'started' ? 'جارية 🟢' : tripData.status === 'assigned' ? 'السائق في الطريق 🚗' : tripData.status;
+          updateAcceptedTripStatusUI(tripData.status, tripData.total_fare);
           if (data.driver_id && tripData.join_code) {
             initAcceptedDriverMap(data.driver_id, tripData.join_code);
+            initPassengerTripRealtime(tripData.id, data.driver_id, data.id);
           }
           currentChatTripId = tripData.id;
-          if (tripData.status === 'assigned' || tripData.status === 'started') {
+          if (tripData.status === 'assigned' || tripData.status === 'arrived' || tripData.status === 'ongoing' || tripData.status === 'started') {
             document.getElementById('track-chat-section').style.display = 'block';
             loadChat('track', currentChatTripId);
           }
@@ -697,6 +750,48 @@
         document.getElementById('cancelRequestBtn').style.display = 'none';
       }
     } catch (e) { console.error(e); }
+  }
+
+  function updateAcceptedTripStatusUI(status, totalFare) {
+    var statusEl = document.getElementById('acceptedTripStatus');
+    var fareRow = document.getElementById('finalFareRow');
+    var fareVal = document.getElementById('finalFareValue');
+    var icon = document.getElementById('acceptedIcon');
+    var title = document.getElementById('acceptedTitle');
+    var subtitle = document.getElementById('acceptedSubtitle');
+    var rateBtn = document.getElementById('rateTripBtn');
+    var trackBtn = document.getElementById('trackTripBtn');
+    if (!statusEl) return;
+    statusEl.style.display = 'block';
+    if (status === 'assigned') {
+      statusEl.textContent = 'السائق في الطريق 🚗';
+      statusEl.style.color = 'var(--accent)';
+    } else if (status === 'arrived') {
+      statusEl.textContent = '✅ وصل السائق إلى مكانك';
+      statusEl.style.color = 'var(--success)';
+      if (title) title.textContent = 'وصل السائق!';
+      if (subtitle) subtitle.textContent = 'السائق في انتظارك';
+    } else if (status === 'ongoing' || status === 'started') {
+      statusEl.textContent = '🔵 الرحلة جارية';
+      statusEl.style.color = '#3b82f6';
+      if (title) title.textContent = 'الرحلة جارية';
+      if (subtitle) subtitle.textContent = 'أنت في رحلة آمنة';
+    } else if (status === 'completed') {
+      statusEl.textContent = '✅ تمت الرحلة بنجاح';
+      statusEl.style.color = 'var(--success)';
+      if (icon) icon.innerHTML = '&#x1F3C1;';
+      if (title) title.textContent = 'تمت الرحلة بنجاح!';
+      if (subtitle) subtitle.textContent = 'شكراً لاستخدامك توقع أجرتك';
+      if (fareRow) { fareRow.style.display = 'flex'; }
+      if (fareVal && totalFare != null) { fareVal.textContent = totalFare + ' ج'; }
+      if (rateBtn) rateBtn.style.display = 'flex';
+      if (trackBtn) trackBtn.style.display = 'none';
+      // Clean up realtime subs
+      if (window._tripRealtimeChannel) { try { supabase.removeChannel(window._tripRealtimeChannel); } catch(e) {} window._tripRealtimeChannel = null; }
+      if (window._driverLocChannel) { try { supabase.removeChannel(window._driverLocChannel); } catch(e) {} window._driverLocChannel = null; }
+      // Open rating modal after short delay
+      setTimeout(function() { openRatingFromAccepted(); }, 1500);
+    }
   }
   window.updateFareEstimate = function() {
     var type = document.getElementById('request-type').value;

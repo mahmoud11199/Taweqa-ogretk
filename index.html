@@ -186,14 +186,35 @@
   </div>
 
   <div id="driver-meter-section">
-    <div id="pending-trip-banner" style="display:none;background:rgba(34,197,94,0.1);border:1px solid var(--success);border-radius:12px;padding:10px 14px;margin-bottom:12px;align-items:center;gap:10px;">
-      <div style="flex:1;">
-        <div style="font-size:13px;font-weight:700;">🚗 طلب راكب منتظر</div>
-        <div style="font-size:12px;color:var(--meter-muted);">كود التتبع: <strong id="pending-trip-code" style="color:var(--success);">-</strong></div>
+    <div id="pending-trip-banner" style="display:none;background:rgba(34,197,94,0.1);border:1px solid var(--success);border-radius:12px;padding:10px 14px;margin-bottom:12px;">
+      <!-- Stage 1: Assigned — driver has accepted, needs to arrive -->
+      <div id="trip-stage-assigned">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <span style="font-size:18px;">🚗</span>
+          <div style="flex:1;font-size:13px;font-weight:700;">طلب راكب منتظر</div>
+        </div>
+        <div style="font-size:12px;color:var(--meter-muted);margin-bottom:8px;">
+          <i class="fas fa-map-pin"></i> <span id="trip-pickup-address">-</span>
+        </div>
+        <button class="btn btn-sm btn-success" onclick="markArrived()" style="padding:6px 14px;font-size:12px;"><i class="fas fa-location-dot"></i> وصلت لمكان الراكب</button>
       </div>
-      <div style="display:flex;gap:6px;">
+      <!-- Stage 2: Arrived — driver has arrived, can start trip -->
+      <div id="trip-stage-arrived" style="display:none;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <span style="font-size:18px;">✅</span>
+          <div style="flex:1;font-size:13px;font-weight:700;">تم الوصول إلى مكان الراكب</div>
+        </div>
+        <div style="font-size:12px;color:var(--meter-muted);margin-bottom:8px;">كود التتبع: <strong id="pending-trip-code" style="color:var(--success);">-</strong></div>
         <button class="btn btn-sm btn-success" onclick="startMeterForAcceptedTrip()" style="padding:6px 14px;font-size:12px;"><i class="fas fa-play"></i> بدء الرحلة</button>
-        <button class="btn btn-sm btn-outline" onclick="dismissAcceptedTrip()" style="padding:6px 10px;font-size:12px;"><i class="fas fa-times"></i></button>
+      </div>
+      <!-- Stage 3: Ongoing — trip is active, show end button -->
+      <div id="trip-stage-ongoing" style="display:none;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <span style="font-size:18px;">🟢</span>
+          <div style="flex:1;font-size:13px;font-weight:700;">الرحلة جارية</div>
+        </div>
+        <div style="font-size:12px;color:var(--meter-muted);margin-bottom:8px;">كود التتبع: <strong id="ongoing-trip-code" style="color:var(--success);">-</strong></div>
+        <button class="btn btn-sm btn-danger" onclick="completeOngoingTrip()" style="padding:6px 14px;font-size:12px;"><i class="fas fa-stop"></i> إنهاء الرحلة</button>
       </div>
     </div>
     <div class="meter-header"><h1>العداد الذكي Pro</h1><p id="globalStatusText">تتبع حي للمسار ونظام ركاب ديناميكي</p></div>
@@ -477,17 +498,20 @@
         <button class="btn btn-danger btn-sm" style="margin-top:14px;width:100%;justify-content:center;display:none;" id="cancelRequestBtn" onclick="cancelPassengerRequest()"><i class="fas fa-times"></i> إلغاء الطلب</button>
       </div>
       <div id="requestAcceptedContent" style="display:none;text-align:center;">
-        <div style="font-size:56px;margin:10px 0;">&#x1F389;</div>
-        <h3 style="margin-bottom:6px;">تم قبول طلبك!</h3>
-        <p style="color:var(--meter-muted);font-size:14px;margin-bottom:14px;">السائق في طريقه إليك</p>
+        <div style="font-size:56px;margin:10px 0;" id="acceptedIcon">&#x1F389;</div>
+        <h3 style="margin-bottom:6px;" id="acceptedTitle">تم قبول طلبك!</h3>
+        <p style="color:var(--meter-muted);font-size:14px;margin-bottom:14px;" id="acceptedSubtitle">السائق في طريقه إليك</p>
         <div class="req-status-detail" style="text-align:right;">
           <div class="row"><span class="lbl">اسم السائق</span><span class="val" id="acceptedDriverName">-</span></div>
+          <div class="row"><span class="lbl">المركبة</span><span class="val" id="acceptedCarInfo">-</span></div>
           <div class="row"><span class="lbl">كود التتبع</span><span class="val" id="acceptedTripCode">-</span></div>
           <div class="row"><span class="lbl">حالة الرحلة</span><span class="val" id="acceptedTripStatus">-</span></div>
+          <div class="row" id="finalFareRow" style="display:none;"><span class="lbl">الأجرة النهائية</span><span class="val" id="finalFareValue" style="color:var(--accent);font-weight:700;">-</span></div>
         </div>
         <div id="accepted-driver-map-container" style="height:140px;border-radius:12px;margin-top:12px;overflow:hidden;border:1px solid var(--meter-border);"></div>
         <div style="display:flex;gap:8px;margin-top:10px;">
-          <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="startTrackingFromRequest()"><i class="fas fa-map-marker-alt"></i> تتبع الرحلة</button>
+          <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="startTrackingFromRequest()" id="trackTripBtn"><i class="fas fa-map-marker-alt"></i> تتبع الرحلة</button>
+          <button class="btn btn-success" style="display:none;flex:1;justify-content:center;" id="rateTripBtn" onclick="openRatingFromAccepted()"><i class="fas fa-star"></i> تقييم السائق</button>
         </div>
       </div>
     </div>
