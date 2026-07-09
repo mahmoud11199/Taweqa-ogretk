@@ -916,3 +916,134 @@
       }
     });
   };
+
+  // ======================== SCHEDULED RIDES ========================
+  var scheduleWaypoints = [];
+  var scheduleMap = null;
+
+  window.initScheduleMap = function() {
+    var el = document.getElementById('schedule-map');
+    if (!el) return;
+    if (scheduleMap) { scheduleMap.invalidateSize(); return; }
+    try {
+      scheduleMap = L.map('schedule-map').setView([30.0444, 31.2357], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(scheduleMap);
+      scheduleWaypoints = [];
+      scheduleMap.on('click', function(e) {
+        scheduleWaypoints.push({ lat: e.latlng.lat, lng: e.latlng.lng });
+        redrawScheduleWaypoints();
+      });
+      setTimeout(function() { if (scheduleMap) scheduleMap.invalidateSize(); }, 300);
+    } catch(e) { console.error('Schedule map init error:', e); }
+  };
+
+  function redrawScheduleWaypoints() {
+    if (!scheduleMap) return;
+    scheduleMap.eachLayer(function(layer) {
+      if (layer._isScheduleWp) scheduleMap.removeLayer(layer);
+      if (layer._isScheduleLine) scheduleMap.removeLayer(layer);
+    });
+    if (scheduleWaypoints.length === 0) return;
+    var markers = [];
+    scheduleWaypoints.forEach(function(wp, i) {
+      var color = i === 0 ? '#22c55e' : i === scheduleWaypoints.length - 1 ? '#ef4444' : '#3b82f6';
+      var m = L.circleMarker([wp.lat, wp.lng], { radius: 7, color: color, fillColor: color, fillOpacity: 0.7 });
+      m._isScheduleWp = true;
+      m.bindTooltip(i === 0 ? '🔵 انطلاق' : i === scheduleWaypoints.length - 1 ? '🔴 وجهة' : 'محطة ' + (i + 1), { direction: 'top' });
+      m.addTo(scheduleMap);
+      markers.push(m);
+    });
+    if (scheduleWaypoints.length >= 2) {
+      var latlngs = scheduleWaypoints.map(function(wp) { return [wp.lat, wp.lng]; });
+      var line = L.polyline(latlngs, { color: '#f59e0b', weight: 3, dashArray: '8,6' });
+      line._isScheduleLine = true;
+      line.addTo(scheduleMap);
+      scheduleMap.fitBounds(line.getBounds().pad(0.1));
+    }
+  }
+
+  window.clearScheduleWaypoints = function() {
+    scheduleWaypoints = [];
+    redrawScheduleWaypoints();
+  };
+
+  window.undoScheduleWaypoint = function() {
+    scheduleWaypoints.pop();
+    redrawScheduleWaypoints();
+  };
+
+  window.createScheduledTrip = async function() {
+    if (!supabase || !currentUser) { showToast('يجب تسجيل الدخول أولاً'); return; }
+    if (scheduleWaypoints.length < 2) { showAlert('schedule-alert', 'يرجى تحديد نقطتين على الأقل (نقطة انطلاق ووجهة)'); return; }
+    var dt = document.getElementById('schedule-datetime').value;
+    if (!dt) { showAlert('schedule-alert', 'يرجى اختيار تاريخ ووقت الرحلة'); return; }
+    var scheduledTime = new Date(dt + ':00').toISOString();
+    if (new Date(scheduledTime).getTime() <= Date.now() + 60000) { showAlert('schedule-alert', 'يجب أن يكون الوقت المحدد بعد دقيقة على الأقل من الآن'); return; }
+    var first = scheduleWaypoints[0];
+    var last = scheduleWaypoints[scheduleWaypoints.length - 1];
+    var count = parseInt(document.getElementById('schedule-passengers').value) || 1;
+    var note = document.getElementById('schedule-note').value.trim();
+    var btn = document.getElementById('schedule-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الجدولة...';
+    try {
+      showAlert('schedule-alert', '', 'success');
+      var { data, error } = await supabase.from('scheduled_trips').insert({
+        passenger_id: currentUser.id,
+        pickup_address: 'نقطة ' + first.lat.toFixed(5) + ', ' + first.lng.toFixed(5),
+        destination_address: 'نقطة ' + last.lat.toFixed(5) + ', ' + last.lng.toFixed(5),
+        pickup_lat: first.lat, pickup_lng: first.lng,
+        destination_lat: last.lat, destination_lng: last.lng,
+        waypoints: scheduleWaypoints,
+        passenger_count: count,
+        note: note || null,
+        scheduled_time: scheduledTime,
+        status: 'scheduled'
+      }).select('id').single();
+      if (error) { showAlert('schedule-alert', error.message); btn.disabled = false; btn.innerHTML = '<i class="fas fa-calendar-check"></i> جدولة الرحلة'; return; }
+      showAlert('schedule-alert', '✅ تم جدولة الرحلة بنجاح! سيتم إرسالها تلقائياً في الوقت المحدد', 'success');
+      scheduleWaypoints = [];
+      redrawScheduleWaypoints();
+      document.getElementById('schedule-datetime').value = '';
+      document.getElementById('schedule-note').value = '';
+      loadScheduledTrips();
+    } catch(e) { showAlert('schedule-alert', e.message); }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-calendar-check"></i> جدولة الرحلة';
+  };
+
+  window.loadScheduledTrips = async function() {
+    if (!supabase || !currentUser) return;
+    var list = document.getElementById('scheduled-trips-list');
+    if (!list) return;
+    try {
+      var { data, error } = await supabase.from('scheduled_trips').select('*').eq('passenger_id', currentUser.id).order('scheduled_time', { ascending: false }).limit(20);
+      if (error || !data || !data.length) {
+        list.innerHTML = '<div class="empty-state">لا توجد رحلات مجدولة</div>';
+        return;
+      }
+      list.innerHTML = data.map(function(t) {
+        var timeStr = new Date(t.scheduled_time).toLocaleString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        var isPast = new Date(t.scheduled_time).getTime() < Date.now();
+        var statusClass = t.status === 'cancelled' ? 'cancelled' : t.status === 'active' || t.status === 'completed' ? 'completed' : '';
+        var statusText = t.status === 'scheduled' ? '⏳ في الانتظار' : t.status === 'processing' ? '🔄 قيد المعالجة' : t.status === 'active' ? '✅ نشطة' : t.status === 'completed' ? '✅ مكتملة' : t.status === 'cancelled' ? '❌ ملغية' : t.status;
+        return '<div class="driver-request-item" style="opacity:' + (t.status === 'cancelled' ? 0.6 : 1) + '">' +
+          '<div class="top"><span class="name"><i class="fas fa-calendar"></i> ' + timeStr + '</span><span class="req-badge ' + statusClass + '">' + statusText + '</span></div>' +
+          '<div class="info"><i class="fas fa-map-pin"></i> ' + escapeHTML(t.pickup_address || '-') + '</div>' +
+          (t.destination_address ? '<div class="info"><i class="fas fa-flag"></i> ' + escapeHTML(t.destination_address) + '</div>' : '') +
+          (t.note ? '<div class="info" style="color:var(--accent);"><i class="fas fa-comment"></i> ' + escapeHTML(t.note) + '</div>' : '') +
+          (t.status === 'scheduled' && !isPast ? '<div class="req-actions"><button class="btn btn-danger btn-sm" onclick="cancelScheduledTrip(\'' + t.id + '\')"><i class="fas fa-times"></i> إلغاء</button></div>' : '') +
+          '</div>';
+      }).join('');
+    } catch(e) { list.innerHTML = '<div class="empty-state">خطأ في التحميل</div>'; console.error(e); }
+  };
+
+  window.cancelScheduledTrip = async function(tripId) {
+    if (!confirm('هل أنت متأكد من إلغاء هذه الرحلة المجدولة؟')) return;
+    try {
+      var { error } = await supabase.from('scheduled_trips').update({ status: 'cancelled', updated_at: new Date().toISOString() }).eq('id', tripId).eq('passenger_id', currentUser.id);
+      if (error) { showToast('❌ فشل الإلغاء: ' + error.message); return; }
+      showToast('✅ تم إلغاء الرحلة المجدولة');
+      loadScheduledTrips();
+    } catch(e) { showToast('❌ فشل'); console.error(e); }
+  };

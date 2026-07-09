@@ -354,6 +354,7 @@
   <div class="app-nav">
     <button class="tab-btn active" onclick="switchPassengerTab('track', this)"><span class="tab-icon">&#x1F4CD;</span>تتبع</button>
     <button class="tab-btn" onclick="switchPassengerTab('request', this)"><span class="tab-icon">&#x1F680;</span>طلب رحلة</button>
+    <button class="tab-btn" onclick="switchPassengerTab('schedule', this);setTimeout(loadScheduledTrips,100)"><span class="tab-icon">&#x1F4C5;</span>جدولة</button>
     <button class="tab-btn" onclick="switchPassengerTab('history', this);setTimeout(loadPassengerHistory,100)"><span class="tab-icon">&#x1F4DC;</span>تاريخي</button>
     <button class="tab-btn" onclick="switchPassengerTab('profile', this)"><span class="tab-icon">&#x1F464;</span>حسابي</button>
     <button class="tab-btn" onclick="switchPassengerTab('wallet', this);setTimeout(loadWallet,100)"><span class="tab-icon">&#x1F4B0;</span>المحفظة</button>
@@ -514,6 +515,27 @@
           <button class="btn btn-success" style="display:none;flex:1;justify-content:center;" id="rateTripBtn" onclick="openRatingFromAccepted()"><i class="fas fa-star"></i> تقييم السائق</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <div id="passenger-schedule-section" style="display:none">
+    <div class="meter-header"><h1>جدولة رحلة</h1><p>احجز رحلة مسبقة ليتم إرسالها تلقائياً في الوقت المحدد</p></div>
+    <div class="card" style="padding:12px;">
+      <div class="auth-alert" id="schedule-alert"></div>
+      <div id="schedule-map" style="height:200px;border-radius:12px;margin-bottom:8px;border:1px solid var(--meter-border);"></div>
+      <div style="text-align:center;font-size:12px;color:var(--meter-muted);margin-bottom:8px;">اضغط على الخريطة لإضافة نقاط (نقطة انطلاق + وجهة)</div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;">
+        <button class="btn btn-sm btn-outline" onclick="clearScheduleWaypoints()" style="flex:1;font-size:11px;padding:6px;"><i class="fas fa-trash"></i> مسح</button>
+        <button class="btn btn-sm btn-outline" onclick="undoScheduleWaypoint()" style="flex:1;font-size:11px;padding:6px;"><i class="fas fa-undo"></i> تراجع</button>
+      </div>
+      <div class="form-row"><label>التاريخ والوقت</label><input type="datetime-local" id="schedule-datetime" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--meter-border);background:rgba(255,255,255,0.05);color:#fff;font-family:inherit;font-size:14px;"></div>
+      <div class="form-row"><label>عدد الركاب</label><input type="number" id="schedule-passengers" value="1" min="1" max="10"></div>
+      <div class="form-row"><label>ملاحظة (اختياري)</label><textarea id="schedule-note" placeholder="ملاحظة للسائق..." maxlength="200" style="width:100%;padding:8px;border-radius:10px;border:1px solid var(--meter-border);background:rgba(255,255,255,0.05);color:#fff;font-family:inherit;font-size:12px;resize:none;height:50px;"></textarea></div>
+      <button class="btn btn-accent" onclick="createScheduledTrip()" id="schedule-btn" style="width:100%;justify-content:center;margin-top:6px;"><i class="fas fa-calendar-check"></i> جدولة الرحلة</button>
+    </div>
+    <div class="card" style="padding:12px;margin-top:12px;">
+      <h4 style="margin-bottom:8px;"><i class="fas fa-list"></i> رحلاتي المجدولة</h4>
+      <div id="scheduled-trips-list"><div class="empty-state">لا توجد رحلات مجدولة</div></div>
     </div>
   </div>
 

@@ -36,7 +36,7 @@
   window.switchDriverTab = switchDriverTab;
 
   function switchPassengerTab(tab, btn) {
-    ['track','request','request-status','history','profile','wallet'].forEach(function(t) {
+    ['track','request','request-status','schedule','history','profile','wallet'].forEach(function(t) {
       var el = document.getElementById('passenger-' + t + '-section');
       if (el) el.style.display = t === tab ? 'block' : 'none';
     });
@@ -55,6 +55,13 @@
       }, 300);
     }
     if (tab === 'track') { setTimeout(autoLoadActiveTrip, 200); }
+    if (tab === 'schedule') {
+      setTimeout(function() {
+        if (typeof initScheduleMap === 'function') initScheduleMap();
+        if (scheduleMap) scheduleMap.invalidateSize();
+        if (typeof loadScheduledTrips === 'function') loadScheduledTrips();
+      }, 300);
+    }
     if (tab === 'history') {
       if (typeof loadPassengerRequests === 'function') loadPassengerRequests();
       if (typeof loadPassengerHistory === 'function') loadPassengerHistory();
