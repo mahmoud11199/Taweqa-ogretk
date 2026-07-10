@@ -320,6 +320,10 @@
   </div>
 
   <div id="driver-meter-section">
+    <!-- Full-bleed map background -->
+    <div id="map" class="map-bleed"></div>
+    <!-- Glass overlay content -->
+    <div class="meter-glass-overlay">
     <div id="pending-trip-banner" style="display:none;background:rgba(34,197,94,0.1);border:1px solid var(--success);border-radius:12px;padding:10px 14px;margin-bottom:12px;">
       <!-- Stage 1: Assigned — driver has accepted, needs to arrive -->
       <div id="trip-stage-assigned">
@@ -351,48 +355,119 @@
         <button class="btn btn-sm btn-danger" onclick="completeOngoingTrip()" style="padding:6px 14px;font-size:12px;"><i class="fas fa-stop"></i> إنهاء الرحلة</button>
       </div>
     </div>
-    <div class="meter-header"><h1>العداد الذكي Pro</h1><p id="globalStatusText">تتبع حي للمسار ونظام ركاب ديناميكي</p></div>
-    <div class="meter-selector">
-      <div id="meterTab_1" class="meter-tab active" onclick="switchActiveMeterUI(1)"><span id="dot_1" class="meter-status-dot"></span>عداد 1</div>
-      <div id="meterTab_2" class="meter-tab" onclick="switchActiveMeterUI(2)"><span id="dot_2" class="meter-status-dot"></span>عداد 2</div>
-    </div>
-    <div class="card" id="setupSection">
-      <div class="form-row"><label>نوع الرحلة:</label><select id="tripType" onchange="onTripTypeChanged()"><option value="makhsoos">مخصوص</option><option value="afrad">أفراد (خط/مشترك)</option></select></div>
-      <div class="form-row" id="kmPriceGroup"><label>سعر الكيلو (ج):</label><input type="number" id="kmPriceInput" value="5" min="1" max="50"></div>
-      <div class="form-row"><label>دقيقة الانتظار (ج):</label><input type="number" id="waitPriceInput" value="1" min="0" max="20"></div>
-      <div class="form-row"><label>دقيقة الوقت (ج):</label><input type="number" id="durationPriceInput" value="0.50" step="0.10" min="0" max="10"></div>
-    </div>
-    <div class="card main-meter">
-      <div>
-        <span class="trip-type-badge" id="currentTypeDisplay">-</span>
-        <span class="passengers-badge" id="passengersBadge">&#x1F465; ركاب: 1</span>
-        <span class="waiting-badge" id="waitingBadge">&#x23F3; انتظار</span>
-        <span class="paused-badge" id="pausedBadge">&#x1F6D1; موقوف</span>
+      <!-- Header: 3 stat icons + status pill + unified title + tabs -->
+      <div class="meter-header-glass">
+        <div class="header-glass-icons">
+          <div class="header-glass-icon">
+            <div class="icon-circle"><i class="fas fa-road"></i></div>
+            <span class="icon-label">رحلاتي</span>
+            <span class="icon-value" id="driver-stat-trips">0</span>
+          </div>
+          <div class="header-glass-icon">
+            <div class="icon-circle"><i class="fas fa-star"></i></div>
+            <span class="icon-label">التقييم</span>
+            <span class="icon-value" id="driver-stat-rating">-</span>
+          </div>
+          <div class="header-glass-icon">
+            <div class="icon-circle"><i class="fas fa-wallet"></i></div>
+            <span class="icon-label">المحفظة</span>
+            <span class="icon-value" id="driver-stat-revenue">0</span>
+          </div>
+        </div>
+        <div class="header-mid-row">
+          <div class="status-pill-glass" id="statusPill">
+            <span class="status-dot-glass"></span>
+            <span id="globalStatusText">عداد 1 &#x2022; جاهز</span>
+          </div>
+          <div class="meter-tabs-glass">
+            <div id="meterTab_1" class="meter-tab active" onclick="switchActiveMeterUI(1)"><span id="dot_1" class="meter-status-dot"></span>عداد 1</div>
+            <div id="meterTab_2" class="meter-tab" onclick="switchActiveMeterUI(2)"><span id="dot_2" class="meter-status-dot"></span>عداد 2</div>
+          </div>
+        </div>
+        <h1 class="meter-title-neon">عدادي الذكي</h1>
       </div>
-      <div class="fare-display" id="totalFareDisplay">0.00 ج</div>
-      <div class="meter-stats">
-        <div class="stat-box"><h3>المسافة</h3><div class="value"><span id="distDisplay">0.00</span> كم</div></div>
-        <div class="stat-box"><h3>الزمن</h3><div class="value"><span id="durationDisplay">0</span> د</div></div>
-        <div class="stat-box"><h3>الانتظار</h3><div class="value"><span id="waitDisplay">0</span> د</div></div>
+      <!-- Central Fare Smart Card -->
+      <div class="glass-card fare-smart-card">
+        <div class="fare-badges">
+          <span class="badge-glass badge-type" id="currentTypeDisplay">&#x2022; مخصوص</span>
+          <span class="badge-glass badge-passengers" id="passengersBadge">&#x1F465; ركاب: 1</span>
+          <span class="badge-glass badge-waiting" id="waitingBadge" style="display:none">&#x23F3; انتظار</span>
+          <span class="badge-glass badge-paused" id="pausedBadge" style="display:none">&#x1F6D1; موقوف</span>
+        </div>
+        <div class="fare-neon">
+          <span class="fare-amount" id="totalFareDisplay">0.00 ج</span>
+        </div>
+        <div class="meter-stats-bar">
+          <div class="stat-cell">
+            <div class="stat-data">
+              <span class="stat-num"><span id="distDisplay">0.00</span></span>
+              <span class="stat-unit">كم</span>
+            </div>
+            <div class="stat-icon-label">المسافة</div>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-cell">
+            <div class="stat-data">
+              <span class="stat-num"><span id="durationDisplay">0</span></span>
+              <span class="stat-unit">د</span>
+            </div>
+            <div class="stat-icon-label">الزمن</div>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-cell">
+            <div class="stat-data">
+              <span class="stat-num"><span id="waitDisplay">0</span></span>
+              <span class="stat-unit">د</span>
+            </div>
+            <div class="stat-icon-label">الانتظار</div>
+          </div>
+        </div>
       </div>
-    </div>
-    <div class="card">
-      <div class="btn-grid">
-        <button class="btn btn-start" id="startBtn" onclick="startCurrentMeter()">بدء العداد</button>
-        <button class="btn btn-stop" id="stopBtn" onclick="stopCurrentMeter()" disabled>إنهاء وتصفية</button>
-        <button class="btn btn-pause" id="pauseBtn" onclick="togglePauseCurrentMeter()" disabled>&#x1F6D1; إيقاف مؤقت</button>
-        <button class="btn btn-dynamic" id="dynamicActionBtn" onclick="handleDynamicActionButton()" disabled>&#x2699;&#xFE0F; إجراء على الركاب</button>
-        <button class="btn btn-secondary2" onclick="triggerManualDistance()">&#x1F4E1; GPS ضعيف (يدوي)</button>
-        <button class="btn btn-secondary2" style="color:var(--error);" onclick="resetCurrentMeterData()">تصفير العداد</button>
+      <!-- Compact Settings Panel -->
+      <div class="glass-card settings-glass" id="setupSection">
+        <div class="settings-toggle" onclick="this.parentElement.classList.toggle('expanded')">
+          <span>&#x2699;&#xFE0F; الإعدادات</span>
+          <span class="toggle-arrow">&#x25BC;</span>
+        </div>
+        <div class="settings-body">
+          <div class="settings-row">
+            <span class="settings-label">نوع الرحلة</span>
+            <select id="tripType" onchange="onTripTypeChanged()"><option value="makhsoos">مخصوص</option><option value="afrad">أفراد (خط/مشترك)</option></select>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">&#x1F4CD; سعر الكيلو</span>
+            <input type="number" id="kmPriceInput" value="5" min="1" max="50">
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">&#x23F3; دقيقة الانتظار</span>
+            <input type="number" id="waitPriceInput" value="1" min="0" max="20">
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">&#x23F1;&#xFE0F; دقيقة الوقت</span>
+            <input type="number" id="durationPriceInput" value="0.50" step="0.10" min="0" max="10">
+          </div>
+        </div>
       </div>
-    </div>
-    <div class="card"><div id="map"></div></div>
-    <div class="card chat-panel" id="driver-chat-section" style="display:none">
-      <h4><i class="fas fa-comments"></i> محادثة مع الراكب</h4>
-      <div class="chat-messages" id="chatMessagesDriver"></div>
-      <div class="chat-input-row">
-        <input type="text" id="chatInputDriver" placeholder="اكتب رسالة..." onkeydown="if(event.key==='Enter')sendChatMessage('driver')">
-        <button class="btn btn-primary btn-sm" onclick="sendChatMessage('driver')"><i class="fas fa-paper-plane"></i></button>
+      <!-- Primary Action Buttons -->
+      <div class="action-row-glass">
+        <button class="btn-action btn-start-glass" id="startBtn" onclick="startCurrentMeter()"><span class="btn-icon">&#x25B6;</span><span class="btn-text">بدء العداد</span></button>
+        <button class="btn-action btn-stop-glass" id="stopBtn" onclick="stopCurrentMeter()" disabled><span class="btn-icon">&#x25A0;</span><span class="btn-text">إنهاء وتصفية</span></button>
+      </div>
+      <!-- Secondary Actions -->
+      <div class="actions-secondary">
+        <button class="btn-secondary-glass" id="pauseBtn" onclick="togglePauseCurrentMeter()" disabled>&#x23F8;&#xFE0F; إيقاف مؤقت</button>
+        <button class="btn-secondary-glass" id="dynamicActionBtn" onclick="handleDynamicActionButton()" disabled>&#x2699;&#xFE0F; إجراء</button>
+        <button class="btn-secondary-glass" onclick="triggerManualDistance()">&#x1F4E1; GPS ضعيف</button>
+        <button class="btn-secondary-glass btn-reset-glass" onclick="resetCurrentMeterData()">&#x1F5D1;&#xFE0F; تصفير</button>
+      </div>
+      <!-- Chat Panel -->
+      <div class="glass-card chat-glass" id="driver-chat-section" style="display:none">
+        <h4 style="font-size:13px;margin-bottom:8px;color:var(--text-muted);"><i class="fas fa-comments"></i> محادثة مع الراكب</h4>
+        <div class="chat-messages" id="chatMessagesDriver"></div>
+        <div class="chat-input-row">
+          <input type="text" id="chatInputDriver" placeholder="اكتب رسالة..." onkeydown="if(event.key==='Enter')sendChatMessage('driver')">
+          <button class="btn btn-primary btn-sm" onclick="sendChatMessage('driver')"><i class="fas fa-paper-plane"></i></button>
+        </div>
       </div>
     </div>
   </div>
