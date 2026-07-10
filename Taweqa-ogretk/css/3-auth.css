@@ -29,3 +29,31 @@
 .loader-dots span:nth-child(1) { animation-delay: -0.32s; }
 .loader-dots span:nth-child(2) { animation-delay: -0.16s; }
 @keyframes dotBounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+
+/* Driver Type Selector */
+.auth-divider { display: flex; align-items: center; gap: 12px; margin: 16px 0 12px; font-size: 13px; color: var(--text-muted); font-weight: 700; }
+.auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--glass-border); }
+.auth-divider span { white-space: nowrap; }
+.driver-type-selector { display: flex; gap: 8px; margin-bottom: 6px; }
+.dtype-btn { flex: 1; padding: 12px 6px; border-radius: 12px; border: 2px solid var(--glass-border); background: transparent; color: var(--text-muted); font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.3s; font-family: inherit; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.dtype-btn .dtype-icon { font-size: 24px; }
+.dtype-btn:hover { border-color: var(--primary); background: rgba(102,126,234,0.08); }
+.dtype-btn.active { border-color: var(--primary); background: rgba(102,126,234,0.12); color: var(--primary); }
+.driver-fields { transition: all 0.3s; }
+.field-row { display: flex; gap: 10px; margin-bottom: 0; }
+.upload-field { margin-bottom: 14px; text-align: right; }
+.upload-field label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; }
+.upload-field label i { width: 18px; color: var(--primary); }
+.file-input { width: 100%; padding: 10px; border: 1px dashed var(--glass-border); border-radius: 12px; font-size: 13px; background: rgba(255,255,255,0.03); color: var(--text); outline: none; font-family: inherit; cursor: pointer; transition: border-color 0.3s; min-height: 44px; }
+.file-input:focus { border-color: var(--primary); }
+.file-input::file-selector-button { background: var(--primary); color: #fff; border: none; padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; margin-left: 10px; font-family: inherit; }
+.file-input::file-selector-button:hover { background: var(--primary-dark); }
+.file-status { font-size: 11px; margin-top: 4px; min-height: 16px; }
+.file-status.success { color: var(--success); }
+.file-status.error { color: var(--error); }
+@media (max-width: 600px) {
+  .driver-type-selector { flex-direction: row; gap: 6px; }
+  .dtype-btn { padding: 10px 4px; font-size: 11px; }
+  .dtype-btn .dtype-icon { font-size: 20px; }
+  .field-row { flex-direction: column; gap: 0; }
+}

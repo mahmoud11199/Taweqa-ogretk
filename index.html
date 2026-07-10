@@ -12,6 +12,17 @@
   <link rel="apple-touch-icon" href="Taweqa-ogretk/icons/Icon-192.png">
   <link rel="icon" type="image/png" href="Taweqa-ogretk/favicon.png">
   <title>توقع أجرتك - تطبيق التوك توك الذكي</title>
+  <meta property="og:title" content="توقع أجرتك - تطبيق التوك توك الذكي">
+  <meta property="og:description" content="التطبيق الذكي لسائقي وركاب التوك توك — احسب أجرتك بدقة، تابع رحلتك، وحافظ على أرباحك">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://mahmoud11199.github.io/Taweqa-ogretk/">
+  <meta property="og:image" content="https://mahmoud11199.github.io/Taweqa-ogretk/Taweqa-ogretk/icons/Icon-512.png">
+  <meta property="og:locale" content="ar_AR">
+  <meta property="og:site_name" content="توقع أجرتك">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="توقع أجرتك - تطبيق التوك توك الذكي">
+  <meta name="twitter:description" content="التطبيق الذكي لسائقي وركاب التوك توك — احسب أجرتك بدقة، تابع رحلتك، وحافظ على أرباحك">
+  <meta name="twitter:image" content="https://mahmoud11199.github.io/Taweqa-ogretk/Taweqa-ogretk/icons/Icon-512.png">
   <link rel="manifest" href="Taweqa-ogretk/manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -45,7 +56,79 @@
       <button class="btn btn-outline" onclick="showAuth('login')"><i class="fas fa-sign-in-alt"></i> تسجيل دخول</button>
     </div>
   </section>
-  <section class="stats-section" id="stats">
+  <section class="calc-section" id="quick-calculator">
+    <div class="container">
+      <h2 class="section-title reveal">احسب <span class="gradient">أجرتك</span> الآن</h2>
+      <p class="section-subtitle reveal">اختر المحافظة ونوع المركبة لتحصل على تقدير فوري للأجرة</p>
+      <div class="calc-card reveal" id="calcCard">
+        <div class="calc-alert" id="calc-alert"></div>
+        <div class="calc-row">
+          <div class="calc-field">
+            <label><i class="fas fa-city"></i> المحافظة</label>
+            <select id="calc-governorate">
+              <option value="">-- اختر المحافظة --</option>
+              <option value="cairo">القاهرة</option>
+              <option value="giza">الجيزة</option>
+              <option value="alex">الإسكندرية</option>
+              <option value="dakahlia">الدقهلية</option>
+              <option value="sharqia">الشرقية</option>
+              <option value="qalubia">القليوبية</option>
+              <option value="gharbia">الغربية</option>
+              <option value="beheira">البحيرة</option>
+              <option value="monufia">المنوفية</option>
+              <option value="kafr">كفر الشيخ</option>
+              <option value="damietta">دمياط</option>
+              <option value="ismailia">الإسماعيلية</option>
+              <option value="suez">السويس</option>
+              <option value="portsaid">بورسعيد</option>
+              <option value="minya">المنيا</option>
+              <option value="assiut">أسيوط</option>
+              <option value="sohag">سوهاج</option>
+              <option value="qena">قنا</option>
+              <option value="luxor">الأقصر</option>
+              <option value="aswan">أسوان</option>
+              <option value="fayoum">الفيوم</option>
+              <option value="benisuef">بني سويف</option>
+              <option value="matrouh">مطروح</option>
+              <option value="redsea">البحر الأحمر</option>
+              <option value="northsinai">شمال سيناء</option>
+              <option value="southsinai">جنوب سيناء</option>
+              <option value="newvalley">الوادي الجديد</option>
+            </select>
+          </div>
+          <div class="calc-field">
+            <label><i class="fas fa-motorcycle"></i> نوع المركبة</label>
+            <select id="calc-vehicle">
+              <option value="">-- اختر نوع المركبة --</option>
+              <option value="tuk-tuk">توك توك</option>
+              <option value="microbus">ميكروباص</option>
+              <option value="taxi">تاكسي</option>
+              <option value="private-car">سيارة خاصة</option>
+            </select>
+          </div>
+        </div>
+        <div class="calc-divider"></div>
+        <div class="calc-field" style="margin-bottom:0;">
+          <label><i class="fas fa-arrows-alt-h"></i> المسافة التقريبية (كم)</label>
+          <div class="calc-distance-group">
+            <input type="number" id="calc-distance" placeholder="مثلاً: 5 كم" min="0.1" max="200" step="0.5">
+            <button class="btn btn-sm btn-primary" id="calc-gps-btn" onclick="calcUseMyLocation()" style="padding:8px 14px;border-radius:12px;font-size:12px;white-space:nowrap;"><i class="fas fa-location-dot"></i> موقعي</button>
+          </div>
+          <div id="calc-gps-status" style="font-size:11px;color:var(--text-muted);margin-top:4px;display:none;"></div>
+        </div>
+        <div class="calc-divider"></div>
+        <button class="btn btn-accent btn-calc" id="calc-btn" onclick="quickCalcFare()"><i class="fas fa-calculator"></i> احسب أجرتك</button>
+        <div id="calc-result" style="display:none;">
+          <div class="calc-result-row"><span>المحافظة:</span><strong id="calc-r-governorate">-</strong></div>
+          <div class="calc-result-row"><span>المركبة:</span><strong id="calc-r-vehicle">-</strong></div>
+          <div class="calc-result-row"><span>المسافة:</span><strong id="calc-r-distance">0 كم</strong></div>
+          <div class="calc-divider"></div>
+          <div class="calc-final-fare" id="calc-r-fare">0 ج.م</div>
+          <p style="font-size:11px;color:var(--text-muted);margin-top:6px;">* تقدير أولي — السعر النهائي حسب العداد والاتفاق مع السائق</p>
+        </div>
+      </div>
+    </div>
+  </section>
     <div class="container">
       <h2 class="section-title reveal">إحصائيات المنصة</h2>
       <p class="section-subtitle reveal">نمو مستمر وأرقام تتحدث عن نفسها</p>
@@ -118,13 +201,64 @@
       <button class="role-btn" id="role-driver" onclick="selectRole('driver')">&#x1F697; سائق</button>
       <button class="role-btn active" id="role-passenger" onclick="selectRole('passenger')">&#x1F464; راكب</button>
     </div>
+    <!-- Driver Type Selector (shown only when role = driver) -->
+    <div id="driver-type-section" style="display:none;">
+      <div class="auth-divider"><span>نوع السائق</span></div>
+      <div class="driver-type-selector">
+        <button class="dtype-btn" data-type="private" onclick="selectDriverType('private')"><span class="dtype-icon">&#x1F697;</span>ملاكي</button>
+        <button class="dtype-btn" data-type="tuk-tuk" onclick="selectDriverType('tuk-tuk')"><span class="dtype-icon">&#x1F3CD;</span>توك توك</button>
+        <button class="dtype-btn" data-type="motorcycle" onclick="selectDriverType('motorcycle')"><span class="dtype-icon">&#x1F3CD;</span>موتوسيكل</button>
+      </div>
+      <input type="hidden" id="reg-driver-type" value="">
+    </div>
+
+    <!-- Private Car Fields (ملاكي) -->
+    <div id="driver-fields-private" class="driver-fields" style="display:none;">
+      <div class="auth-divider"><span>بيانات المركبة — ملاكي</span></div>
+      <div class="field"><label><i class="fas fa-car"></i> رقم السيارة (اللوحة)</label><input type="text" id="dprivate-plate" placeholder="مثلاً: س ج ب 1234" maxlength="20"></div>
+      <div class="field-row">
+        <div class="field" style="flex:1;"><label>الموديل</label><input type="text" id="dprivate-model" placeholder="مثلاً: شاهين" maxlength="50"></div>
+        <div class="field" style="flex:1;"><label>سنة الصنع</label><input type="number" id="dprivate-year" placeholder="2024" min="1990" max="2030"></div>
+      </div>
+      <div class="auth-divider"><span>المستندات — ملاكي</span></div>
+      <div class="upload-field"><label><i class="fas fa-id-card"></i> رخصة القيادة الشخصية</label><input type="file" id="dprivate-license" accept="image/*" class="file-input"><div class="file-status" id="dprivate-license-status"></div></div>
+      <div class="upload-field"><label><i class="fas fa-file-contract"></i> رخصة السيارة</label><input type="file" id="dprivate-car-license" accept="image/*" class="file-input"><div class="file-status" id="dprivate-car-license-status"></div></div>
+      <div class="upload-field"><label><i class="fas fa-shield-alt"></i> الفيش والتشبيه (صحيفة الحالة الجنائية)</label><input type="file" id="dprivate-criminal" accept="image/*,.pdf" class="file-input"><div class="file-status" id="dprivate-criminal-status"></div></div>
+    </div>
+
+    <!-- Tuk-Tuk Fields -->
+    <div id="driver-fields-tuk-tuk" class="driver-fields" style="display:none;">
+      <div class="auth-divider"><span>بيانات التوك توك</span></div>
+      <div class="field"><label><i class="fas fa-id-card"></i> الرقم القومي لصاحب التوك توك</label><input type="text" id="dtuktuk-national" placeholder="14 رقماً" maxlength="14" inputmode="numeric"></div>
+      <div class="field-row">
+        <div class="field" style="flex:1;"><label>رقم الشاسيه / الموتور</label><input type="text" id="dtuktuk-chassis" placeholder="إن وجد" maxlength="30"></div>
+        <div class="field" style="flex:1;"><label>المنطقة / الحي التجاري</label><input type="text" id="dtuktuk-area" placeholder="مثلاً: بولاق الدكرور" maxlength="50"></div>
+      </div>
+      <div class="auth-divider"><span>المستندات — توك توك</span></div>
+      <div class="upload-field"><label><i class="fas fa-id-card"></i> صورة بطاقة الرقم القومي (وجه)</label><input type="file" id="dtuktuk-id-front" accept="image/*" class="file-input"><div class="file-status" id="dtuktuk-id-front-status"></div></div>
+      <div class="upload-field"><label><i class="fas fa-id-card"></i> صورة بطاقة الرقم القومي (ظهر)</label><input type="file" id="dtuktuk-id-back" accept="image/*" class="file-input"><div class="file-status" id="dtuktuk-id-back-status"></div></div>
+      <div class="upload-field"><label><i class="fas fa-file-signature"></i> عقد شراء / مبايعة التوك توك</label><input type="file" id="dtuktuk-contract" accept="image/*,.pdf" class="file-input"><div class="file-status" id="dtuktuk-contract-status"></div></div>
+      <div class="upload-field"><label><i class="fas fa-video"></i> فيديو إثبات الهوية الشخصية</label><input type="file" id="dtuktuk-video" accept="video/*" class="file-input"><div class="file-status" id="dtuktuk-video-status"></div></div>
+    </div>
+
+    <!-- Motorcycle Fields -->
+    <div id="driver-fields-motorcycle" class="driver-fields" style="display:none;">
+      <div class="auth-divider"><span>بيانات الموتوسيكل</span></div>
+      <div class="field"><label><i class="fas fa-motorcycle"></i> رقم اللوحة</label><input type="text" id="dmoto-plate" placeholder="مثلاً: ر ق أ 567" maxlength="20"></div>
+      <div class="field"><label><i class="fas fa-tag"></i> الماركة / الموديل</label><input type="text" id="dmoto-model" placeholder="مثلاً: هوندا سي 90" maxlength="50"></div>
+      <div class="auth-divider"><span>المستندات — موتوسيكل</span></div>
+      <div class="upload-field"><label><i class="fas fa-id-card"></i> رخصة قيادة الدراجة النارية</label><input type="file" id="dmoto-license" accept="image/*" class="file-input"><div class="file-status" id="dmoto-license-status"></div></div>
+      <div class="upload-field"><label><i class="fas fa-file-contract"></i> رخصة الموتوسيكل</label><input type="file" id="dmoto-bike-license" accept="image/*" class="file-input"><div class="file-status" id="dmoto-bike-license-status"></div></div>
+      <div class="upload-field"><label><i class="fas fa-id-card"></i> صورة بطاقة الرقم القومي</label><input type="file" id="dmoto-national-id" accept="image/*" class="file-input"><div class="file-status" id="dmoto-national-id-status"></div></div>
+    </div>
+
     <div class="field"><label>الاسم الكامل</label><input type="text" id="reg-name" placeholder="الاسم ثلاثي" autocomplete="name"></div>
     <div class="field"><label>البريد الإلكتروني</label><input type="email" id="reg-email" placeholder="example@email.com" autocomplete="email"></div>
     <div class="field"><label>رقم الهاتف</label><input type="tel" id="reg-phone" placeholder="01XXXXXXXXX" pattern="^01[0-9]{9}$" title="أدخل رقم هاتف مصري صحيح (01XXXXXXXXX)" autocomplete="tel"></div>
     <div class="field"><label>كلمة السر (6 أحرف على الأقل)</label><input type="password" id="reg-password" placeholder="كلمة السر" minlength="6" autocomplete="new-password"><div class="password-strength" id="reg-password-strength"></div></div>
     <div class="field"><label>تأكيد كلمة السر</label><input type="password" id="reg-confirm" placeholder="أعد إدخال كلمة السر"><div class="error-msg" id="reg-password-error">كلمة السر غير متطابقة</div></div>
     <div class="field"><label>كود الإحالة (اختياري)</label><input type="text" id="reg-ref" placeholder="مثلاً: ABC12345" maxlength="10" style="text-transform:uppercase;letter-spacing:2px;"></div>
-    <button class="btn btn-accent" id="register-btn" onclick="handleRegister()"><i class="fas fa-user-plus"></i> <span id="register-btn-text">تسجيل كراكب</span></button>
+    <button class="btn btn-accent" id="register-btn" onclick="handleRegister()"><i class="fas fa-user-plus"></i> <span id="register-btn-text">تسجيل</span></button>
     <div id="register-loading" class="hidden-el"><div class="loader-dots"><span></span><span></span><span></span></div></div>
     <div class="auth-link">لديك حساب؟ <a onclick="showAuthForm('login')">تسجيل دخول</a></div>
   </div>

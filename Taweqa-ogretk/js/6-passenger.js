@@ -628,31 +628,31 @@
             acceptedDriverMap.setView([driverLoc.current_lat, driverLoc.current_lng], 15);
           }
         } catch(e) { console.error('Driver location poll error:', e); }
-        // Also check trip status as backup to Realtime
-      }, 15000);
-        var { data: tripUpd } = await supabase.from('trips').select('id, status').eq('join_code', tripCode).order('created_at', { ascending: false }).limit(1).maybeSingle();
-        if (tripUpd) {
-          if (tripUpd.status === 'started') {
-            clearInterval(acceptedDriverLocTimer);
-            document.getElementById('acceptedTripStatus').textContent = 'جارية 🟢';
-            if (tripUpd.id) currentChatTripId = tripUpd.id;
-            try { var ctx = new (window.AudioContext || window.webkitAudioContext)(); var osc = ctx.createOscillator(); osc.frequency.value = 880; osc.type = 'sine'; var gain = ctx.createGain(); gain.gain.value = 0.4; osc.connect(gain); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.5); } catch(e) {}
-            setTimeout(function() {
-              switchPassengerTab('track', document.querySelector('#passenger-app .tab-btn'));
-              document.getElementById('track-code').value = tripCode;
-              trackTrip(tripCode);
-            }, 1500);
-          } else if (tripUpd.status === 'completed') {
-            clearInterval(acceptedDriverLocTimer);
-            showToast('✅ تم إنهاء الرحلة');
-            setTimeout(function() {
-              switchPassengerTab('track', document.querySelector('#passenger-app .tab-btn'));
-              document.getElementById('track-code').value = tripCode;
-              trackTrip(tripCode);
-            }, 1000);
+        try {
+          var { data: tripUpd } = await supabase.from('trips').select('id, status').eq('join_code', tripCode).order('created_at', { ascending: false }).limit(1).maybeSingle();
+          if (tripUpd) {
+            if (tripUpd.status === 'started') {
+              clearInterval(acceptedDriverLocTimer);
+              document.getElementById('acceptedTripStatus').textContent = 'جارية 🟢';
+              if (tripUpd.id) currentChatTripId = tripUpd.id;
+              try { var ctx = new (window.AudioContext || window.webkitAudioContext)(); var osc = ctx.createOscillator(); osc.frequency.value = 880; osc.type = 'sine'; var gain = ctx.createGain(); gain.gain.value = 0.4; osc.connect(gain); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.5); } catch(e) {}
+              setTimeout(function() {
+                switchPassengerTab('track', document.querySelector('#passenger-app .tab-btn'));
+                document.getElementById('track-code').value = tripCode;
+                trackTrip(tripCode);
+              }, 1500);
+            } else if (tripUpd.status === 'completed') {
+              clearInterval(acceptedDriverLocTimer);
+              showToast('✅ تم إنهاء الرحلة');
+              setTimeout(function() {
+                switchPassengerTab('track', document.querySelector('#passenger-app .tab-btn'));
+                document.getElementById('track-code').value = tripCode;
+                trackTrip(tripCode);
+              }, 1000);
+            }
           }
-        }
-      }, 4000);
+        } catch(e) { console.error('Trip status poll error:', e); }
+      }, 15000);
       setTimeout(function() { if (acceptedDriverMap) acceptedDriverMap.invalidateSize(); }, 300);
     } catch(e) { console.error(e); }
   }

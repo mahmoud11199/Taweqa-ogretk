@@ -133,6 +133,95 @@ window.toggleFaq = function(el) {
   if (a) a.classList.toggle('open');
 };
 
+// --- Quick Fare Calculator ---
+var calcGovernoratePrices = {
+  cairo: { tuk_tuk: { base: 8, per_km: 3 }, microbus: { base: 5, per_km: 2 }, taxi: { base: 12, per_km: 4.5 }, private_car: { base: 10, per_km: 3.5 } },
+  giza: { tuk_tuk: { base: 7, per_km: 3 }, microbus: { base: 5, per_km: 2 }, taxi: { base: 11, per_km: 4 }, private_car: { base: 10, per_km: 3.5 } },
+  alex: { tuk_tuk: { base: 8, per_km: 3.5 }, microbus: { base: 5, per_km: 2 }, taxi: { base: 13, per_km: 5 }, private_car: { base: 11, per_km: 4 } },
+  default: { tuk_tuk: { base: 6, per_km: 2.5 }, microbus: { base: 4, per_km: 1.5 }, taxi: { base: 10, per_km: 3.5 }, private_car: { base: 8, per_km: 3 } }
+};
+
+window.quickCalcFare = function() {
+  var gov = document.getElementById('calc-governorate').value;
+  var veh = document.getElementById('calc-vehicle').value;
+  var dist = parseFloat(document.getElementById('calc-distance').value);
+  var alertEl = document.getElementById('calc-alert');
+  var resultEl = document.getElementById('calc-result');
+  alertEl.className = 'calc-alert';
+  resultEl.style.display = 'none';
+  if (!gov) {
+    alertEl.className = 'calc-alert error';
+    alertEl.textContent = '⚠️ الرجاء اختيار المحافظة';
+    alertEl.style.display = 'block';
+    document.getElementById('calc-governorate').focus();
+    return;
+  }
+  if (!veh) {
+    alertEl.className = 'calc-alert error';
+    alertEl.textContent = '⚠️ الرجاء اختيار نوع المركبة';
+    alertEl.style.display = 'block';
+    document.getElementById('calc-vehicle').focus();
+    return;
+  }
+  if (!dist || dist <= 0) {
+    alertEl.className = 'calc-alert error';
+    alertEl.textContent = '⚠️ الرجاء إدخال المسافة التقريبية أو الضغط على "موقعي"';
+    alertEl.style.display = 'block';
+    document.getElementById('calc-distance').focus();
+    return;
+  }
+  var prices = calcGovernoratePrices[gov] || calcGovernoratePrices.default;
+  var vehKey = veh.replace(/-/g, '_');
+  var price = prices[vehKey] || calcGovernoratePrices.default[vehKey] || { base: 5, per_km: 2.5 };
+  var fare = price.base + (dist * price.per_km);
+  var fareMin = Math.round(fare);
+  var fareMax = Math.round(fare * 1.25);
+  var govName = document.getElementById('calc-governorate').options[document.getElementById('calc-governorate').selectedIndex].text;
+  var vehName = document.getElementById('calc-vehicle').options[document.getElementById('calc-vehicle').selectedIndex].text;
+  document.getElementById('calc-r-governorate').textContent = govName;
+  document.getElementById('calc-r-vehicle').textContent = vehName;
+  document.getElementById('calc-r-distance').textContent = dist.toFixed(1) + ' كم';
+  document.getElementById('calc-r-fare').textContent = fareMin + ' - ' + fareMax + ' ج.م';
+  resultEl.style.display = 'block';
+  var card = document.getElementById('calcCard');
+  if (card) { card.style.transition = 'border-color 0.3s'; card.style.borderColor = 'rgba(34,197,94,0.3)'; setTimeout(function() { card.style.borderColor = ''; }, 2000); }
+};
+
+window.calcUseMyLocation = function() {
+  var gpsStatus = document.getElementById('calc-gps-status');
+  gpsStatus.style.display = 'block';
+  gpsStatus.textContent = '⏳ جلب الموقع...';
+  if (!navigator.geolocation) {
+    gpsStatus.textContent = '⚠️ متصفحك لا يدعم تحديد الموقع';
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    function(pos) {
+      var lat = pos.coords.latitude;
+      var lng = pos.coords.longitude;
+      gpsStatus.textContent = '✅ تم تحديد موقعك بنجاح (' + lat.toFixed(4) + ', ' + lng.toFixed(4) + ')';
+      // Cairo center as reference: 30.0444, 31.2357
+      var refLat = 30.0444, refLng = 31.2357;
+      // Haversine formula for rough distance in km
+      var R = 6371;
+      var dLat = (lat - refLat) * Math.PI / 180;
+      var dLng = (lng - refLng) * Math.PI / 180;
+      var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(refLat * Math.PI / 180) * Math.cos(lat * Math.PI / 180) * Math.sin(dLng/2) * Math.sin(dLng/2);
+      var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      var distKm = Math.round(R * c * 10) / 10;
+      if (distKm < 0.5) distKm = 1;
+      document.getElementById('calc-distance').value = distKm;
+      document.getElementById('calc-gps-btn').innerHTML = '<i class="fas fa-check"></i> تم';
+      setTimeout(function() { document.getElementById('calc-gps-btn').innerHTML = '<i class="fas fa-location-dot"></i> موقعي'; }, 3000);
+    },
+    function(err) {
+      var msgs = { 1: '⚠️ تم رفض إذن الموقع — يرجى السماح بالوصول للموقع في إعدادات المتصفح', 2: '⚠️ الموقع غير متاح — تأكد من تفعيل GPS', 3: '⏱️ انتهت مهلة تحديد الموقع — حاول مرة أخرى' };
+      gpsStatus.textContent = msgs[err.code] || '⚠️ خطأ في تحديد الموقع: ' + err.message;
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+  );
+};
+
 var installPrompt = null;
 window.addEventListener('beforeinstallprompt', function(e) {
   e.preventDefault();

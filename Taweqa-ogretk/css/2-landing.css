@@ -107,6 +107,35 @@
 .faq-question.open .faq-icon { transform: rotate(45deg); }
 .faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.35s ease, padding 0.35s ease; padding: 0 22px; color: var(--text-muted); font-size: 14px; line-height: 1.7; }
 .faq-answer.open { max-height: 300px; padding: 0 22px 18px; }
+.calc-section { padding: 40px 0 60px; }
+.calc-card {
+  background: var(--bg-card); backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border); border-radius: 20px;
+  padding: 28px 24px; max-width: 560px; margin: 0 auto;
+  box-shadow: var(--shadow-glow);
+}
+.calc-alert { display: none; }
+.calc-alert.error { display: block; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); color: #f87171; padding: 10px; border-radius: 10px; font-size: 13px; margin-bottom: 14px; text-align: center; }
+.calc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px; }
+.calc-field { margin-bottom: 12px; }
+.calc-field label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; }
+.calc-field label i { width: 18px; color: var(--primary); }
+.calc-field select, .calc-field input {
+  width: 100%; padding: 12px 14px; border: 1px solid var(--glass-border);
+  border-radius: 12px; font-size: 14px; background: rgba(255,255,255,0.04);
+  color: #fff; outline: none; font-family: inherit; transition: border-color 0.3s;
+}
+.calc-field select:focus, .calc-field input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(102,126,234,0.15); }
+.calc-field select option { background: #1a1a3e; color: #fff; }
+.calc-distance-group { display: flex; gap: 8px; }
+.calc-distance-group input { flex: 1; }
+.calc-divider { border-top: 1px dashed var(--glass-border); margin: 14px 0; }
+.btn-calc { width: 100%; justify-content: center; padding: 14px; font-size: 16px; }
+#calc-result { margin-top: 16px; padding: 16px; background: rgba(34,197,94,0.06); border: 1px solid rgba(34,197,94,0.15); border-radius: 14px; text-align: center; }
+.calc-result-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; color: var(--text-muted); }
+.calc-result-row strong { color: var(--text); }
+.calc-final-fare { font-size: 32px; font-weight: 900; color: var(--success); text-shadow: 0 0 20px rgba(34,197,94,0.3); }
+
 footer { text-align: center; padding: 32px 24px; color: rgba(255,255,255,0.25); font-size: 13px; border-top: 1px solid var(--glass-border); }
 footer a { color: var(--primary-light); }
 footer a:hover { text-decoration: underline; }

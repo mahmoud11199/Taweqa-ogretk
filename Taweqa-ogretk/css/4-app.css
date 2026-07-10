@@ -175,4 +175,47 @@
 .share-link-box input { direction: ltr; }
 #track-eta-row { display: none; }
 @media (max-width: 900px) { .hero h1 { font-size: 34px; } .hero { padding: 60px 20px 40px; } .stats-grid { grid-template-columns: repeat(2, 1fr); } .stat-card .stat-value { font-size: 26px; } }
-@media (max-width: 600px) { .hero h1 { font-size: 28px; } .hero p { font-size: 15px; } .stats-grid { grid-template-columns: 1fr; } .features-grid { grid-template-columns: 1fr; } .stat-wide { grid-column: 1; } .navbar .logo { font-size: 17px; } .hero-icon { width: 72px; height: 72px; font-size: 30px; } .auth-card { padding: 28px 20px; } .app-container { padding: 0 8px 80px; } .fare-display { font-size: 32px; } .track-input-group { flex-direction: column; } }
+@media (max-width: 700px) { .calc-row { grid-template-columns: 1fr; } .calc-card { padding: 20px 16px; } }
+@media (max-width: 600px) {
+  .hero h1 { font-size: 28px; } .hero p { font-size: 15px; }
+  .stats-grid { grid-template-columns: 1fr; } .features-grid { grid-template-columns: 1fr; } .stat-wide { grid-column: 1; }
+  .navbar .logo { font-size: 17px; } .hero-icon { width: 72px; height: 72px; font-size: 30px; }
+  .auth-card { padding: 28px 20px; }
+  .app-container { padding: 0 6px 80px; }
+  .app-nav .tab-btn { padding: 8px 4px; font-size: 11px; }
+  .app-nav .tab-btn .tab-icon { font-size: 14px; }
+  .meter-selector { gap: 6px; }
+  .meter-tab { padding: 8px; font-size: 12px; }
+  .fare-display { font-size: 28px; }
+  .form-row { flex-direction: column; align-items: stretch; gap: 4px; }
+  .form-row input, .form-row select { width: 100%; }
+  .meter-stats { gap: 6px; }
+  .meter-stats .stat-box .value { font-size: 14px; }
+  .btn-grid { gap: 6px; }
+  .btn-grid .btn { padding: 10px 8px; font-size: 12px; min-height: 44px; }
+  .track-input-group { flex-direction: row; }
+  .track-input-group input { font-size: 13px; padding: 10px 12px; min-height: 44px; }
+  .track-input-group button { min-height: 44px; }
+  .request-form .field input, .request-form .field select { min-height: 44px; padding: 10px 12px; font-size: 14px; }
+  #request-map { height: 200px; }
+  .wallet-actions { flex-direction: column; gap: 6px; }
+  .wallet-balance .amount { font-size: 28px; }
+  .profile-stats { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .card { padding: 12px; }
+  .receipt-actions { flex-direction: column; gap: 6px; }
+  .receipt-actions .btn { min-height: 44px; }
+  .dialog-content { padding: 16px; }
+  .btn { padding: 10px 20px; font-size: 13px; min-height: 44px; }
+  .calc-distance-group { flex-direction: column; }
+  .calc-distance-group button { width: 100%; }
+}
+@media (max-width: 400px) {
+  .hero h1 { font-size: 24px; }
+  .hero-icon { width: 60px; height: 60px; font-size: 26px; }
+  .app-nav .tab-btn { font-size: 10px; padding: 6px 2px; }
+  .app-nav .tab-btn .tab-icon { font-size: 12px; }
+  .fare-display { font-size: 24px; }
+  .auth-card { padding: 20px 14px; }
+  .track-info .info-row { font-size: 12px; }
+  .driver-card-avatar { width: 40px; height: 40px; }
+}

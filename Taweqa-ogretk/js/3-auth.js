@@ -11,17 +11,38 @@ window.handleRegister = async function() {
   if (!phone || !/^01[0-9]{9}$/.test(phone)) { showAlert('register-alert', 'يرجى إدخال رقم هاتف مصري صحيح (01XXXXXXXXX)'); return; }
   if (!pass || pass.length < 6) { showAlert('register-alert', 'كلمة السر يجب أن تكون 6 أحرف على الأقل'); return; }
   if (pass !== confirm) { showAlert('register-alert', 'كلمة السر غير متطابقة'); return; }
+  var requestedRole = selectedRole;
+  var driverType = '';
+  if (requestedRole === 'driver') {
+    driverType = document.getElementById('reg-driver-type').value;
+    if (!driverType) { showAlert('register-alert', 'يرجى اختيار نوع السائق (ملاكي، توك توك، أو موتوسيكل)'); return; }
+    var fieldErrors = validateDriverFields(driverType);
+    if (fieldErrors.length > 0) {
+      showAlert('register-alert', 'يرجى إكمال البيانات المطلوبة: ' + fieldErrors.join('، '));
+      return;
+    }
+  }
   setLoading('register', true);
   try {
-    var requestedRole = selectedRole;
     var { data, error } = await supabase.auth.signUp({
       email: email, password: pass,
       options: { data: { full_name: name, role: requestedRole, phone: phone, ref: refCode || null } }
     });
     if (error) { showAlert('register-alert', error.message || 'فشل التسجيل'); setLoading('register', false); return; }
     if (data && data.user && requestedRole === 'driver') {
-      await supabase.from('driver_applications').upsert({ user_id: data.user.id, status: 'pending', payload: { full_name: name, phone: phone } });
-      await supabase.from('drivers').upsert({ id: data.user.id, is_available: false });
+      var payload = { full_name: name, phone: phone, driver_type: driverType };
+      var fields = getDriverFields(driverType);
+      payload.fields = {};
+      // Store field names only (actual file upload happens via storage later)
+      for (var k in fields) {
+        if (typeof fields[k] === 'object' && fields[k] && fields[k].name) {
+          payload.fields[k] = fields[k].name;
+        } else if (fields[k]) {
+          payload.fields[k] = fields[k];
+        }
+      }
+      await supabase.from('driver_applications').upsert({ user_id: data.user.id, status: 'pending', payload: payload });
+      await supabase.from('drivers').upsert({ id: data.user.id, is_available: false, driver_type: driverType });
     }
     showAlert('register-alert', 'تم إنشاء الحساب بنجاح! جاري تحويلك...', 'success');
     setTimeout(function() {
