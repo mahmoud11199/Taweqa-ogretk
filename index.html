@@ -313,10 +313,10 @@
   <div class="app-nav">
     <button class="tab-btn active" onclick="switchDriverTab('meter', this)"><span class="tab-icon">&#x1F4DF;</span>العداد</button>
     <button class="tab-btn" onclick="switchDriverTab('requests', this);setTimeout(loadDriverRequests,100)"><span class="tab-icon">&#x1F4E8;</span>الطلبات</button>
-    <button class="tab-btn" onclick="switchDriverTab('history', this);setTimeout(renderDriverHistory,100)"><span class="tab-icon">&#x1F4DC;</span>السجل</button>
-    <button class="tab-btn" onclick="switchDriverTab('profile', this)"><span class="tab-icon">&#x1F464;</span>حسابي</button>
-    <button class="tab-btn" onclick="switchDriverTab('chat', this);setTimeout(openDriverChat,100)"><span class="tab-icon">&#x1F4AC;</span>المحادثة</button>
     <button class="tab-btn" onclick="switchDriverTab('wallet', this);setTimeout(loadWallet,100)"><span class="tab-icon">&#x1F4B0;</span>المحفظة</button>
+    <button class="tab-btn" onclick="switchDriverTab('history', this);setTimeout(renderDriverHistory,100)"><span class="tab-icon">&#x1F4DC;</span>سجل الرحلات</button>
+    <button class="tab-btn" onclick="switchDriverTab('profile', this)"><span class="tab-icon">&#x1F464;</span>الملف الشخصي</button>
+    <button class="tab-btn" onclick="switchDriverTab('chat', this);setTimeout(openDriverChat,100)"><span class="tab-icon">&#x1F4AC;</span>المحادثات</button>
   </div>
 
   <div id="driver-meter-section">
@@ -387,7 +387,7 @@
         <h1 class="meter-title-neon">عدادي الذكي</h1>
       </div>
       <!-- Central Fare Smart Card -->
-      <div class="glass-card fare-smart-card">
+      <div class="meter-card fare-smart-card">
         <div class="fare-badges">
           <span class="badge-glass badge-type" id="currentTypeDisplay">&#x2022; مخصوص</span>
           <span class="badge-glass badge-passengers" id="passengersBadge">&#x1F465; ركاب: 1</span>
@@ -424,7 +424,7 @@
         </div>
       </div>
       <!-- Compact Settings Panel -->
-      <div class="glass-card settings-glass" id="setupSection">
+      <div class="meter-card settings-card" id="setupSection">
         <div class="settings-toggle" onclick="this.parentElement.classList.toggle('expanded')">
           <span>&#x2699;&#xFE0F; الإعدادات</span>
           <span class="toggle-arrow">&#x25BC;</span>
@@ -461,7 +461,7 @@
         <button class="btn-secondary-glass btn-reset-glass" onclick="resetCurrentMeterData()">&#x1F5D1;&#xFE0F; تصفير</button>
       </div>
       <!-- Chat Panel -->
-      <div class="glass-card chat-glass" id="driver-chat-section" style="display:none">
+      <div class="meter-card chat-card" id="driver-chat-section" style="display:none">
         <h4 style="font-size:13px;margin-bottom:8px;color:var(--text-muted);"><i class="fas fa-comments"></i> محادثة مع الراكب</h4>
         <div class="chat-messages" id="chatMessagesDriver"></div>
         <div class="chat-input-row">
