@@ -883,8 +883,10 @@
       if (data && data.length) {
         var avg = data.reduce(function(s, r) { return s + r.score; }, 0) / data.length;
         document.getElementById('driver-stat-rating').textContent = avg.toFixed(1);
+        try { document.getElementById('header-stat-rating').textContent = avg.toFixed(1); } catch(e) {}
       } else {
         document.getElementById('driver-stat-rating').textContent = '-';
+        try { document.getElementById('header-stat-rating').textContent = '-'; } catch(e) {}
       }
     } catch (e) { console.error(e); }
   }

@@ -233,8 +233,10 @@ async function loadDriverStats() {
     var { data: trips } = await supabase.from('trips').select('total_fare').eq('driver_id', currentUser.id).eq('status', 'completed');
     if (trips) {
       document.getElementById('driver-stat-trips').textContent = trips.length;
+      try { document.getElementById('header-stat-trips').textContent = trips.length; } catch(e) {}
       var rev = trips.reduce(function(s, t) { return s + (parseFloat(t.total_fare) || 0); }, 0);
       document.getElementById('driver-stat-revenue').textContent = rev.toFixed(0);
+      try { document.getElementById('header-stat-revenue').textContent = rev.toFixed(0); } catch(e) {}
     }
   } catch (e) { console.error(e); }
 }
