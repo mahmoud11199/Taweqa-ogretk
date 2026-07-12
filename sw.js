@@ -1,10 +1,10 @@
 var CACHE_NAME = 'taweqe-cache-v2';
 var urlsToCache = [
-  '/',
-  '/index.html',
-  '/recovery.html',
-  '/Taweqa-ogretk/favicon.png',
-  '/Taweqa-ogretk/manifest.json'
+  '/Taweqa-ogretk/',
+  '/Taweqa-ogretk/index.html',
+  '/Taweqa-ogretk/recovery.html',
+  '/Taweqa-ogretk/Taweqa-ogretk/favicon.png',
+  '/Taweqa-ogretk/Taweqa-ogretk/manifest.json'
 ];
 
 self.addEventListener('install', function(event) {
