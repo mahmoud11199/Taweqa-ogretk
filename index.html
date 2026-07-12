@@ -311,12 +311,12 @@
     </div>
   </nav>
   <div class="app-nav">
-    <button class="tab-btn active" onclick="switchDriverTab('meter', this)"><span class="tab-icon">&#x1F4DF;</span>العداد</button>
-    <button class="tab-btn" onclick="switchDriverTab('requests', this);setTimeout(loadDriverRequests,100)"><span class="tab-icon">&#x1F4E8;</span>الطلبات</button>
-    <button class="tab-btn" onclick="switchDriverTab('wallet', this);setTimeout(loadWallet,100)"><span class="tab-icon">&#x1F4B0;</span>المحفظة</button>
-    <button class="tab-btn" onclick="switchDriverTab('history', this);setTimeout(renderDriverHistory,100)"><span class="tab-icon">&#x1F4DC;</span>سجل الرحلات</button>
-    <button class="tab-btn" onclick="switchDriverTab('profile', this)"><span class="tab-icon">&#x1F464;</span>الملف الشخصي</button>
-    <button class="tab-btn" onclick="switchDriverTab('chat', this);setTimeout(openDriverChat,100)"><span class="tab-icon">&#x1F4AC;</span>المحادثات</button>
+    <button class="tab-btn active" id="nav-tab-meter" onclick="switchDriverTab('meter', this)"><span class="tab-icon">&#x1F4DF;</span>العداد</button>
+    <button class="tab-btn" id="nav-tab-requests" onclick="switchDriverTab('requests', this);setTimeout(loadDriverRequests,100)"><span class="tab-icon">&#x1F4E8;</span>الطلبات</button>
+    <button class="tab-btn" id="nav-tab-wallet" onclick="switchDriverTab('wallet', this);setTimeout(loadWallet,100)"><span class="tab-icon">&#x1F4B0;</span>المحفظة</button>
+    <button class="tab-btn" id="nav-tab-history" onclick="switchDriverTab('history', this);setTimeout(renderDriverHistory,100)"><span class="tab-icon">&#x1F4DC;</span>سجل الرحلات</button>
+    <button class="tab-btn" id="nav-tab-profile" onclick="switchDriverTab('profile', this)"><span class="tab-icon">&#x1F464;</span>الملف الشخصي</button>
+    <button class="tab-btn" id="nav-tab-chat" onclick="switchDriverTab('chat', this);setTimeout(openDriverChat,100)"><span class="tab-icon">&#x1F4AC;</span>المحادثات</button>
   </div>
 
   <div id="driver-meter-section">
@@ -358,17 +358,17 @@
       <!-- Header: 3 stat icons + status pill + unified title + tabs -->
       <div class="meter-header-glass">
         <div class="header-glass-icons">
-          <div class="header-glass-icon">
+          <div class="header-glass-icon" onclick="switchDriverTab('history', this)" style="cursor:pointer;">
             <div class="icon-circle"><i class="fas fa-road"></i></div>
             <span class="icon-label">رحلاتي</span>
             <span class="icon-value" id="header-stat-trips">0</span>
           </div>
-          <div class="header-glass-icon">
+          <div class="header-glass-icon" onclick="switchDriverTab('profile', this)" style="cursor:pointer;">
             <div class="icon-circle"><i class="fas fa-star"></i></div>
             <span class="icon-label">التقييم</span>
             <span class="icon-value" id="header-stat-rating">-</span>
           </div>
-          <div class="header-glass-icon">
+          <div class="header-glass-icon" onclick="switchDriverTab('wallet', this);setTimeout(loadWallet,100)" style="cursor:pointer;">
             <div class="icon-circle"><i class="fas fa-wallet"></i></div>
             <span class="icon-label">المحفظة</span>
             <span class="icon-value" id="header-stat-revenue">0</span>

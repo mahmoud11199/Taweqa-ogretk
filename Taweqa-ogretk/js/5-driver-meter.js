@@ -1110,3 +1110,45 @@
 	    renderMeterDataToUI();
 	    saveDataToStorage();
 	  });
+	  // ======================== ROBUST TAB SWITCHING (event listeners) ========================
+	  function switchToTab(tabName) {
+	    var sections = ['meter', 'requests', 'history', 'profile', 'wallet'];
+	    sections.forEach(function(t) {
+	      var el = document.getElementById('driver-' + t + '-section');
+	      if (el) {
+	        if (t === tabName) { el.classList.remove('hidden'); el.style.display = 'block'; }
+	        else { el.classList.add('hidden'); el.style.display = 'none'; }
+	      }
+	    });
+	    var chatStandalone = document.getElementById('driver-chat-section-standalone');
+	    if (chatStandalone) {
+	      if (tabName === 'chat') { chatStandalone.classList.remove('hidden'); chatStandalone.style.display = 'block'; }
+	      else { chatStandalone.classList.add('hidden'); chatStandalone.style.display = 'none'; }
+	    }
+	    var chatInline = document.getElementById('driver-chat-section');
+	    if (chatInline) { chatInline.style.display = 'none'; }
+	    document.querySelectorAll('#driver-app .app-nav .tab-btn').forEach(function(b) { b.classList.remove('active'); });
+	    var activeBtn = document.getElementById('nav-tab-' + tabName);
+	    if (activeBtn) activeBtn.classList.add('active');
+	    if (tabName === 'meter' && typeof driverMap !== 'undefined' && driverMap) {
+	      setTimeout(function() { driverMap.invalidateSize(); }, 200);
+	    }
+	  }
+	  window.switchToTab = switchToTab;
+	  document.addEventListener('DOMContentLoaded', function() {
+	    var tabMap = { meter: 'nav-tab-meter', requests: 'nav-tab-requests', history: 'nav-tab-history', profile: 'nav-tab-profile', wallet: 'nav-tab-wallet', chat: 'nav-tab-chat' };
+	    Object.keys(tabMap).forEach(function(tab) {
+	      var btn = document.getElementById(tabMap[tab]);
+	      if (btn) {
+	        btn.addEventListener('click', function(e) {
+	          var tabName = tab;
+	          switchToTab(tabName);
+	          if (tabName === 'requests' && typeof loadDriverRequests === 'function') setTimeout(loadDriverRequests, 100);
+	          if (tabName === 'history' && typeof renderDriverHistory === 'function') setTimeout(renderDriverHistory, 100);
+	          if (tabName === 'wallet' && typeof loadWallet === 'function') setTimeout(loadWallet, 100);
+	          if (tabName === 'chat' && typeof openDriverChat === 'function') setTimeout(openDriverChat, 100);
+	        });
+	      }
+	    });
+	    switchToTab('meter');
+	  });
