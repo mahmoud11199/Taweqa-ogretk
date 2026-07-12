@@ -226,14 +226,25 @@ var installPrompt = null;
 window.addEventListener('beforeinstallprompt', function(e) {
   e.preventDefault();
   installPrompt = e;
+  var btn = document.getElementById('installPwaBtn');
+  if (btn) btn.style.display = '';
+});
+window.addEventListener('appinstalled', function() {
+  installPrompt = null;
+  var btn = document.getElementById('installPwaBtn');
+  if (btn) btn.style.display = 'none';
 });
 window.installApp = function() {
   if (installPrompt) {
     installPrompt.prompt();
     installPrompt.userChoice.then(function(choice) {
-      if (choice.outcome === 'accepted') installPrompt = null;
+      if (choice.outcome === 'accepted') {
+        installPrompt = null;
+        var btn = document.getElementById('installPwaBtn');
+        if (btn) btn.style.display = 'none';
+      }
     });
   } else {
-    window.open('https://github.com/mahmoud11199/Taweqa-ogretk/releases', '_blank');
+    alert('التطبيق مثبت بالفعل أو متصفحك لا يدعم التثبيت.\nافتح التطبيق من الشاشة الرئيسية أو استخدم متصفح Chrome/Edge/Firefox على أندرويد.');
   }
 };
