@@ -5,7 +5,7 @@
   var globalWatchId = null;
 
 	  function createEmptyMeterObject(id) {
-	    return { id: id, isActive: false, isPaused: false, tripType: 'makhsoos', kmPrice: 5, waitPrice: 1, durationPrice: 0.50, bandira: 5, minFare: 10, totalDistance: 0, startTime: null, pausedTimeTotal: 0, lastPauseTimestamp: null, totalDurationMinutes: 0, totalWaitSeconds: 0, waitingStartedAt: null, waitingBaseSeconds: 0, lastLat: null, lastLng: null, lastAccuracy: null, lastSpeedKmh: null, lastLocationTime: null, isWaitingMode: false, shareCode: '', tripId: null, lastSupabaseSync: 0, finalFare: 0, passengerCount: 1, pathCoords: [], passengersData: [] };
+ 	    return { id: id, isActive: false, isPaused: false, tripType: 'makhsoos', kmPrice: 5, waitPrice: 1, durationPrice: 0.50, bandira: 5, minFare: 10, totalDistance: 0, startTime: null, pausedTimeTotal: 0, lastPauseTimestamp: null, totalDurationMinutes: 0, totalWaitSeconds: 0, waitingStartedAt: null, waitingBaseSeconds: 0, lastLat: null, lastLng: null, lastAccuracy: null, lastSpeedKmh: null, lastLocationTime: null, isWaitingMode: false, shareCode: '', tripId: null, lastSupabaseSync: 0, finalFare: 0, passengerCount: 1, pathCoords: [], routeCoords: [], passengersData: [] };
 	  }
 
   function initDriverMap() {
@@ -15,6 +15,13 @@
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(driverMap);
       pathLine = L.polyline([], {color: '#22d3ee', weight: 4}).addTo(driverMap);
       currentMarker = L.marker([30.0444, 31.2357]).addTo(driverMap);
+      try {
+        if (typeof L.Routing !== 'undefined') {
+          L.Routing.control({ waypoints: [], show: false, addWaypoints: false, routeWhileDragging: false, fitSelectedRoutes: false, showAlternatives: false, lineOptions: { styles: [{color: '#22d3ee', weight: 4}] } }).addTo(driverMap);
+          var rc = document.querySelector('.leaflet-routing-container');
+          if (rc) rc.style.display = 'none';
+        }
+      } catch(e) { console.error('L.Routing init:', e); }
       setTimeout(function() { driverMap.invalidateSize(); }, 300);
     } catch(e) { console.error('Map init error:', e); }
   }
@@ -160,6 +167,7 @@
     m.passengerCount = 1;
     m.lastLat = null; m.lastLng = null; m.lastAccuracy = null; m.lastSpeedKmh = null; m.lastLocationTime = null;
     m.pathCoords = [];
+    m.routeCoords = [];
     if (selectedType === 'afrad') {
       m.passengersData = [];
       for (var i = 1; i <= m.passengerCount; i++) {
@@ -226,6 +234,7 @@
     m.passengerCount = initialPassengers;
 	    m.lastLat = null; m.lastLng = null; m.lastAccuracy = null; m.lastSpeedKmh = null; m.lastLocationTime = null;
     m.pathCoords = [];
+    m.routeCoords = [];
     if (selectedType === 'afrad') {
       m.passengersData = [];
       for (var i = 1; i <= initialPassengers; i++) {
@@ -523,12 +532,16 @@
             if (m.pathCoords.length >= 2) {
               try {
                 var lastPoint = m.pathCoords[m.pathCoords.length - 2];
-                var url = 'https://router.project-osrm.org/route/v1/driving/' + lastPoint.lng + ',' + lastPoint.lat + ';' + lng + ',' + lat + '?overview=false';
+                var url = 'https://router.project-osrm.org/route/v1/driving/' + lastPoint.lng + ',' + lastPoint.lat + ';' + lng + ',' + lat + '?overview=full&geometries=geojson&alternatives=false&steps=false';
                 var response = await fetch(url);
                 var data = await response.json();
                 if (data.code === 'Ok' && data.routes && data.routes[0]) {
                   var roadDistanceKm = data.routes[0].distance / 1000;
                   m.totalDistance += roadDistanceKm < rawDistanceKm * 3 ? roadDistanceKm : rawDistanceKm;
+                  if (data.routes[0].geometry && data.routes[0].geometry.coordinates) {
+                    var routePoints = data.routes[0].geometry.coordinates.map(function(c) { return {lat: c[1], lng: c[0]}; });
+                    m.routeCoords = m.routeCoords.concat(routePoints);
+                  }
                 } else { m.totalDistance += rawDistanceKm; }
               } catch (e) { m.totalDistance += rawDistanceKm; }
             } else { m.totalDistance += rawDistanceKm; }
@@ -550,8 +563,9 @@
   function redrawActiveRouteLine() {
     if (!pathLine || !driverMap) return;
     var m = meters[activeMeterId];
-    if (m.pathCoords && m.pathCoords.length > 0) {
-      pathLine.setLatLngs(m.pathCoords.map(function(c) { return L.latLng(c.lat, c.lng); }));
+    var coords = (m.routeCoords && m.routeCoords.length > 4) ? m.routeCoords : m.pathCoords;
+    if (coords && coords.length > 0) {
+      pathLine.setLatLngs(coords.map(function(c) { return L.latLng(c.lat, c.lng); }));
     } else { pathLine.setLatLngs([]); }
   }
 
