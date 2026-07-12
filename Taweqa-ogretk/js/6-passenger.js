@@ -379,14 +379,25 @@
     // Attempt to log SOS event if user is logged in
     if (supabase && currentUser) {
       var tripId = trackCurrentTripData?.trip_id || trackCurrentTripData?.trip?.id;
+      var code = document.getElementById('track-code').value;
       supabase.from('ride_requests').insert({
         passenger_id: currentUser.id,
         classification: 'private',
         status: 'cancelled',
         passenger_count: 1,
-        note: '🚨 SOS from tracking screen' + (tripId ? ' (trip: ' + tripId + ')' : '')
-      }).then(function(r) { if (r.error) console.error('SOS log error:', r.error); });
+        note: '🚨 SOS ALERT from tracking screen' + (tripId ? ' (trip: ' + tripId + ')' : '') + (code ? ' (code: ' + code + ')' : '') + ' — user: ' + (currentUser.email || currentUser.id)
+      }).then(function(r) { if (r.error) console.error('SOS log error:', r.error); else showToast('✅ تم تسجيل بلاغ SOS — سيتم التواصل معك قريباً'); });
     }
+  };
+
+  window.triggerProcessScheduled = async function() {
+    if (!supabase) { showToast('خدمة الجدولة غير متاحة'); return; }
+    try {
+      var { data, error } = await supabase.rpc('process_scheduled_rides');
+      if (error) { showToast('❌ فشل تشغيل الجدولة: ' + error.message); return; }
+      showToast('✅ تم معالجة ' + (data || 0) + ' رحلة مجدولة');
+      setTimeout(loadScheduledTrips, 500);
+    } catch(e) { showToast('❌ حدث خطأ'); console.error(e); }
   };
 
   // Click outside dialog to close

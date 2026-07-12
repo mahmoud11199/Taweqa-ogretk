@@ -498,7 +498,12 @@
 
   <div id="driver-profile-section" style="display:none">
     <div class="card profile-card">
-      <div class="profile-avatar"><i class="fas fa-user"></i></div>
+      <div class="profile-avatar" id="driver-avatar-container" style="position:relative;cursor:pointer;" onclick="document.getElementById('driver-avatar-input').click()">
+        <img id="driver-avatar-img" src="Taweqa-ogretk/icons/Icon-192.png" style="width:72px;height:72px;border-radius:50%;object-fit:cover;display:none;">
+        <i class="fas fa-user" id="driver-avatar-icon" style="font-size:32px;"></i>
+        <div style="position:absolute;bottom:0;right:0;background:var(--accent);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:12px;"><i class="fas fa-camera"></i></div>
+        <input type="file" id="driver-avatar-input" accept="image/*" style="display:none;" onchange="uploadAvatar('driver')">
+      </div>
       <div class="profile-name" id="driver-profile-name">-</div>
       <div class="profile-role">&#x1F697; سائق</div>
       <div class="profile-stats">
@@ -518,6 +523,12 @@
           <button class="btn btn-sm btn-primary" onclick="saveDriverCarInfo()" style="padding:8px 16px;font-size:12px;white-space:nowrap;"><i class="fas fa-save"></i> حفظ</button>
         </div>
         <div id="driver-car-status" style="font-size:11px;color:var(--success);text-align:center;margin-top:4px;display:none;">✅ تم الحفظ</div>
+      </div>
+      <div style="margin-top:12px;border-top:1px solid var(--meter-border);padding-top:12px;">
+        <h4 style="font-size:13px;margin-bottom:8px;text-align:center;"><i class="fas fa-cog"></i> الإعدادات</h4>
+        <div style="font-size:12px;color:var(--meter-muted);text-align:center;margin-bottom:6px;">الهاتف: <strong id="driver-profile-phone" style="color:#fff;">-</strong></div>
+        <button class="btn btn-sm btn-outline" onclick="updatePhoneNumber('driver')" style="width:100%;padding:8px;font-size:12px;margin-bottom:6px;"><i class="fas fa-phone"></i> تحديث رقم الهاتف</button>
+        <button class="btn btn-sm btn-outline" onclick="changePassword()" style="width:100%;padding:8px;font-size:12px;"><i class="fas fa-key"></i> تغيير كلمة السر</button>
       </div>
       <button class="btn btn-outline" style="width:100%;margin-top:12px;" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>
       <button class="btn btn-danger" style="width:100%;margin-top:8px;" onclick="deleteMyAccount()"><i class="fas fa-trash"></i> حذف الحساب</button>
@@ -744,7 +755,7 @@
       <button class="btn btn-accent" onclick="createScheduledTrip()" id="schedule-btn" style="width:100%;justify-content:center;margin-top:6px;"><i class="fas fa-calendar-check"></i> جدولة الرحلة</button>
     </div>
     <div class="card" style="padding:12px;margin-top:12px;">
-      <h4 style="margin-bottom:8px;"><i class="fas fa-list"></i> رحلاتي المجدولة</h4>
+      <h4 style="margin-bottom:8px;"><i class="fas fa-list"></i> رحلاتي المجدولة <button class="btn btn-sm btn-outline" onclick="triggerProcessScheduled()" style="float:left;padding:4px 10px;font-size:10px;"><i class="fas fa-play"></i> تشغيل يدوي</button></h4>
       <div id="scheduled-trips-list"><div class="empty-state">لا توجد رحلات مجدولة</div></div>
     </div>
   </div>
@@ -763,7 +774,12 @@
 
   <div id="passenger-profile-section" style="display:none">
     <div class="card profile-card">
-      <div class="profile-avatar"><i class="fas fa-user"></i></div>
+      <div class="profile-avatar" id="passenger-avatar-container" style="position:relative;cursor:pointer;" onclick="document.getElementById('passenger-avatar-input').click()">
+        <img id="passenger-avatar-img" src="Taweqa-ogretk/icons/Icon-192.png" style="width:72px;height:72px;border-radius:50%;object-fit:cover;display:none;">
+        <i class="fas fa-user" id="passenger-avatar-icon" style="font-size:32px;"></i>
+        <div style="position:absolute;bottom:0;right:0;background:var(--accent);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:12px;"><i class="fas fa-camera"></i></div>
+        <input type="file" id="passenger-avatar-input" accept="image/*" style="display:none;" onchange="uploadAvatar('passenger')">
+      </div>
       <div class="profile-name" id="passenger-profile-name">-</div>
       <div class="profile-role">&#x1F464; راكب</div>
       <div class="profile-stats">
@@ -771,6 +787,12 @@
         <div class="profile-stat"><div class="num" id="passenger-stat-spent">0</div><div class="lbl">الإجمالي (ج)</div></div>
       </div>
       <div id="passenger-ref-section" style="margin-top:10px;"></div>
+      <div style="margin-top:12px;border-top:1px solid var(--meter-border);padding-top:12px;">
+        <h4 style="font-size:13px;margin-bottom:8px;text-align:center;"><i class="fas fa-cog"></i> الإعدادات</h4>
+        <div style="font-size:12px;color:var(--meter-muted);text-align:center;margin-bottom:6px;">الهاتف: <strong id="passenger-profile-phone" style="color:#fff;">-</strong></div>
+        <button class="btn btn-sm btn-outline" onclick="updatePhoneNumber('passenger')" style="width:100%;padding:8px;font-size:12px;margin-bottom:6px;"><i class="fas fa-phone"></i> تحديث رقم الهاتف</button>
+        <button class="btn btn-sm btn-outline" onclick="changePassword()" style="width:100%;padding:8px;font-size:12px;"><i class="fas fa-key"></i> تغيير كلمة السر</button>
+      </div>
       <button class="btn btn-outline" style="width:100%;margin-top:12px;" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>
       <button class="btn btn-danger" style="width:100%;margin-top:8px;" onclick="deleteMyAccount()"><i class="fas fa-trash"></i> حذف الحساب</button>
     </div>
@@ -805,6 +827,53 @@
         <button class="btn btn-outline" onclick="hideWithdrawForm('passenger')" style="flex:1;justify-content:center;">إلغاء</button>
       </div>
     </div>
+  </div>
+</div>
+
+<div class="app-container" id="admin-app">
+  <nav class="navbar" style="padding:10px 14px;margin:0 -12px;border-radius:0">
+    <div class="logo"><i class="fas fa-shield-alt"></i><span>لوحة المشرف</span></div>
+    <button class="btn btn-sm btn-outline nav-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i></button>
+  </nav>
+  <div class="app-nav">
+    <button class="tab-btn active" onclick="switchAdminTab('dashboard', this)"><span class="tab-icon">&#x1F4CA;</span>الإحصائيات</button>
+    <button class="tab-btn" onclick="switchAdminTab('drivers', this);setTimeout(loadAdminDrivers,100)"><span class="tab-icon">&#x1F697;</span>السائقين</button>
+    <button class="tab-btn" onclick="switchAdminTab('applications', this);setTimeout(loadAdminApplications,100)"><span class="tab-icon">&#x1F4CB;</span>الطلبات</button>
+    <button class="tab-btn" onclick="switchAdminTab('trips', this);setTimeout(loadAdminTrips,100)"><span class="tab-icon">&#x1F9FE;</span>الرحلات</button>
+    <button class="tab-btn" onclick="switchAdminTab('sos', this);setTimeout(loadAdminSos,100)"><span class="tab-icon">&#x1F6A8;</span>SOS</button>
+  </div>
+
+  <div id="admin-dashboard-section">
+    <div class="meter-header"><h1>&#x1F4CA; نظرة عامة</h1></div>
+    <div id="admin-stats-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:10px 0;">
+      <div class="card" style="text-align:center;padding:16px;"><div style="font-size:24px;font-weight:700;color:var(--success);" id="admin-stat-drivers">0</div><div style="font-size:12px;color:var(--meter-muted);">سائقين</div></div>
+      <div class="card" style="text-align:center;padding:16px;"><div style="font-size:24px;font-weight:700;color:var(--meter-primary);" id="admin-stat-passengers">0</div><div style="font-size:12px;color:var(--meter-muted);">ركاب</div></div>
+      <div class="card" style="text-align:center;padding:16px;"><div style="font-size:24px;font-weight:700;color:var(--accent);" id="admin-stat-trips">0</div><div style="font-size:12px;color:var(--meter-muted);">رحلات</div></div>
+      <div class="card" style="text-align:center;padding:16px;"><div style="font-size:24px;font-weight:700;color:var(--pink);" id="admin-stat-applications">0</div><div style="font-size:12px;color:var(--meter-muted);">طلبات معلقة</div></div>
+    </div>
+    <div class="card" style="padding:12px;">
+      <button class="btn btn-sm btn-outline" onclick="processScheduledNow()" style="width:100%;padding:8px;"><i class="fas fa-play"></i> تشغيل الرحلات المجدولة يدوياً</button>
+    </div>
+  </div>
+
+  <div id="admin-drivers-section" style="display:none">
+    <div class="meter-header"><h1>&#x1F697; إدارة السائقين</h1></div>
+    <div id="adminDriversList" class="card"><div class="empty-state">جاري التحميل...</div></div>
+  </div>
+
+  <div id="admin-applications-section" style="display:none">
+    <div class="meter-header"><h1>&#x1F4CB; طلبات انضمام السائقين</h1></div>
+    <div id="adminApplicationsList" class="card"><div class="empty-state">جاري التحميل...</div></div>
+  </div>
+
+  <div id="admin-trips-section" style="display:none">
+    <div class="meter-header"><h1>&#x1F9FE; جميع الرحلات</h1></div>
+    <div id="adminTripsList" class="card"><div class="empty-state">جاري التحميل...</div></div>
+  </div>
+
+  <div id="admin-sos-section" style="display:none">
+    <div class="meter-header"><h1>&#x1F6A8; بلاغات SOS</h1></div>
+    <div id="adminSosList" class="card"><div class="empty-state">جاري التحميل...</div></div>
   </div>
 </div>
 
@@ -907,6 +976,7 @@
 <script src="Taweqa-ogretk/js/7-chat.js"></script>
 <script src="Taweqa-ogretk/js/8-wallet.js"></script>
 <script src="Taweqa-ogretk/js/9-paymob.js"></script>
+<script src="Taweqa-ogretk/js/10-admin.js"></script>
 <script src="Taweqa-ogretk/js/9-init.js"></script>
 <script>
 if ('serviceWorker' in navigator) {

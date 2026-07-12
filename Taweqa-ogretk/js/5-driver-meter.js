@@ -754,7 +754,27 @@
     try {
       var history = JSON.parse(localStorage.getItem('smart_meter_history')) || [];
       if (!history.length) { list.innerHTML = '<div class="empty-state">لا توجد رحلات مسجلة</div>'; return; }
-      list.innerHTML = history.map(function(item, index) {
+      // Summary stats
+      var totalTrips = history.length;
+      var totalEarnings = history.reduce(function(s, item) { return s + clampNumber(item.fare, 0, 100000, 0); }, 0);
+      var totalDistance = history.reduce(function(s, item) { return s + clampNumber(item.distance, 0, 1000, 0); }, 0);
+      var totalDuration = history.reduce(function(s, item) { return s + clampNumber(item.duration, 0, 1440, 0); }, 0);
+      var today = new Date(); today.setHours(0,0,0,0);
+      var todayEarnings = history.filter(function(item) { try { return new Date(item.date).getTime() >= today.getTime(); } catch(e) { return false; } }).reduce(function(s, item) { return s + clampNumber(item.fare, 0, 100000, 0); }, 0);
+      var weekAgo = new Date(Date.now() - 7*24*60*60*1000);
+      var weekEarnings = history.filter(function(item) { try { return new Date(item.date).getTime() >= weekAgo.getTime(); } catch(e) { return false; } }).reduce(function(s, item) { return s + clampNumber(item.fare, 0, 100000, 0); }, 0);
+      var avgFare = totalEarnings / totalTrips;
+      var summaryHtml = '<div class="earnings-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px;padding:10px;background:rgba(34,197,94,0.08);border-radius:12px;text-align:center;font-size:12px;">'
+        + '<div><div style="color:var(--success);font-weight:700;font-size:16px;">' + todayEarnings.toFixed(0) + ' ج</div><div style="color:var(--meter-muted);">اليوم</div></div>'
+        + '<div><div style="color:var(--accent);font-weight:700;font-size:16px;">' + weekEarnings.toFixed(0) + ' ج</div><div style="color:var(--meter-muted);">الأسبوع</div></div>'
+        + '<div><div style="color:var(--meter-primary);font-weight:700;font-size:16px;">' + totalEarnings.toFixed(0) + ' ج</div><div style="color:var(--meter-muted);">الإجمالي</div></div>'
+        + '<div style="grid-column:1/-1;display:flex;justify-content:space-around;padding-top:6px;border-top:1px solid var(--meter-border);margin-top:4px;">'
+        + '<span style="color:var(--meter-muted);">' + totalTrips + ' رحلة</span>'
+        + '<span style="color:var(--meter-muted);">' + totalDistance.toFixed(1) + ' كم</span>'
+        + '<span style="color:var(--meter-muted);">~' + totalDuration.toFixed(0) + ' د</span>'
+        + '<span style="color:var(--meter-muted);">معدل ' + avgFare.toFixed(1) + ' ج/رحلة</span>'
+        + '</div></div>';
+      list.innerHTML = summaryHtml + history.map(function(item, index) {
         var payLabel = '';
         if (item.paymentMethod === 'cash') payLabel = '💰 نقدي';
         else if (item.paymentStatus === 'paid_wallet') payLabel = '✅ مدفوع المحفظة';

@@ -33,10 +33,20 @@ window.handleRegister = async function() {
       var payload = { full_name: name, phone: phone, driver_type: driverType };
       var fields = getDriverFields(driverType);
       payload.fields = {};
-      // Store field names only (actual file upload happens via storage later)
+      payload.fileUrls = {};
+      // Upload each file to Supabase Storage
       for (var k in fields) {
-        if (typeof fields[k] === 'object' && fields[k] && fields[k].name) {
+        if (typeof fields[k] === 'object' && fields[k] && fields[k] instanceof File && fields[k].size > 0) {
           payload.fields[k] = fields[k].name;
+          try {
+            var filePath = 'driver-docs/' + data.user.id + '/' + k + '_' + Date.now() + '_' + fields[k].name;
+            var { error: uploadErr } = await supabase.storage.from('driver-documents').upload(filePath, fields[k], { upsert: true, contentType: fields[k].type });
+            if (uploadErr) { console.error('Upload error for ' + k + ':', uploadErr); }
+            else {
+              var { data: urlData } = supabase.storage.from('driver-documents').getPublicUrl(filePath);
+              if (urlData) payload.fileUrls[k] = urlData.publicUrl;
+            }
+          } catch(e) { console.error('File upload exception for ' + k + ':', e); }
         } else if (fields[k]) {
           payload.fields[k] = fields[k];
         }
@@ -178,7 +188,12 @@ async function initSession() {
     currentProfile = profile;
     if (!profile) { clearTimeout(loadingFallback); showLandingPage(); return; }
     clearTimeout(loadingFallback);
-    if (profile.role === 'driver') showDriverDashboard();
+    if (profile.role === 'admin') {
+      hideAllScreens();
+      adminApp.classList.add('active'); adminApp.style.display = 'block';
+      window.switchAdminTab('dashboard', document.querySelector('#admin-app .tab-btn'));
+      setTimeout(loadAdminStats, 200);
+    } else if (profile.role === 'driver') showDriverDashboard();
     else if (profile.role === 'passenger') showPassengerDashboard();
     else showLandingPage();
   } catch (e) { console.error('Session error:', e); clearTimeout(loadingFallback); showLandingPage(); }
@@ -187,6 +202,7 @@ async function initSession() {
 function showDriverDashboard() {
   showScreen('driver-app');
   document.getElementById('driver-profile-name').textContent = currentProfile.full_name || currentUser.email;
+  try { document.getElementById('driver-profile-phone').textContent = currentProfile.phone || '-'; } catch(e) {}
   loadDriverStats();
   loadDriverRating();
   loadDriverCarInfo();
@@ -224,6 +240,7 @@ async function loadDriverAvailability() {
 function showPassengerDashboard() {
   showScreen('passenger-app');
   document.getElementById('passenger-profile-name').textContent = currentProfile.full_name || currentUser.email;
+  try { document.getElementById('passenger-profile-phone').textContent = currentProfile.phone || '-'; } catch(e) {}
   loadPassengerStats();
 }
 
@@ -335,4 +352,84 @@ window.saveDriverCarInfo = async function() {
     statusEl.style.display = 'block';
     setTimeout(function() { statusEl.style.display = 'none'; }, 3000);
   } catch(e) { console.error('Save car info error:', e); alert('فشل حفظ بيانات المركبة'); }
+};
+
+// ====== AVATAR UPLOAD ======
+window.uploadAvatar = async function(role) {
+  if (!supabase || !currentUser) { showToast('يجب تسجيل الدخول أولاً'); return; }
+  var input = document.getElementById(role + '-avatar-input');
+  if (!input || !input.files || !input.files[0]) return;
+  var file = input.files[0];
+  if (file.size > 2 * 1024 * 1024) { showToast('الحد الأقصى لحجم الصورة 2 ميجابايت'); return; }
+  try {
+    var filePath = 'avatars/' + currentUser.id + '_' + Date.now() + '.jpg';
+    var { error: uploadErr } = await supabase.storage.from('avatars').upload(filePath, file, { upsert: true, contentType: file.type });
+    if (uploadErr) { showToast('❌ فشل رفع الصورة: ' + uploadErr.message); return; }
+    var { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+    if (!urlData) { showToast('❌ فشل الحصول على رابط الصورة'); return; }
+    var url = urlData.publicUrl;
+    await supabase.from('profiles').update({ avatar_url: url }).eq('id', currentUser.id);
+    // Update both avatar displays
+    var img = document.getElementById(role + '-avatar-img');
+    var icon = document.getElementById(role + '-avatar-icon');
+    if (img) { img.src = url; img.style.display = ''; }
+    if (icon) icon.style.display = 'none';
+    loadReferralInfo();
+    showToast('✅ تم تحديث الصورة الشخصية');
+  } catch(e) { showToast('❌ حدث خطأ'); console.error(e); }
+};
+
+// Load avatar on dashboard load
+var origShowDriverDashboard2 = showDriverDashboard;
+showDriverDashboard = function() {
+  if (origShowDriverDashboard2) origShowDriverDashboard2();
+  setTimeout(function() {
+    if (currentProfile && currentProfile.avatar_url) {
+      var img = document.getElementById('driver-avatar-img');
+      var icon = document.getElementById('driver-avatar-icon');
+      if (img) { img.src = currentProfile.avatar_url; img.style.display = ''; }
+      if (icon) icon.style.display = 'none';
+    }
+  }, 300);
+};
+var origShowPassengerDashboard2 = showPassengerDashboard;
+showPassengerDashboard = function() {
+  if (origShowPassengerDashboard2) origShowPassengerDashboard2();
+  setTimeout(function() {
+    if (currentProfile && currentProfile.avatar_url) {
+      var img = document.getElementById('passenger-avatar-img');
+      var icon = document.getElementById('passenger-avatar-icon');
+      if (img) { img.src = currentProfile.avatar_url; img.style.display = ''; }
+      if (icon) icon.style.display = 'none';
+    }
+  }, 300);
+};
+
+// ====== SETTINGS: Update phone ======
+window.updatePhoneNumber = async function(role) {
+  if (!supabase || !currentUser) return;
+  var newPhone = prompt('أدخل رقم الهاتف الجديد (01XXXXXXXXX):', currentProfile?.phone || '');
+  if (!newPhone || !/^01[0-9]{9}$/.test(newPhone)) { showToast('يرجى إدخال رقم هاتف مصري صحيح'); return; }
+  try {
+    await supabase.from('profiles').update({ phone: newPhone }).eq('id', currentUser.id);
+    currentProfile.phone = newPhone;
+    showToast('✅ تم تحديث رقم الهاتف');
+  } catch(e) { showToast('❌ فشل التحديث'); console.error(e); }
+};
+
+window.changePassword = async function() {
+  if (!supabase) return;
+  var oldPass = prompt('أدخل كلمة السر الحالية:');
+  if (!oldPass) return;
+  var newPass = prompt('أدخل كلمة السر الجديدة (6 أحرف على الأقل):');
+  if (!newPass || newPass.length < 6) { showToast('كلمة السر يجب أن تكون 6 أحرف على الأقل'); return; }
+  var confirmPass = prompt('أعد إدخال كلمة السر الجديدة:');
+  if (newPass !== confirmPass) { showToast('كلمة السر غير متطابقة'); return; }
+  try {
+    var { error: signInErr } = await supabase.auth.signInWithPassword({ email: currentUser.email, password: oldPass });
+    if (signInErr) { showToast('❌ كلمة السر الحالية غير صحيحة'); return; }
+    var { error } = await supabase.auth.updateUser({ password: newPass });
+    if (error) { showToast('❌ فشل تغيير كلمة السر: ' + error.message); return; }
+    showToast('✅ تم تغيير كلمة السر بنجاح');
+  } catch(e) { showToast('❌ حدث خطأ'); console.error(e); }
 };

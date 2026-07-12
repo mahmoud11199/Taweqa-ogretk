@@ -215,11 +215,13 @@
       await supabase.rpc('check_subscription_expiry');
       var { data: sub } = await supabase.from('subscriptions').select('id, end_date').eq('user_id', currentUser.id).eq('status', 'active').order('end_date', { ascending: false }).maybeSingle();
       if (!sub) {
-        // Warn but don't block — subscription pending feature
-        return true;
+        var role = currentProfile && currentProfile.role === 'driver' ? 'driver' : 'passenger';
+        var price = role === 'driver' ? 299 : 89;
+        showToast('❌ يجب الاشتراك أولاً (' + price + ' ج/شهر) — اذهب إلى المحفظة');
+        return false;
       }
       return true;
-    } catch(e) { return true; }
+    } catch(e) { return false; }
   };
 
   window.checkPendingPriceProposals = async function() {
