@@ -217,11 +217,10 @@
     var selectedType = document.getElementById('tripType').value;
     var initialPassengers = 1;
     if (selectedType === 'afrad') {
-      var seats = prompt('المشوار أفراد، كم عدد المقاعد المحجوزة الآن؟', '1');
-      if (seats === null) return;
+      var seats = await showPromptModal({ title: 'عدد الركاب', placeholder: '1', defaultValue: '1', confirmText: 'تأكيد', validator: function(v) { var n = parseInt(v); if (isNaN(n) || n < 1 || n > 20) return 'يرجى إدخال عدد مقاعد صحيح (1-20)'; } });
+      if (!seats) return;
       var parsedSeats = parseInt(seats);
-      if (parsedSeats >= 1 && parsedSeats <= 20) { initialPassengers = parsedSeats; }
-      else { alert('يرجى إدخال عدد مقاعد صحيح'); return; }
+      initialPassengers = parsedSeats;
     }
     m.isActive = true; m.isPaused = false; m.startTime = Date.now(); m.pausedTimeTotal = 0;
     m.tripType = selectedType;
@@ -395,67 +394,77 @@
     var m = meters[activeMeterId];
     if (!m.isActive || m.isPaused) return;
     if (m.tripType === 'afrad') {
-      var action = prompt('اختر الإجراء:\n1 - ركوب فرد جديد\n2 - نزول ومحاسبة فرد', '1');
-      if (action === '1') {
-        var pNumber = m.passengersData.length + 1;
-        m.passengersData.push({ id: pNumber, name: 'راكب رقم ' + pNumber, startDistance: m.totalDistance, isInside: true, isInitial: false, individualFare: 0 });
-        m.passengerCount = m.passengersData.filter(function(p) { return p.isInside; }).length;
-        showToast('➕ تم إركاب فرد جديد: ' + pNumber);
-      } else if (action === '2') {
-        var activeList = m.passengersData.filter(function(p) { return p.isInside; });
-        if (!activeList.length) { showToast('لا يوجد ركاب داخل المركبة'); return; }
-        var promptText = 'اختر رقم الراكب النازل:\n';
-        activeList.forEach(function(p) { promptText += p.id + ' - ' + p.name + '\n'; });
-        var targetId = prompt(promptText);
-        var targetPassenger = m.passengersData.find(function(p) { return p.id == targetId && p.isInside; });
-        if (targetPassenger) {
-          targetPassenger.isInside = false;
+      var self = this;
+      (async function() {
+        var action = await showPromptModal({ title: 'إجراء الركاب', fields: [{ key: 'action', label: '1 - ركوب فرد جديد\n2 - نزول ومحاسبة فرد', placeholder: '1', type: 'text' }], confirmText: 'تأكيد', validator: function(v) { if (v.action !== '1' && v.action !== '2') return 'اختر 1 أو 2'; } });
+        if (!action) return;
+        if (action.action === '1') {
+          var pNumber = m.passengersData.length + 1;
+          m.passengersData.push({ id: pNumber, name: 'راكب رقم ' + pNumber, startDistance: m.totalDistance, isInside: true, isInitial: false, individualFare: 0 });
           m.passengerCount = m.passengersData.filter(function(p) { return p.isInside; }).length;
-          var pDist = m.totalDistance - targetPassenger.startDistance;
-          var pFare = targetPassenger.isInitial
-            ? m.bandira + (pDist * m.kmPrice) + (m.totalDurationMinutes * m.durationPrice) + ((m.totalWaitSeconds/60) * m.waitPrice)
-            : pDist * m.kmPrice;
-          targetPassenger.individualFare = pFare;
-          var body = document.getElementById('receiptBody');
-	          body.innerHTML = '<div class="receipt-line"><span class="label">تصفية حساب</span><span class="value" style="color:var(--accent)">' + escapeHTML(targetPassenger.name) + '</span></div><div class="receipt-divider"></div><div class="receipt-line receipt-total"><span>المطلوب</span><span>' + clampNumber(pFare, 0, 100000, 0).toFixed(2) + ' ج</span></div>';
-          document.getElementById('receiptModal').style.display = 'flex';
-          showToast('🛑 تم تصفية حساب ' + targetPassenger.name);
+          showToast('➕ تم إركاب فرد جديد: ' + pNumber);
+        } else if (action.action === '2') {
+          var activeList = m.passengersData.filter(function(p) { return p.isInside; });
+          if (!activeList.length) { showToast('لا يوجد ركاب داخل المركبة'); return; }
+          var pOpts = activeList.map(function(p) { return p.id + ' - ' + p.name; }).join('\n');
+          var targetResult = await showPromptModal({ title: 'اختر رقم الراكب النازل', fields: [{ key: 'id', label: pOpts, placeholder: 'الرقم', type: 'text' }], confirmText: 'تصفية', validator: function(v) { if (!v.id || !m.passengersData.find(function(p) { return p.id == v.id && p.isInside; })) return 'رقم غير صالح'; } });
+          if (!targetResult) return;
+          var targetPassenger = m.passengersData.find(function(p) { return p.id == targetResult.id && p.isInside; });
+          if (targetPassenger) {
+            targetPassenger.isInside = false;
+            m.passengerCount = m.passengersData.filter(function(p) { return p.isInside; }).length;
+            var pDist = m.totalDistance - targetPassenger.startDistance;
+            var pFare = targetPassenger.isInitial
+              ? m.bandira + (pDist * m.kmPrice) + (m.totalDurationMinutes * m.durationPrice) + ((m.totalWaitSeconds/60) * m.waitPrice)
+              : pDist * m.kmPrice;
+            targetPassenger.individualFare = pFare;
+            var body = document.getElementById('receiptBody');
+            body.innerHTML = '<div class="receipt-line"><span class="label">تصفية حساب</span><span class="value" style="color:var(--accent)">' + escapeHTML(targetPassenger.name) + '</span></div><div class="receipt-divider"></div><div class="receipt-line receipt-total"><span>المطلوب</span><span>' + clampNumber(pFare, 0, 100000, 0).toFixed(2) + ' ج</span></div>';
+            document.getElementById('receiptModal').style.display = 'flex';
+            showToast('🛑 تم تصفية حساب ' + targetPassenger.name);
+          }
         }
-      }
+        calculateFare(m); renderMeterDataToUI(); saveDataToStorage();
+      })();
     } else {
       if (confirm('هل تريد تحويل المخصوص إلى مشترك (أفراد)؟')) {
-	        var newPrice = prompt('سعر الكيلو الجديد للمخصوص:', m.kmPrice);
-	        if (newPrice !== null) {
-	          m.kmPrice = clampNumber(newPrice, 1, 50, m.kmPrice);
-          m.tripType = 'afrad'; m.passengerCount = 1;
-          m.passengersData = [{ id: 1, name: 'راكب 1 (المخصوص)', startDistance: m.totalDistance, startDuration: m.totalDurationMinutes, startWait: m.totalWaitSeconds/60, isInside: true, isInitial: true, individualFare: 0 }];
-          document.getElementById('tripType').value = 'afrad';
-          onTripTypeChanged();
-          showToast('🔄 تم تحويل المشوار');
-        }
+        (async function() {
+          var newPrice = await showPromptModal({ title: 'سعر الكيلو الجديد', placeholder: m.kmPrice, defaultValue: m.kmPrice, confirmText: 'تأكيد', validator: function(v) { var n = parseFloat(v); if (isNaN(n) || n < 1 || n > 50) return 'سعر غير صالح (1-50)'; } });
+          if (newPrice !== null) {
+            m.kmPrice = clampNumber(newPrice, 1, 50, m.kmPrice);
+            m.tripType = 'afrad'; m.passengerCount = 1;
+            m.passengersData = [{ id: 1, name: 'راكب 1 (المخصوص)', startDistance: m.totalDistance, startDuration: m.totalDurationMinutes, startWait: m.totalWaitSeconds/60, isInside: true, isInitial: true, individualFare: 0 }];
+            document.getElementById('tripType').value = 'afrad';
+            onTripTypeChanged();
+            showToast('🔄 تم تحويل المشوار');
+          }
+          calculateFare(m); renderMeterDataToUI(); saveDataToStorage();
+        })();
       }
     }
-    calculateFare(m); renderMeterDataToUI(); saveDataToStorage();
   }
   window.handleDynamicActionButton = handleDynamicActionButton;
 
-  setInterval(function() {
+  window._meterTickTimer = setInterval(function() {
     var updated = false;
     for (var id in meters) {
       var m = meters[id];
       if (m.isActive && m.startTime && !m.isPaused) {
         m.totalDurationMinutes = ((Date.now() - m.startTime) - m.pausedTimeTotal) / 1000 / 60;
-	        if (m.isWaitingMode) { updateWaitSeconds(m); }
-	        else if (m.lastLocationTime && (Date.now() - m.lastLocationTime > 5000)) { setWaitingMode(m, true); updateWaitSeconds(m); }
-	        calculateFare(m); syncStartedTripToSupabase(m, false); updated = true;
-	      }
-	    }
+        if (m.isWaitingMode) { updateWaitSeconds(m); }
+        else if (m.lastLocationTime && (Date.now() - m.lastLocationTime > 5000) && !m._gpsLostWarning) {
+          m._gpsLostWarning = true;
+          // GPS signal lost — show warning but do NOT auto-enter waiting mode
+        }
+        calculateFare(m); syncStartedTripToSupabase(m, false); updated = true;
+      }
+    }
     if (updated) { renderMeterDataToUI(); saveDataToStorage(); }
     syncDriverLocation();
   }, 1000);
 
   // Poll active trip status to detect passenger_end_trip
-  var activeTripPollTimer = setInterval(async function() {
+  window._activeTripPollTimer = setInterval(async function() {
     for (var id in meters) {
       var m = meters[id];
       if (!m.tripId || !m.isActive) continue;
@@ -528,15 +537,17 @@
 	          if (finalSpeed > 80) { m.lastLat = lat; m.lastLng = lng; m.lastLocationTime = now; continue; }
           if (finalSpeed > GPS_FILTER.waitingSpeedKmh) {
 	            setWaitingMode(m, false);
-            m.pathCoords.push({lat: lat, lng: lng});
-            if (m.pathCoords.length >= 2) {
+            var gpsCoord = {lat: lat, lng: lng};
+            var lastCoord = m.pathCoords.length > 0 ? m.pathCoords[m.pathCoords.length - 1] : null;
+            m.pathCoords.push(gpsCoord);
+            if (lastCoord) {
               try {
-                var lastPoint = m.pathCoords[m.pathCoords.length - 2];
-                var url = 'https://router.project-osrm.org/route/v1/driving/' + lastPoint.lng + ',' + lastPoint.lat + ';' + lng + ',' + lat + '?overview=full&geometries=geojson&alternatives=false&steps=false';
+                var roadDistanceKm;
+                var url = 'https://router.project-osrm.org/route/v1/driving/' + lastCoord.lng + ',' + lastCoord.lat + ';' + lng + ',' + lat + '?overview=full&geometries=geojson&alternatives=false&steps=false';
                 var response = await fetch(url);
                 var data = await response.json();
                 if (data.code === 'Ok' && data.routes && data.routes[0]) {
-                  var roadDistanceKm = data.routes[0].distance / 1000;
+                  roadDistanceKm = data.routes[0].distance / 1000;
                   m.totalDistance += roadDistanceKm < rawDistanceKm * 3 ? roadDistanceKm : rawDistanceKm;
                   if (data.routes[0].geometry && data.routes[0].geometry.coordinates) {
                     var routePoints = data.routes[0].geometry.coordinates.map(function(c) { return {lat: c[1], lng: c[0]}; });
@@ -548,7 +559,7 @@
 	          } else { setWaitingMode(m, true); }
           m.lastLat = lat; m.lastLng = lng; m.lastLocationTime = now;
         } else {
-	          if ((now - m.lastLocationTime)/1000 > 4 && (speedKmh === null || speedKmh < GPS_FILTER.waitingSpeedKmh)) setWaitingMode(m, true);
+          // Very small movement — likely stopped, but don't force waiting mode on GPS uncertainty
         }
       } else {
         m.lastLat = lat; m.lastLng = lng; m.lastLocationTime = now;
@@ -576,12 +587,16 @@
       m.finalFare = total < m.minFare ? m.minFare : total;
     } else {
       var totalRevenue = 0;
+      var bandiraCharged = false;
       (m.passengersData || []).forEach(function(p) {
         if (!p.isInside) { totalRevenue += (p.individualFare || 0); }
         else {
           var currentPDist = m.totalDistance - p.startDistance;
-          if (p.isInitial) {
+          if (p.isInitial && !bandiraCharged) {
             totalRevenue += m.bandira + (currentPDist * m.kmPrice) + ((m.totalDurationMinutes - (p.startDuration || 0)) * m.durationPrice) + (((m.totalWaitSeconds/60) - (p.startWait || 0)) * m.waitPrice);
+            bandiraCharged = true;
+          } else if (p.isInitial && bandiraCharged) {
+            totalRevenue += (currentPDist * m.kmPrice) + ((m.totalDurationMinutes - (p.startDuration || 0)) * m.durationPrice) + (((m.totalWaitSeconds/60) - (p.startWait || 0)) * m.waitPrice);
           } else { totalRevenue += currentPDist * m.kmPrice; }
         }
       });
@@ -602,12 +617,14 @@
 
   function triggerManualDistance() {
     var m = meters[activeMeterId];
-	    var manual = prompt('المسافة المقطوعة يدوياً (كم):', (m.totalDistance || 0).toFixed(2));
-	    if (manual !== null) {
-	      m.totalDistance = clampNumber(manual, 0, 1000, 0);
-	      calculateFare(m); renderMeterDataToUI(); saveDataToStorage();
-      showToast('تم تحديث المسافة');
-    }
+    (async function() {
+      var manual = await showPromptModal({ title: 'المسافة المقطوعة يدوياً (كم)', placeholder: (m.totalDistance || 0).toFixed(2), defaultValue: (m.totalDistance || 0).toFixed(2), confirmText: 'تحديث', validator: function(v) { var n = parseFloat(v); if (isNaN(n) || n < 0 || n > 1000) return 'مسافة غير صالحة (0-1000 كم)'; } });
+      if (manual !== null) {
+        m.totalDistance = clampNumber(manual, 0, 1000, 0);
+        calculateFare(m); renderMeterDataToUI(); saveDataToStorage();
+        showToast('تم تحديث المسافة');
+      }
+    })();
   }
   window.triggerManualDistance = triggerManualDistance;
 
@@ -733,11 +750,37 @@
   window.shareWhatsApp = shareWhatsApp;
 
   // Storage
-  function saveDataToStorage() { try { localStorage.setItem('smart_meter_data', JSON.stringify(meters)); } catch(e) { console.error('Storage save error:', e); } }
+  function saveDataToStorage() {
+    try {
+      var thinMeters = {};
+      for (var id in meters) {
+        thinMeters[id] = Object.assign({}, meters[id]);
+        // Thin pathCoords to max 200 points to prevent localStorage quota overflow
+        if (thinMeters[id].pathCoords && thinMeters[id].pathCoords.length > 200) {
+          var step = Math.ceil(thinMeters[id].pathCoords.length / 200);
+          thinMeters[id].pathCoords = thinMeters[id].pathCoords.filter(function(_, i) { return i % step === 0; });
+        }
+        // Thin routeCoords similarly
+        if (thinMeters[id].routeCoords && thinMeters[id].routeCoords.length > 200) {
+          var step2 = Math.ceil(thinMeters[id].routeCoords.length / 200);
+          thinMeters[id].routeCoords = thinMeters[id].routeCoords.filter(function(_, i) { return i % step2 === 0; });
+        }
+      }
+      localStorage.setItem('smart_meter_data', JSON.stringify(thinMeters));
+    } catch(e) { console.error('Storage save error:', e); }
+  }
   function loadDataFromStorage() {
     try {
       var saved = localStorage.getItem('smart_meter_data');
       if (saved) { var parsed = JSON.parse(saved); for (var id in parsed) { meters[id] = parsed[id]; } }
+      // Restore waiting mode state safely after page reload
+      for (var id2 in meters) {
+        var m2 = meters[id2];
+        if (m2.isWaitingMode) {
+          m2.waitingBaseSeconds = clampNumber(m2.totalWaitSeconds, 0, 86400, 0);
+          m2.waitingStartedAt = Date.now();
+        }
+      }
     } catch(e) { console.error(e); }
   }
 
@@ -809,6 +852,12 @@
 	  window.clearDriverHistory = clearDriverHistory;
 
   function buildTripPayload(m, status) {
+    // Warn once when clamping limits are hit
+    if (!m._clampWarned) {
+      if (m.totalDistance >= 1000) { showToast('⚠️ المسافة capped عند 1000 كم'); m._clampWarned = true; }
+      else if (m.finalFare >= 100000) { showToast('⚠️ الأجرة capped عند 100,000 ج'); m._clampWarned = true; }
+      else if (m.totalDurationMinutes >= 1440) { showToast('⚠️ المدة capped عند 24 ساعة'); m._clampWarned = true; }
+    }
     return {
       driver_id: currentUser.id,
       status: status,
@@ -825,7 +874,7 @@
       passenger_count: clampNumber(m.passengerCount, 0, 20, 1),
       passenger_breakdown: JSON.stringify(m.passengersData || [])
     };
-    }
+  }
 
  	  async function invokeTripEvent(action, m) {
  	    if (!supabase || !currentUser) return null;
@@ -947,7 +996,7 @@
           wpHtml = '<div class="info" style="font-size:11px;"><i class="fas fa-route"></i> ' + r.waypoints.length + ' محطة: ' + waypointIcons.join(' ') + '</div>';
         }
         var noteHtml = r.note ? '<div class="info" style="font-size:11px;color:var(--accent);"><i class="fas fa-comment"></i> ' + escapeHTML(r.note) + '</div>' : '';
-        return '<div class="driver-request-item"><div class="top"><span class="name"><i class="fas fa-user"></i> راكب</span><span class="req-badge pending">جديد</span></div><div class="info"><i class="fas fa-tag"></i> ' + typeText + ' | <i class="fas fa-users"></i> ' + (r.passenger_count || 1) + ' راكب</div><div class="info"><i class="fas fa-map-pin"></i> ' + escapeHTML(r.pickup_address || 'بدون موقع') + '</div>' + (r.destination_address ? '<div class="info"><i class="fas fa-flag"></i> ' + escapeHTML(r.destination_address) + '</div>' : '') + wpHtml + noteHtml + '<div class="info"><i class="fas fa-clock"></i> ' + timeText + '</div><div class="req-actions">' + (hasLoc ? '<button class="btn btn-sm btn-outline" onclick="showPickupOnMap(' + r.pickup_lat + ', ' + r.pickup_lng + ')" style="padding:6px 10px;font-size:11px;"><i class="fas fa-map-marker-alt"></i> موقع</button>' : '') + (r.waypoints && Array.isArray(r.waypoints) && r.waypoints.length > 1 ? '<button class="btn btn-sm btn-outline" onclick="showWaypointsOnMap(\'' + r.id + '\')" style="padding:6px 10px;font-size:11px;"><i class="fas fa-route"></i> المسار</button>' : '') + '<button class="btn btn-success btn-sm" onclick="acceptRequest(\'' + r.id + '\')"><i class="fas fa-check"></i> قبول</button><button class="btn btn-danger btn-sm" onclick="rejectRequest(\'' + r.id + '\')"><i class="fas fa-times"></i> رفض</button></div></div>';
+        return '<div class="driver-request-item"><div class="top"><span class="name"><i class="fas fa-user"></i> راكب</span><span class="req-badge pending">جديد</span></div><div class="info"><i class="fas fa-tag"></i> ' + typeText + ' | <i class="fas fa-users"></i> ' + (r.passenger_count || 1) + ' راكب</div><div class="info"><i class="fas fa-map-pin"></i> ' + escapeHTML(r.pickup_address || 'بدون موقع') + '</div>' + (r.destination_address ? '<div class="info"><i class="fas fa-flag"></i> ' + escapeHTML(r.destination_address) + '</div>' : '') + wpHtml + noteHtml + '<div class="info"><i class="fas fa-clock"></i> ' + timeText + '</div><div class="req-actions">' + (hasLoc ? '<button class="btn btn-sm btn-outline" onclick="showPickupOnMap(' + r.pickup_lat + ', ' + r.pickup_lng + ')" style="padding:6px 10px;font-size:11px;"><i class="fas fa-map-marker-alt"></i> موقع</button>' : '') + (r.waypoints && Array.isArray(r.waypoints) && r.waypoints.length > 1 ? '<button class="btn btn-sm btn-outline" onclick="showWaypointsOnMap(\'' + escapeHTML(r.id) + '\')" style="padding:6px 10px;font-size:11px;"><i class="fas fa-route"></i> المسار</button>' : '') + '<button class="btn btn-success btn-sm" onclick="acceptRequest(\'' + escapeHTML(r.id) + '\')"><i class="fas fa-check"></i> قبول</button><button class="btn btn-danger btn-sm" onclick="rejectRequest(\'' + escapeHTML(r.id) + '\')"><i class="fas fa-times"></i> رفض</button></div></div>';
       }).join('');
       // Notify if there are new requests
       if (typeof driverLastRequestCount !== 'undefined' && requests.length > driverLastRequestCount) {

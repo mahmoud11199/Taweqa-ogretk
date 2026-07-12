@@ -2,7 +2,7 @@
     if (!supabase || !currentUser) return;
     var role = currentProfile && currentProfile.role === 'driver' ? 'driver' : 'passenger';
     if (typeof checkPaymobReturn === 'function') checkPaymobReturn();
-    try {
+    try { showLoading('جاري تحميل المحفظة...');
       // Load balance
       var { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', currentUser.id).single();
       if (wallet) {
@@ -25,7 +25,7 @@
       } else {
         txList.innerHTML = '<div class="empty-state">لا توجد معاملات</div>';
       }
-    } catch(e) { console.error(e); }
+    } catch(e) { console.error(e); } finally { hideLoading(); }
   };
 
   window.showChargeForm = function(role) {
@@ -58,6 +58,9 @@
         sessionStorage.setItem('paymob_pending', JSON.stringify({ amount: amount, intention_id: data.intention_id }));
       } catch(e) { console.error('Session storage error:', e); }
 
+      if (!data.redirect_url || typeof data.redirect_url !== 'string' || !/^https:\/\//i.test(data.redirect_url)) {
+        showToast('❌ رابط بوابة الدفع غير صالح'); if (btn) btn.disabled = false; return;
+      }
       showToast('🔄 جاري تحويلك إلى بوابة الدفع...');
       window.location.href = data.redirect_url;
     } catch(e) { showToast('❌ فشل الشحن'); console.error(e); }
@@ -193,8 +196,8 @@
           + '<div class="ref-progress"><div style="font-size:12px;color:var(--meter-muted);margin-bottom:4px;">📊 إحالاتي: ' + completedRefs + ' / 10</div>'
           + '<div class="bar"><div class="bar-fill" style="width:' + progress + '%;"></div></div>'
           + '<div class="count">' + (completedRefs >= 10 ? '🎉 أحسنت! ستحصل على شهر مجاني' : (10 - completedRefs) + ' إحالات متبقية للحصول على شهر مجاني') + '</div></div>';
-      });
-    });
+      }).catch(function(e) { console.error('Referrals fetch error:', e); });
+    }).catch(function(e) { console.error('Referral code fetch error:', e); });
   }
   window.copyReferralCode = function() {
     var el = document.getElementById('refCodeDisplay');
@@ -249,7 +252,7 @@
         meterSection.insertBefore(banner, meterSection.firstChild);
       }
       banner.innerHTML = proposals.map(function(p) {
-        return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:13px;"><span style="flex:1;">💬 الراكب يقترح <strong>' + p.passenger_proposed_fare.toFixed(2) + ' ج</strong> بدلاً من ' + (p.total_fare || 0).toFixed(2) + ' ج (كود: ' + escapeHTML(p.join_code || '-') + ')' + (p.passenger_adjustment_note ? '<br><span style="font-size:11px;color:var(--meter-muted);">السبب: ' + escapeHTML(p.passenger_adjustment_note) + '</span>' : '') + '</span><button class="btn btn-sm btn-success" onclick="acceptPriceProposal(\'' + p.id + '\')" style="padding:4px 10px;font-size:11px;">قبول</button><button class="btn btn-sm btn-outline" onclick="rejectPriceProposal(\'' + p.id + '\')" style="padding:4px 10px;font-size:11px;">رفض</button></div>';
+        return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:13px;"><span style="flex:1;">💬 الراكب يقترح <strong>' + p.passenger_proposed_fare.toFixed(2) + ' ج</strong> بدلاً من ' + (p.total_fare || 0).toFixed(2) + ' ج (كود: ' + escapeHTML(p.join_code || '-') + ')' + (p.passenger_adjustment_note ? '<br><span style="font-size:11px;color:var(--meter-muted);">السبب: ' + escapeHTML(p.passenger_adjustment_note) + '</span>' : '') + '</span><button class="btn btn-sm btn-success" onclick="acceptPriceProposal(\'' + escapeHTML(p.id) + '\')" style="padding:4px 10px;font-size:11px;">قبول</button><button class="btn btn-sm btn-outline" onclick="rejectPriceProposal(\'' + escapeHTML(p.id) + '\')" style="padding:4px 10px;font-size:11px;">رفض</button></div>';
       }).join('');
       banner.style.display = 'block';
     } catch(e) { console.error(e); }
@@ -332,7 +335,7 @@
       document.addEventListener(events[i], handler, { passive: true });
     }
     // Check periodically (every 5 minutes)
-    setInterval(function() {
+    window._sessionInactivityTimer = setInterval(function() {
       if (currentUser) {
         checkSessionInactivity();
       }

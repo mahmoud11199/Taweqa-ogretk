@@ -54,11 +54,14 @@
         if (payload.fileUrls) {
           filesHtml = '<div style="font-size:11px;margin-top:4px;">';
           for (var k in payload.fileUrls) {
-            filesHtml += '<a href="' + escapeHTML(payload.fileUrls[k]) + '" target="_blank" style="color:var(--meter-primary);display:inline-block;margin:2px 4px;"><i class="fas fa-file"></i> ' + escapeHTML(payload.fields[k] || k) + '</a>';
+            var fileUrl = payload.fileUrls[k];
+            if (typeof fileUrl === 'string' && /^https?:\/\//i.test(fileUrl)) {
+              filesHtml += '<a href="' + escapeHTML(fileUrl) + '" target="_blank" style="color:var(--meter-primary);display:inline-block;margin:2px 4px;"><i class="fas fa-file"></i> ' + escapeHTML(payload.fields[k] || k) + '</a>';
+            }
           }
           filesHtml += '</div>';
         }
-        return '<div class="driver-request-item"><div class="top"><span class="name">' + escapeHTML(payload.full_name || a.user_id) + '</span><span class="req-badge pending">معلق</span></div><div class="info"><i class="fas fa-phone"></i> ' + escapeHTML(payload.phone || '-') + '</div><div class="info"><i class="fas fa-tag"></i> ' + escapeHTML(payload.driver_type || '-') + '</div>' + filesHtml + '<div class="req-actions"><button class="btn btn-success btn-sm" onclick="approveDriverApp(\'' + a.user_id + '\')" style="padding:4px 12px;font-size:11px;"><i class="fas fa-check"></i> قبول</button><button class="btn btn-danger btn-sm" onclick="rejectDriverApp(\'' + a.user_id + '\')" style="padding:4px 12px;font-size:11px;"><i class="fas fa-times"></i> رفض</button></div></div>';
+        return '<div class="driver-request-item"><div class="top"><span class="name">' + escapeHTML(payload.full_name || a.user_id) + '</span><span class="req-badge pending">معلق</span></div><div class="info"><i class="fas fa-phone"></i> ' + escapeHTML(payload.phone || '-') + '</div><div class="info"><i class="fas fa-tag"></i> ' + escapeHTML(payload.driver_type || '-') + '</div>' + filesHtml + '<div class="req-actions"><button class="btn btn-success btn-sm" onclick="approveDriverApp(\'' + escapeHTML(a.user_id) + '\')" style="padding:4px 12px;font-size:11px;"><i class="fas fa-check"></i> قبول</button><button class="btn btn-danger btn-sm" onclick="rejectDriverApp(\'' + escapeHTML(a.user_id) + '\')" style="padding:4px 12px;font-size:11px;"><i class="fas fa-times"></i> رفض</button></div></div>';
       }).join('');
     } catch(e) { list.innerHTML = '<div class="empty-state">خطأ</div>'; console.error(e); }
   }

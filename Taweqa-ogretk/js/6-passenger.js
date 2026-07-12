@@ -386,7 +386,7 @@
         status: 'cancelled',
         passenger_count: 1,
         note: '🚨 SOS ALERT from tracking screen' + (tripId ? ' (trip: ' + tripId + ')' : '') + (code ? ' (code: ' + code + ')' : '') + ' — user: ' + (currentUser.email || currentUser.id)
-      }).then(function(r) { if (r.error) console.error('SOS log error:', r.error); else showToast('✅ تم تسجيل بلاغ SOS — سيتم التواصل معك قريباً'); });
+      }).then(function(r) { if (r.error) console.error('SOS log error:', r.error); else showToast('✅ تم تسجيل بلاغ SOS — سيتم التواصل معك قريباً'); }).catch(function(e) { console.error('SOS insert error:', e); showToast('❌ فشل تسجيل بلاغ SOS'); });
     }
   };
 
@@ -447,6 +447,7 @@
     var activeStars = document.querySelectorAll('#trackRatingStars span.active').length;
     if (activeStars === 0) { showToast('اختر عدد النجوم أولاً'); return; }
     var comment = document.getElementById('trackRatingComment').value.trim();
+    if (comment.length > 1000) { showToast('التعليق طويل جداً (الحد الأقصى 1000 حرف)'); return; }
     try {
       var tripId = lastTrackedTripId;
       if (!tripId && lastTrackedCode) {
@@ -493,7 +494,7 @@
       if (trip && trip.join_code) {
         document.getElementById('track-code').value = trip.join_code;
         document.getElementById('auto-track-banner').style.display = 'flex';
-        document.getElementById('auto-track-banner').innerHTML = '<span style="flex:1"><i class="fas fa-circle" style="color:var(--success);font-size:10px;animation:pulse 1.5s infinite;"></i> لديك رحلة نشطة - <strong>' + escapeHTML(trip.join_code) + '</strong></span><button class="btn btn-sm btn-primary" onclick="trackTrip(\'' + trip.join_code + '\')" style="padding:6px 16px;font-size:12px;"><i class="fas fa-eye"></i> تتبع</button>';
+        document.getElementById('auto-track-banner').innerHTML = '<span style="flex:1"><i class="fas fa-circle" style="color:var(--success);font-size:10px;animation:pulse 1.5s infinite;"></i> لديك رحلة نشطة - <strong>' + escapeHTML(trip.join_code) + '</strong></span><button class="btn btn-sm btn-primary" onclick="trackTrip(\'' + escapeHTML(trip.join_code) + '\')" style="padding:6px 16px;font-size:12px;"><i class="fas fa-eye"></i> تتبع</button>';
       }
     } catch (e) { console.error(e); }
   }
@@ -505,6 +506,7 @@
     var type = document.getElementById('request-type').value;
     var passengers = Math.round(clampNumber(document.getElementById('request-passengers').value, 1, 10, 1));
     var note = document.getElementById('request-note').value.trim();
+    if (note.length > 500) { showAlert('request-alert', 'الملاحظة طويلة جداً (الحد الأقصى 500 حرف)'); return; }
     document.getElementById('request-btn').disabled = true;
     document.getElementById('request-loading').classList.remove('hidden-el');
     try {
@@ -837,7 +839,7 @@
         var fare = proposalAccepted ? t.total_fare : t.total_fare;
         var priceActions = '';
         if (isCompleted && !proposalAccepted) {
-          priceActions = '<button class="btn btn-sm btn-outline" onclick="showPassengerPriceProposal(\'' + t.id + '\', ' + (t.total_fare || 0) + ')" style="padding:4px 10px;font-size:11px;margin-top:4px;"><i class="fas fa-edit"></i> ' + (hasPendingProposal ? 'تعديل الاقتراح' : 'تعديل السعر') + '</button>';
+          priceActions = '<button class="btn btn-sm btn-outline" onclick="showPassengerPriceProposal(\'' + escapeHTML(t.id) + '\', ' + (t.total_fare || 0) + ')" style="padding:4px 10px;font-size:11px;margin-top:4px;"><i class="fas fa-edit"></i> ' + (hasPendingProposal ? 'تعديل الاقتراح' : 'تعديل السعر') + '</button>';
         }
         if (hasPendingProposal) {
           priceActions += '<div style="font-size:10px;color:var(--accent);margin-top:2px;">⏳ بانتظار موافقة السائق على ' + t.passenger_proposed_fare.toFixed(2) + ' ج</div>';
@@ -847,7 +849,7 @@
         }
         // Payment button for unpaid wallet trips
         if (isCompleted && t.payment_method === 'wallet' && (t.payment_status === 'unpaid' || t.payment_status === null)) {
-          priceActions += '<button class="btn btn-sm btn-success" onclick="payTripFromWallet(\'' + t.id + '\', ' + fare + ')" style="padding:4px 10px;font-size:11px;margin-top:4px;"><i class="fas fa-wallet"></i> ادفع ' + fare.toFixed(2) + ' ج من المحفظة</button>';
+          priceActions += '<button class="btn btn-sm btn-success" onclick="payTripFromWallet(\'' + escapeHTML(t.id) + '\', ' + fare + ')" style="padding:4px 10px;font-size:11px;margin-top:4px;"><i class="fas fa-wallet"></i> ادفع ' + fare.toFixed(2) + ' ج من المحفظة</button>';
         }
         if (t.payment_status === 'paid_wallet') {
           priceActions += '<div style="font-size:10px;color:var(--success);margin-top:2px;">✅ مدفوع عن طريق المحفظة</div>';
@@ -871,7 +873,7 @@
         var statusText = r.status === 'pending' ? '🟡 قيد الانتظار' : r.status === 'accepted' ? '🟢 تم القبول' : r.status === 'cancelled' ? '🔴 ملغي' : r.status;
         var timeAgo = Math.floor((Date.now() - new Date(r.created_at).getTime()) / 1000);
         var timeText = timeAgo < 60 ? 'منذ ' + timeAgo + ' ثانية' : timeAgo < 3600 ? 'منذ ' + Math.floor(timeAgo / 60) + ' دقيقة' : 'منذ ' + Math.floor(timeAgo / 3600) + ' ساعة';
-        var cancelBtn = r.status === 'pending' ? '<button class="btn btn-danger btn-sm" onclick="cancelRequestFromHistory(\'' + r.id + '\')" style="padding:4px 10px;font-size:11px;"><i class="fas fa-times"></i> إلغاء</button>' : '';
+        var cancelBtn = r.status === 'pending' ? '<button class="btn btn-danger btn-sm" onclick="cancelRequestFromHistory(\'' + escapeHTML(r.id) + '\')" style="padding:4px 10px;font-size:11px;"><i class="fas fa-times"></i> إلغاء</button>' : '';
         var driverInfo = r.driver_id ? '<div style="font-size:10px;color:var(--meter-muted);">السائق: ' + r.driver_id.slice(0,8) + '...</div>' : '';
         return '<div class="history-item"><div class="history-header"><span>' + escapeHTML(timeText) + '</span><span style="color:var(--meter-primary)">' + statusText + '</span></div><div class="history-details"><div>' + (r.classification === 'private' ? 'مخصوص' : 'أفراد') + '</div><div>' + (r.passenger_count || 1) + ' راكب</div><div style="font-size:10px;">' + escapeHTML(r.pickup_address || '-') + '</div></div><div style="display:flex;gap:6px;margin-top:4px;">' + cancelBtn + driverInfo + '</div></div>';
       }).join('');
@@ -909,15 +911,11 @@
     } catch(e) { showToast('❌ حدث خطأ'); console.error(e); }
   };
 
-  window.showPassengerPriceProposal = function(tripId, currentFare) {
-    var proposed = prompt('السعر الحالي: ' + currentFare.toFixed(2) + ' ج\nأدخل السعر المقترح:', currentFare.toFixed(2));
-    if (proposed === null) return;
-    var fareNum = parseFloat(proposed);
-    if (!fareNum || fareNum < 0 || fareNum > 100000) { showToast('قيمة غير صالحة'); return; }
-    if (fareNum > currentFare) { showToast('السعر المقترح يجب أن لا يزيد عن السعر الحالي'); return; }
-    var note = prompt('سبب التعديل (اختياري):', '');
-    if (note === null) return;
-    supabase.rpc('propose_trip_price', { p_trip_id: tripId, p_proposed_fare: fareNum, p_note: note || '' }).then(function(r) {
+  window.showPassengerPriceProposal = async function(tripId, currentFare) {
+    var vals = await showPromptModal({ title: 'تعديل السعر (الحد الأقصى: ' + currentFare.toFixed(2) + ' ج)', fields: [{ key: 'fare', label: 'السعر المقترح', placeholder: currentFare.toFixed(2), defaultValue: currentFare.toFixed(2), type: 'text' }, { key: 'note', label: 'سبب التعديل (اختياري)', placeholder: 'السبب...', type: 'text' }], confirmText: 'إرسال', validator: function(v) { var n = parseFloat(v.fare); if (isNaN(n) || n < 0 || n > 100000) return 'قيمة غير صالحة'; if (n > currentFare) return 'السعر لا يزيد عن السعر الحالي'; } });
+    if (!vals) return;
+    var fareNum = parseFloat(vals.fare);
+    supabase.rpc('propose_trip_price', { p_trip_id: tripId, p_proposed_fare: fareNum, p_note: vals.note || '' }).then(function(r) {
       if (r.error) { showToast('❌ فشل: ' + r.error.message); return; }
       if (r.data && r.data.success) {
         showToast('✅ تم اقتراح السعر. بانتظار موافقة السائق');
@@ -925,7 +923,7 @@
       } else {
         showToast('❌ ' + (r.data?.error || 'فشل'));
       }
-    });
+    }).catch(function(e) { console.error('Price proposal error:', e); showToast('❌ فشل اقتراح السعر'); });
   };
 
   // ======================== SCHEDULED RIDES ========================
@@ -1043,7 +1041,7 @@
           '<div class="info"><i class="fas fa-map-pin"></i> ' + escapeHTML(t.pickup_address || '-') + '</div>' +
           (t.destination_address ? '<div class="info"><i class="fas fa-flag"></i> ' + escapeHTML(t.destination_address) + '</div>' : '') +
           (t.note ? '<div class="info" style="color:var(--accent);"><i class="fas fa-comment"></i> ' + escapeHTML(t.note) + '</div>' : '') +
-          (t.status === 'scheduled' && !isPast ? '<div class="req-actions"><button class="btn btn-danger btn-sm" onclick="cancelScheduledTrip(\'' + t.id + '\')"><i class="fas fa-times"></i> إلغاء</button></div>' : '') +
+          (t.status === 'scheduled' && !isPast ? '<div class="req-actions"><button class="btn btn-danger btn-sm" onclick="cancelScheduledTrip(\'' + escapeHTML(t.id) + '\')"><i class="fas fa-times"></i> إلغاء</button></div>' : '') +
           '</div>';
       }).join('');
     } catch(e) { list.innerHTML = '<div class="empty-state">خطأ في التحميل</div>'; console.error(e); }

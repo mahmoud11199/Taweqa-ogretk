@@ -6,11 +6,13 @@ window.handleRegister = async function() {
   var pass = document.getElementById('reg-password').value;
   var confirm = document.getElementById('reg-confirm').value;
   var refCode = document.getElementById('reg-ref').value.trim().toUpperCase();
-  if (!name) { showAlert('register-alert', 'يرجى إدخال الاسم الكامل'); return; }
-  if (!email) { showAlert('register-alert', 'يرجى إدخال البريد الإلكتروني'); return; }
-  if (!phone || !/^01[0-9]{9}$/.test(phone)) { showAlert('register-alert', 'يرجى إدخال رقم هاتف مصري صحيح (01XXXXXXXXX)'); return; }
-  if (!pass || pass.length < 6) { showAlert('register-alert', 'كلمة السر يجب أن تكون 6 أحرف على الأقل'); return; }
-  if (pass !== confirm) { showAlert('register-alert', 'كلمة السر غير متطابقة'); return; }
+  ['reg-name','reg-email','reg-phone','reg-password','reg-confirm'].forEach(function(id) { setFieldError(id, false); });
+  if (refCode && refCode.length > 20) { showAlert('register-alert', 'كود الإحالة غير صالح'); return; }
+  if (!name) { setFieldError('reg-name', true); showAlert('register-alert', 'يرجى إدخال الاسم الكامل'); return; }
+  if (!email) { setFieldError('reg-email', true); showAlert('register-alert', 'يرجى إدخال البريد الإلكتروني'); return; }
+  if (!phone || !/^01[0-9]{9}$/.test(phone)) { setFieldError('reg-phone', true); showAlert('register-alert', 'يرجى إدخال رقم هاتف مصري صحيح (01XXXXXXXXX)'); return; }
+  if (!pass || pass.length < 6) { setFieldError('reg-password', true); showAlert('register-alert', 'كلمة السر يجب أن تكون 6 أحرف على الأقل'); return; }
+  if (pass !== confirm) { setFieldError('reg-confirm', true); showAlert('register-alert', 'كلمة السر غير متطابقة'); return; }
   var requestedRole = selectedRole;
   var driverType = '';
   if (requestedRole === 'driver') {
@@ -41,12 +43,12 @@ window.handleRegister = async function() {
           try {
             var filePath = 'driver-docs/' + data.user.id + '/' + k + '_' + Date.now() + '_' + fields[k].name;
             var { error: uploadErr } = await supabase.storage.from('driver-documents').upload(filePath, fields[k], { upsert: true, contentType: fields[k].type });
-            if (uploadErr) { console.error('Upload error for ' + k + ':', uploadErr); }
+            if (uploadErr) { console.error('Upload error for ' + k + ':', uploadErr); showToast('❌ فشل رفع ' + k + ': ' + uploadErr.message); }
             else {
               var { data: urlData } = supabase.storage.from('driver-documents').getPublicUrl(filePath);
               if (urlData) payload.fileUrls[k] = urlData.publicUrl;
             }
-          } catch(e) { console.error('File upload exception for ' + k + ':', e); }
+          } catch(e) { console.error('File upload exception for ' + k + ':', e); showToast('❌ فشل رفع الملف: ' + (e.message || 'خطأ غير متوقع')); }
         } else if (fields[k]) {
           payload.fields[k] = fields[k];
         }
@@ -65,7 +67,7 @@ window.handleLogin = async function() {
   if (!supabase) {
     initSupa();
     if (!supabase) {
-      await new Promise(function(r) { var _t2 = setInterval(function() { if (initSupa() || supabase) { clearInterval(_t2); r(); } }, 100); setTimeout(r, 3000); });
+      await new Promise(function(r) { var _t2 = setInterval(function() { if (initSupa() || supabase) { clearInterval(_t2); r(); } }, 100); setTimeout(function() { clearInterval(_t2); r(); }, 3000); });
     }
   }
   if (!supabase) { showToast('خدمة الدخول غير متاحة'); return; }
@@ -107,6 +109,12 @@ window.handleLogout = async function() {
   if (typeof acceptedDriverLocTimer !== 'undefined' && acceptedDriverLocTimer) { clearInterval(acceptedDriverLocTimer); acceptedDriverLocTimer = null; }
   if (typeof driverRequestPollTimer !== 'undefined' && driverRequestPollTimer) { clearInterval(driverRequestPollTimer); driverRequestPollTimer = null; }
   if (typeof chatPollTimer !== 'undefined' && chatPollTimer) { clearInterval(chatPollTimer); chatPollTimer = null; }
+  // Cleanup meter tick, trip poll, price proposal, and session inactivity timers
+  if (window._meterTickTimer) { clearInterval(window._meterTickTimer); window._meterTickTimer = null; }
+  if (window._activeTripPollTimer) { clearInterval(window._activeTripPollTimer); window._activeTripPollTimer = null; }
+  if (window._priceProposalInterval) { clearInterval(window._priceProposalInterval); window._priceProposalInterval = null; }
+  if (window._sessionInactivityTimer) { clearInterval(window._sessionInactivityTimer); window._sessionInactivityTimer = null; }
+  if (window._landingStatsTimer) { clearInterval(window._landingStatsTimer); window._landingStatsTimer = null; }
   // Cleanup realtime channels
   try { supabase.removeAllChannels(); } catch(e) {}
   try { localStorage.removeItem('taweqe_last_activity'); } catch(e) { console.error('LocalStorage remove error:', e); }
@@ -201,7 +209,7 @@ async function initSession() {
 
 function showDriverDashboard() {
   showScreen('driver-app');
-  document.getElementById('driver-profile-name').textContent = currentProfile.full_name || currentUser.email;
+  document.getElementById('driver-profile-name').textContent = (currentProfile && currentProfile.full_name) || (currentUser && currentUser.email) || '-';
   try { document.getElementById('driver-profile-phone').textContent = currentProfile.phone || '-'; } catch(e) {}
   loadDriverStats();
   loadDriverRating();
@@ -239,7 +247,7 @@ async function loadDriverAvailability() {
 
 function showPassengerDashboard() {
   showScreen('passenger-app');
-  document.getElementById('passenger-profile-name').textContent = currentProfile.full_name || currentUser.email;
+  document.getElementById('passenger-profile-name').textContent = (currentProfile && currentProfile.full_name) || (currentUser && currentUser.email) || '-';
   try { document.getElementById('passenger-profile-phone').textContent = currentProfile.phone || '-'; } catch(e) {}
   loadPassengerStats();
 }
@@ -361,12 +369,12 @@ window.uploadAvatar = async function(role) {
   if (!input || !input.files || !input.files[0]) return;
   var file = input.files[0];
   if (file.size > 2 * 1024 * 1024) { showToast('الحد الأقصى لحجم الصورة 2 ميجابايت'); return; }
-  try {
+  try { showLoading('جاري رفع الصورة...');
     var filePath = 'avatars/' + currentUser.id + '_' + Date.now() + '.jpg';
     var { error: uploadErr } = await supabase.storage.from('avatars').upload(filePath, file, { upsert: true, contentType: file.type });
-    if (uploadErr) { showToast('❌ فشل رفع الصورة: ' + uploadErr.message); return; }
+    if (uploadErr) { hideLoading(); showToast('❌ فشل رفع الصورة: ' + uploadErr.message); return; }
     var { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
-    if (!urlData) { showToast('❌ فشل الحصول على رابط الصورة'); return; }
+    if (!urlData) { hideLoading(); showToast('❌ فشل الحصول على رابط الصورة'); return; }
     var url = urlData.publicUrl;
     await supabase.from('profiles').update({ avatar_url: url }).eq('id', currentUser.id);
     // Update both avatar displays
@@ -376,7 +384,7 @@ window.uploadAvatar = async function(role) {
     if (icon) icon.style.display = 'none';
     loadReferralInfo();
     showToast('✅ تم تحديث الصورة الشخصية');
-  } catch(e) { showToast('❌ حدث خطأ'); console.error(e); }
+  } catch(e) { showToast('❌ حدث خطأ'); console.error(e); } finally { hideLoading(); }
 };
 
 // Load avatar on dashboard load
@@ -408,27 +416,25 @@ showPassengerDashboard = function() {
 // ====== SETTINGS: Update phone ======
 window.updatePhoneNumber = async function(role) {
   if (!supabase || !currentUser) return;
-  var newPhone = prompt('أدخل رقم الهاتف الجديد (01XXXXXXXXX):', currentProfile?.phone || '');
-  if (!newPhone || !/^01[0-9]{9}$/.test(newPhone)) { showToast('يرجى إدخال رقم هاتف مصري صحيح'); return; }
+  var val = await showPromptModal({ title: 'تحديث رقم الهاتف', placeholder: '01XXXXXXXXX', defaultValue: currentProfile?.phone || '', confirmText: 'تحديث', validator: function(v) { if (!v || !/^01[0-9]{9}$/.test(v)) return 'يرجى إدخال رقم هاتف مصري صحيح'; } });
+  if (!val) return;
   try {
-    await supabase.from('profiles').update({ phone: newPhone }).eq('id', currentUser.id);
-    currentProfile.phone = newPhone;
+    await supabase.from('profiles').update({ phone: val }).eq('id', currentUser.id);
+    currentProfile.phone = val;
+    var phoneEl = document.getElementById(role + '-profile-phone');
+    if (phoneEl) phoneEl.textContent = val;
     showToast('✅ تم تحديث رقم الهاتف');
   } catch(e) { showToast('❌ فشل التحديث'); console.error(e); }
 };
 
 window.changePassword = async function() {
   if (!supabase) return;
-  var oldPass = prompt('أدخل كلمة السر الحالية:');
-  if (!oldPass) return;
-  var newPass = prompt('أدخل كلمة السر الجديدة (6 أحرف على الأقل):');
-  if (!newPass || newPass.length < 6) { showToast('كلمة السر يجب أن تكون 6 أحرف على الأقل'); return; }
-  var confirmPass = prompt('أعد إدخال كلمة السر الجديدة:');
-  if (newPass !== confirmPass) { showToast('كلمة السر غير متطابقة'); return; }
+  var vals = await showPromptModal({ title: 'تغيير كلمة السر', confirmText: 'تغيير', fields: [{ key: 'old', label: 'كلمة السر الحالية', type: 'password' }, { key: 'new', label: 'كلمة السر الجديدة (6 أحرف على الأقل)', type: 'password' }, { key: 'confirm', label: 'أعد إدخال كلمة السر الجديدة', type: 'password' }], validator: function(v) { if (!v.old) return 'أدخل كلمة السر الحالية'; if (!v.new || v.new.length < 6) return 'كلمة السر الجديدة يجب أن تكون 6 أحرف على الأقل'; if (v.new !== v.confirm) return 'كلمة السر غير متطابقة'; } });
+  if (!vals) return;
   try {
-    var { error: signInErr } = await supabase.auth.signInWithPassword({ email: currentUser.email, password: oldPass });
+    var { error: signInErr } = await supabase.auth.signInWithPassword({ email: currentUser.email, password: vals.old });
     if (signInErr) { showToast('❌ كلمة السر الحالية غير صحيحة'); return; }
-    var { error } = await supabase.auth.updateUser({ password: newPass });
+    var { error } = await supabase.auth.updateUser({ password: vals.new });
     if (error) { showToast('❌ فشل تغيير كلمة السر: ' + error.message); return; }
     showToast('✅ تم تغيير كلمة السر بنجاح');
   } catch(e) { showToast('❌ حدث خطأ'); console.error(e); }

@@ -48,7 +48,8 @@
     try {
       var { data: msgs, error } = await supabase.from('trip_chat_messages').select('*').eq('trip_id', tripId).order('created_at', { ascending: true }).limit(100);
       if (error) return;
-      container.innerHTML = (msgs || []).map(function(m) {
+      if (!msgs || !msgs.length) { container.innerHTML = '<div class="empty-chat" style="text-align:center;padding:40px;color:var(--text-muted,#888);font-size:14px;">💬 لا توجد رسائل بعد</div>'; return; }
+      container.innerHTML = msgs.map(function(m) {
         var role = m.sender_role === 'driver' ? 'driver' : 'passenger';
         var name = m.sender_role === 'driver' ? 'السائق' : 'الراكب';
         var time = new Date(m.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });

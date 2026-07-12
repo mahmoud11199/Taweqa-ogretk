@@ -162,9 +162,9 @@
       <h2 class="section-title reveal">الأسئلة الشائعة</h2>
       <p class="section-subtitle reveal">إجابات لأكثر الأسئلة تكراراً</p>
       <div class="faq-list">
-        <div class="faq-item reveal"><div class="faq-question" onclick="toggleFaq(this)"><span>ما هو تطبيق توقع أجرتك؟</span><i class="fas fa-plus faq-icon"></i></div><div class="faq-answer">تطبيق توقع أجرتك هو تطبيق ذكي لسائقي التوك توك يساعدك في حساب الأجرة بدقة. كما يتيح مشاركة كود الرحلة مع الركاب لتتبعها.</div></div>
-        <div class="faq-item reveal"><div class="faq-question" onclick="toggleFaq(this)"><span>كيف يمكنني تحميل التطبيق؟</span><i class="fas fa-plus faq-icon"></i></div><div class="faq-answer">يمكنك تحميل التطبيق من رابط التحميل الموجود في أعلى الصفحة. التطبيق متاح لنظام Android بصيغة APK.</div></div>
-        <div class="faq-item reveal"><div class="faq-question" onclick="toggleFaq(this)"><span>هل يمكن للراكب تتبع الرحلات؟</span><i class="fas fa-plus faq-icon"></i></div><div class="faq-answer">نعم! يمكن للراكب إدخال كود المشاركة المكون من 6 أرقام الذي يولده السائق في بداية الرحلة لتتبع المسار والأجرة بشكل مباشر.</div></div>
+        <div class="faq-item reveal"><div class="faq-question" onclick="toggleFaq(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')this.click()"><span>ما هو تطبيق توقع أجرتك؟</span><i class="fas fa-plus faq-icon"></i></div><div class="faq-answer">تطبيق توقع أجرتك هو تطبيق ذكي لسائقي التوك توك يساعدك في حساب الأجرة بدقة. كما يتيح مشاركة كود الرحلة مع الركاب لتتبعها.</div></div>
+        <div class="faq-item reveal"><div class="faq-question" onclick="toggleFaq(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')this.click()"><span>كيف يمكنني تحميل التطبيق؟</span><i class="fas fa-plus faq-icon"></i></div><div class="faq-answer">يمكنك تحميل التطبيق من رابط التحميل الموجود في أعلى الصفحة. التطبيق متاح لنظام Android بصيغة APK.</div></div>
+        <div class="faq-item reveal"><div class="faq-question" onclick="toggleFaq(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')this.click()"><span>هل يمكن للراكب تتبع الرحلات؟</span><i class="fas fa-plus faq-icon"></i></div><div class="faq-answer">نعم! يمكن للراكب إدخال كود المشاركة المكون من 6 أرقام الذي يولده السائق في بداية الرحلة لتتبع المسار والأجرة بشكل مباشر.</div></div>
       </div>
     </div>
   </section>
@@ -303,12 +303,12 @@
     <p>يرجى الانتظار</p>
   </div>
 </div>
-<div class="app-container" id="driver-app">
+<div class="app-container" id="driver-app" role="main">
   <nav class="navbar" style="padding:10px 14px;margin:0 -12px;border-radius:0">
     <div class="logo"><i class="fas fa-motorcycle"></i><span>السائق</span></div>
     <div style="display:flex;gap:8px;align-items:center">
       <span id="driver-status-badge" onclick="toggleDriverAvailability()" style="font-size:12px;background:var(--success);color:var(--bg-deep);padding:4px 12px;border-radius:20px;font-weight:700;cursor:pointer;">🟢 متاح للطلب</span>
-      <button class="btn btn-sm btn-outline nav-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i></button>
+      <button class="btn btn-sm btn-outline nav-btn" onclick="handleLogout()" aria-label="تسجيل الخروج"><i class="fas fa-sign-out-alt"></i></button>
     </div>
   </nav>
   <div class="app-nav">
@@ -567,10 +567,10 @@
   </div>
 </div>
 
-<div class="app-container" id="passenger-app">
+<div class="app-container" id="passenger-app" role="main">
   <nav class="navbar" style="padding:10px 14px;margin:0 -12px;border-radius:0">
     <div class="logo"><i class="fas fa-motorcycle"></i><span>الراكب</span></div>
-    <button class="btn btn-sm btn-outline nav-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i></button>
+    <button class="btn btn-sm btn-outline nav-btn" onclick="handleLogout()" aria-label="تسجيل الخروج"><i class="fas fa-sign-out-alt"></i></button>
   </nav>
   <div class="app-nav">
     <button class="tab-btn active" onclick="switchPassengerTab('track', this)"><span class="tab-icon">&#x1F4CD;</span>تتبع</button>
@@ -755,7 +755,7 @@
       <button class="btn btn-accent" onclick="createScheduledTrip()" id="schedule-btn" style="width:100%;justify-content:center;margin-top:6px;"><i class="fas fa-calendar-check"></i> جدولة الرحلة</button>
     </div>
     <div class="card" style="padding:12px;margin-top:12px;">
-      <h4 style="margin-bottom:8px;"><i class="fas fa-list"></i> رحلاتي المجدولة <button class="btn btn-sm btn-outline" onclick="triggerProcessScheduled()" style="float:left;padding:4px 10px;font-size:10px;"><i class="fas fa-play"></i> تشغيل يدوي</button></h4>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><h4 style="margin:0;"><i class="fas fa-list"></i> رحلاتي المجدولة</h4><button class="btn btn-sm btn-outline" onclick="triggerProcessScheduled()" style="padding:4px 10px;font-size:10px;"><i class="fas fa-play"></i> تشغيل يدوي</button></div>
       <div id="scheduled-trips-list"><div class="empty-state">لا توجد رحلات مجدولة</div></div>
     </div>
   </div>
@@ -830,10 +830,10 @@
   </div>
 </div>
 
-<div class="app-container" id="admin-app">
+<div class="app-container" id="admin-app" role="main">
   <nav class="navbar" style="padding:10px 14px;margin:0 -12px;border-radius:0">
     <div class="logo"><i class="fas fa-shield-alt"></i><span>لوحة المشرف</span></div>
-    <button class="btn btn-sm btn-outline nav-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i></button>
+    <button class="btn btn-sm btn-outline nav-btn" onclick="handleLogout()" aria-label="تسجيل الخروج"><i class="fas fa-sign-out-alt"></i></button>
   </nav>
   <div class="app-nav">
     <button class="tab-btn active" onclick="switchAdminTab('dashboard', this)"><span class="tab-icon">&#x1F4CA;</span>الإحصائيات</button>

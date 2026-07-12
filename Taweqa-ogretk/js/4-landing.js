@@ -4,7 +4,7 @@ function initLandingPage() {
   landingInitialized = true;
   initReveal();
   loadStats();
-  setInterval(loadStats, 60000);
+  window._landingStatsTimer = setInterval(loadStats, 60000);
 }
 
 function initReveal() {
