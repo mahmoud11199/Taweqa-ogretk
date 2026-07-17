@@ -43,13 +43,13 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
       - name: Set Edge Function secrets
-        if: ${{ secrets.PAYMOB_API_KEY != '' }}
-        run: >
-          supabase secrets set
-          PAYMOB_API_KEY=${{ secrets.PAYMOB_API_KEY }}
-          PAYMOB_INTEGRATION_ID=${{ secrets.PAYMOB_INTEGRATION_ID }}
-          PAYMOB_IFRAME_ID=${{ secrets.PAYMOB_IFRAME_ID }}
+        if: env.PAYMOB_API_KEY != ''
+        run: |
+          supabase secrets set PAYMOB_API_KEY=${{ secrets.PAYMOB_API_KEY }}
+          supabase secrets set PAYMOB_INTEGRATION_ID=${{ secrets.PAYMOB_INTEGRATION_ID }}
+          supabase secrets set PAYMOB_IFRAME_ID=${{ secrets.PAYMOB_IFRAME_ID }}
         env:
+          PAYMOB_API_KEY: ${{ secrets.PAYMOB_API_KEY }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
   build-android:
