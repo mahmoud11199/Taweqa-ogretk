@@ -92,6 +92,15 @@ jobs:
           }
           EOF
 
+      - name: Setup Android signing
+        run: |
+          cat > android/key.properties << EOF
+          storePassword=${{ secrets.ANDROID_STORE_PASSWORD || 'changeit' }}
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD || 'changeit' }}
+          keyAlias=taweqa
+          storeFile=app/keystore.jks
+          EOF
+
       - name: Install dependencies
         run: flutter pub get
 

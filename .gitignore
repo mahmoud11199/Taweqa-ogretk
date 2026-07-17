@@ -21,5 +21,8 @@ lib/core/config/secrets.dart
 .DS_Store
 Thumbs.db
 
+# Android signing (local passwords, keystore is tracked in git)
+android/key.properties
+
 # Supabase local dev
 supabase/.temp/

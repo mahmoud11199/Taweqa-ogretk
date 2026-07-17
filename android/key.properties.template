@@ -1,0 +1,6 @@
+# انسخ هذا الملف إلى key.properties واملأ كلمات السر
+# في CI/CD يتم إنشاؤه تلقائياً من GitHub Secrets
+storePassword=changeit
+keyPassword=changeit
+keyAlias=taweqa
+storeFile=app/keystore.jks

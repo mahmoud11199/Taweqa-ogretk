@@ -1,12 +1,32 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+fun getSigningProperties(): Properties? {
+    val env = System.getenv()
+    if (env.containsKey("ANDROID_STORE_FILE")) {
+        return Properties().apply {
+            setProperty("storeFile", env["ANDROID_STORE_FILE"])
+            setProperty("storePassword", env["ANDROID_STORE_PASSWORD"] ?: "changeit")
+            setProperty("keyPassword", env["ANDROID_KEY_PASSWORD"] ?: "changeit")
+            setProperty("keyAlias", env["ANDROID_KEY_ALIAS"] ?: "taweqa")
+        }
+    }
+    val propsFile = rootProject.file("key.properties")
+    if (propsFile.exists()) {
+        return Properties().apply {
+            load(propsFile.inputStream())
+        }
+    }
+    return null
+}
+
 android {
-    namespace = "com.example.taweqa_ogretk"
+    namespace = "com.mahmoud11199.taweqa_ogretk"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -27,11 +47,22 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            val props = getSigningProperties()
+            if (props != null) {
+                storeFile = rootProject.file(props["storeFile"] ?: "app/keystore.jks")
+                storePassword = props["storePassword"] as? String ?: "changeit"
+                keyAlias = props["keyAlias"] as? String ?: "taweqa"
+                keyPassword = props["keyPassword"] as? String ?: "changeit"
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            val relSigning = signingConfigs.findByName("release")
+            signingConfig = relSigning ?: signingConfigs.getByName("debug")
         }
     }
 }
