@@ -29,25 +29,59 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       (data) {
         if (data.event == AuthChangeEvent.signedOut) {
           add(LogoutRequested());
-        } else if (data.event == AuthChangeEvent.signedIn ||
-            data.event == AuthChangeEvent.userUpdated) {
+        } else if (data.event == AuthChangeEvent.signedIn &&
+            state is! AuthAuthenticated) {
+          add(AppStarted());
+        } else if (data.event == AuthChangeEvent.tokenRefreshed &&
+            state is! AuthAuthenticated) {
           add(AppStarted());
         }
       },
     );
   }
 
+  String _translateError(Object e) {
+    if (e is AuthException) {
+      final msg = e.message;
+      if (msg.contains('Invalid login credentials') || msg.contains('invalid_credentials') || msg.contains('invalid grant')) {
+        return 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
+      }
+      if (msg.contains('Email not confirmed')) {
+        return 'البريد الإلكتروني غير مؤكد، يرجى التحقق من بريدك';
+      }
+      if (msg.contains('User already registered')) {
+        return 'هذا البريد مسجل بالفعل';
+      }
+      if (msg.contains('Weak password')) {
+        return 'كلمة السر ضعيفة جداً (6 أحرف على الأقل)';
+      }
+      return msg;
+    }
+    if (e is PostgrestException) {
+      return 'عذراً، حدث خطأ في الخادم، يرجى المحاولة لاحقاً';
+    }
+    return 'حدث خطأ غير متوقع، يرجى المحاولة لاحقاً';
+  }
+
+  bool _isProcessingStart = false;
+
   Future<void> _onAppStarted(AppStarted event, Emitter<AuthState> emit) async {
-    final user = SupabaseConfig.client.auth.currentUser;
-    if (user != null) {
-      try {
-        final profile = await _repository.getCurrentProfile();
-        emit(AuthAuthenticated(profile: profile));
-      } catch (_) {
+    if (_isProcessingStart) return;
+    _isProcessingStart = true;
+    try {
+      final user = SupabaseConfig.client.auth.currentUser;
+      if (user != null) {
+        try {
+          final profile = await _repository.getCurrentProfile();
+          emit(AuthAuthenticated(profile: profile));
+        } catch (_) {
+          emit(AuthUnauthenticated());
+        }
+      } else {
         emit(AuthUnauthenticated());
       }
-    } else {
-      emit(AuthUnauthenticated());
+    } finally {
+      _isProcessingStart = false;
     }
   }
 
@@ -62,10 +96,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         final profile = await _repository.getCurrentProfile();
         emit(AuthAuthenticated(profile: profile));
       } else {
-        emit(AuthFailure('فشل تسجيل الدخول'));
+        emit(AuthFailure('البريد الإلكتروني أو كلمة المرور غير صحيحة'));
       }
     } catch (e) {
-      emit(AuthFailure(e.toString()));
+      emit(AuthFailure(_translateError(e)));
     }
   }
 
@@ -90,12 +124,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
       final userId = response.user!.id;
 
-      // Ensure profile and wallet exist
       await _repository.ensureProfileExists(
         response.user!, event.name, event.role, event.phone,
       );
 
-      // Handle driver-specific setup
       if (event.role == 'driver' && event.driverType != null) {
         await _repository.ensureDriverRow(userId, event.driverType!.apiValue);
         await _repository.submitDriverApplication(
@@ -108,7 +140,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         );
       }
 
-      // Handle referral code
       if (event.refCode != null && event.refCode!.isNotEmpty) {
         try {
           await SupabaseConfig.client.rpc('apply_referral', params: {
@@ -121,7 +152,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final profile = await _repository.getCurrentProfile();
       emit(AuthAuthenticated(profile: profile));
     } catch (e) {
-      emit(AuthFailure(e.toString()));
+      emit(AuthFailure(_translateError(e)));
     }
   }
 
@@ -132,7 +163,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       await _repository.sendPasswordResetEmail(event.email);
       emit(PasswordResetSent(message: 'تم إرسال رابط إعادة التعيين إلى بريدك'));
     } catch (e) {
-      emit(AuthFailure(e.toString()));
+      emit(AuthFailure(_translateError(e)));
     }
   }
 
@@ -145,7 +176,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       );
       emit(AuthSuccess(message: 'تم تغيير كلمة السر بنجاح'));
     } catch (e) {
-      emit(AuthFailure(e.toString()));
+      emit(AuthFailure(_translateError(e)));
     }
   }
 
@@ -160,7 +191,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthAuthenticated(profile: profile));
       }
     } catch (e) {
-      emit(AuthFailure(e.toString()));
+      emit(AuthFailure(_translateError(e)));
     }
   }
 
@@ -173,10 +204,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         await _repository.changePassword(
           user.email!, event.oldPassword, event.newPassword,
         );
-        emit(AuthSuccess(message: '✅ تم تغيير كلمة السر بنجاح'));
+        emit(AuthSuccess(message: 'تم تغيير كلمة السر بنجاح'));
       }
     } catch (e) {
-      emit(AuthFailure(e.toString()));
+      emit(AuthFailure(_translateError(e)));
     }
   }
 
@@ -191,7 +222,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthAuthenticated(profile: profile));
       }
     } catch (e) {
-      emit(AuthFailure(e.toString()));
+      emit(AuthFailure(_translateError(e)));
     }
   }
 
