@@ -204,6 +204,7 @@ jobs:
       - name: Build Web
         run: >
           flutter build web --release
+          --base-href=/Taweqa-ogretk/
           --dart-define=PAYMOB_API_KEY=${{ secrets.PAYMOB_API_KEY }}
           --dart-define=PAYMOB_INTEGRATION_ID=${{ secrets.PAYMOB_INTEGRATION_ID }}
           --dart-define=PAYMOB_IFRAME_ID=${{ secrets.PAYMOB_IFRAME_ID }}
