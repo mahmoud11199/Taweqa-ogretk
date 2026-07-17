@@ -63,25 +63,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     return 'حدث خطأ غير متوقع، يرجى المحاولة لاحقاً';
   }
 
-  bool _isProcessingStart = false;
+  Future<UserProfile?> _tryFetchProfile() async {
+    try {
+      return await _repository
+          .getCurrentProfile()
+          .timeout(const Duration(seconds: 8));
+    } catch (_) {
+      return null;
+    }
+  }
 
   Future<void> _onAppStarted(AppStarted event, Emitter<AuthState> emit) async {
-    if (_isProcessingStart) return;
-    _isProcessingStart = true;
-    try {
-      final user = SupabaseConfig.client.auth.currentUser;
-      if (user != null) {
-        try {
-          final profile = await _repository.getCurrentProfile();
-          emit(AuthAuthenticated(profile: profile));
-        } catch (_) {
-          emit(AuthUnauthenticated());
-        }
-      } else {
-        emit(AuthUnauthenticated());
-      }
-    } finally {
-      _isProcessingStart = false;
+    final user = SupabaseConfig.client.auth.currentUser;
+    if (user == null) {
+      emit(AuthUnauthenticated());
+      return;
+    }
+    final cached = UserProfile.fromSupabaseUser(user);
+    emit(AuthAuthenticated(profile: cached));
+    final full = await _tryFetchProfile();
+    if (full != null && !isClosed) {
+      emit(AuthAuthenticated(profile: full));
     }
   }
 
@@ -92,11 +94,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         email: event.email,
         password: event.password,
       );
-      if (response.user != null) {
-        final profile = await _repository.getCurrentProfile();
-        emit(AuthAuthenticated(profile: profile));
-      } else {
+      if (response.user == null) {
         emit(AuthFailure('البريد الإلكتروني أو كلمة المرور غير صحيحة'));
+        return;
+      }
+      final cached = UserProfile.fromSupabaseUser(response.user!);
+      emit(AuthAuthenticated(profile: cached));
+      final full = await _tryFetchProfile();
+      if (full != null && !isClosed) {
+        emit(AuthAuthenticated(profile: full));
       }
     } catch (e) {
       emit(AuthFailure(_translateError(e)));
@@ -122,35 +128,40 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         return;
       }
 
-      final userId = response.user!.id;
+      final user = response.user!;
+      final cached = UserProfile.fromSupabaseUser(user);
+      emit(AuthAuthenticated(profile: cached));
 
-      await _repository.ensureProfileExists(
-        response.user!, event.name, event.role, event.phone,
-      );
+      // Background: ensure profile, wallet, driver setup, referral
+      try {
+        await _repository.ensureProfileExists(user, event.name, event.role, event.phone);
 
-      if (event.role == 'driver' && event.driverType != null) {
-        await _repository.ensureDriverRow(userId, event.driverType!.apiValue);
-        await _repository.submitDriverApplication(
-          userId: userId,
-          name: event.name,
-          phone: event.phone,
-          driverType: event.driverType!.apiValue,
-          fields: event.driverFields,
-          files: event.driverFiles,
-        );
-      }
+        if (event.role == 'driver' && event.driverType != null) {
+          await _repository.ensureDriverRow(user.id, event.driverType!.apiValue);
+          await _repository.submitDriverApplication(
+            userId: user.id,
+            name: event.name,
+            phone: event.phone,
+            driverType: event.driverType!.apiValue,
+            fields: event.driverFields,
+            files: event.driverFiles,
+          );
+        }
 
-      if (event.refCode != null && event.refCode!.isNotEmpty) {
-        try {
-          await SupabaseConfig.client.rpc('apply_referral', params: {
-            'p_user_id': userId,
-            'p_ref_code': event.refCode,
-          });
-        } catch (_) {}
-      }
+        if (event.refCode != null && event.refCode!.isNotEmpty) {
+          try {
+            await SupabaseConfig.client.rpc('apply_referral', params: {
+              'p_user_id': user.id,
+              'p_ref_code': event.refCode,
+            });
+          } catch (_) {}
+        }
 
-      final profile = await _repository.getCurrentProfile();
-      emit(AuthAuthenticated(profile: profile));
+        final full = await _tryFetchProfile();
+        if (full != null && !isClosed) {
+          emit(AuthAuthenticated(profile: full));
+        }
+      } catch (_) {}
     } catch (e) {
       emit(AuthFailure(_translateError(e)));
     }

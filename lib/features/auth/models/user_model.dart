@@ -1,3 +1,5 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 class UserProfile {
   final String id;
   final String fullName;
@@ -33,6 +35,17 @@ class UserProfile {
       avatarUrl: map['avatar_url'] as String?,
       rating: map['rating'] as int?,
       metadata: map['metadata'] as Map<String, dynamic>?,
+    );
+  }
+
+  factory UserProfile.fromSupabaseUser(User user) {
+    final meta = user.userMetadata;
+    return UserProfile(
+      id: user.id,
+      fullName: meta?['full_name'] as String? ?? user.email ?? '',
+      role: meta?['role'] as String? ?? 'passenger',
+      phone: meta?['phone'] as String?,
+      email: user.email,
     );
   }
 
