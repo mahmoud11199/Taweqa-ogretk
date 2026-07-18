@@ -1,21 +1,29 @@
-// Supabase Edge Function: init-paymob-payment
-// Initializes a Paymob payment and returns the payment_key for iframe
-//
-// NOTE: Uses dummy placeholder response until real Paymob keys are configured.
-// Set secrets: PAYMOB_API_KEY, PAYMOB_INTEGRATION_ID, PAYMOB_IFRAME_ID
-//   supabase secrets set PAYMOB_API_KEY=real_key ...
-// When secrets are missing, returns a mock success for development/testing.
-
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+};
 
 const PAYMOB_API_KEY = Deno.env.get('PAYMOB_API_KEY') || '';
 const PAYMOB_IFRAME_ID = Deno.env.get('PAYMOB_IFRAME_ID') || '';
 
 serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
   try {
     const { amount, email, phone, first_name, last_name } = await req.json();
 
-    // If real Paymob key is configured, call the actual API
+    if (typeof amount !== 'number' || amount <= 0) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid amount' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
     if (PAYMOB_API_KEY && PAYMOB_API_KEY !== '') {
       const amountCents = Math.round(amount * 100);
       const PAYMOB_INTEGRATION_ID = Deno.env.get('PAYMOB_INTEGRATION_ID') || '';
@@ -75,11 +83,10 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ payment_key: paymentKey, iframe_id: PAYMOB_IFRAME_ID }),
-        { headers: { 'Content-Type': 'application/json' } },
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
 
-    // No real keys — return mock success for development/testing
     const mockPaymentKey = `mock_pk_${Date.now()}`;
     return new Response(
       JSON.stringify({
@@ -88,12 +95,12 @@ serve(async (req) => {
         mock: true,
         message: '⚠️ Paymob غير مهيأ — هذه استجابة تجريبية. اضبط PAYMOB_API_KEY في Supabase Secrets.',
       }),
-      { headers: { 'Content-Type': 'application/json' } },
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (err) {
     return new Response(
       JSON.stringify({ error: err instanceof Error ? err.message : 'Unknown error' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   }
 });

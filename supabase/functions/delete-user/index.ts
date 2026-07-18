@@ -1,10 +1,17 @@
-// Supabase Edge Function: delete-user
-// Deletes a user and all their data (admin only)
-
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+};
+
 serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
   const authHeader = req.headers.get('Authorization') || '';
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL') || '',
@@ -14,11 +21,19 @@ serve(async (req) => {
 
   try {
     const { user_id } = await req.json();
+    if (!user_id || typeof user_id !== 'string') {
+      return new Response(
+        JSON.stringify({ error: 'Missing or invalid user_id' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
 
-    // Verify caller is admin
     const { data: caller } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
     if (!caller?.user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
     }
 
     const { data: profile } = await supabase
@@ -28,20 +43,23 @@ serve(async (req) => {
       .single();
 
     if (profile?.role !== 'admin') {
-      return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 });
+      return new Response(
+        JSON.stringify({ error: 'Forbidden' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
     }
 
-    // Delete user from Auth (cascade will handle profiles, drivers, etc.)
     const { error } = await supabase.auth.admin.deleteUser(user_id);
     if (error) throw error;
 
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({ success: true }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    );
   } catch (err) {
     return new Response(
       JSON.stringify({ error: err instanceof Error ? err.message : 'Unknown error' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   }
 });

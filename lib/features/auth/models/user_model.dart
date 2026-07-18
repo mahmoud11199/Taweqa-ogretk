@@ -7,7 +7,7 @@ class UserProfile {
   final String? phone;
   final String? email;
   final String? avatarUrl;
-  final int? rating;
+  final double? rating;
   final Map<String, dynamic>? metadata;
 
   UserProfile({
@@ -33,7 +33,7 @@ class UserProfile {
       phone: map['phone'] as String?,
       email: map['email'] as String?,
       avatarUrl: map['avatar_url'] as String?,
-      rating: map['rating'] as int?,
+      rating: (map['rating'] as num?)?.toDouble(),
       metadata: map['metadata'] as Map<String, dynamic>?,
     );
   }

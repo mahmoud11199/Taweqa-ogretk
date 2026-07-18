@@ -42,7 +42,9 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
-        if (state is AuthFailure) {
+        if (state is AuthAuthenticated) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        } else if (state is AuthFailure) {
           showToast(context, state.message, isError: true);
         }
       },
