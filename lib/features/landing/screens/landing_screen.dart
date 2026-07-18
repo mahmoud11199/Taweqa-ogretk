@@ -126,8 +126,6 @@ class _LandingScreenState extends State<LandingScreen> {
                             ),
                           ),
                         ],
-                        if (release?.webUrl != null)
-                          const SizedBox(height: 12),
                         if (release == null)
                           Padding(
                             padding: const EdgeInsets.only(top: 16),

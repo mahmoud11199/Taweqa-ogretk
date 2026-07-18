@@ -108,9 +108,9 @@ class DriverRepository {
   }
 
   double calculateFare(double distanceKm, double durationMin) {
-    final baseFare = AppConstants.pricingBaseFare;
-    final perKm = AppConstants.pricingPerKm;
-    final perMin = AppConstants.pricingPerMin;
+    const baseFare = AppConstants.pricingBaseFare;
+    const perKm = AppConstants.pricingPerKm;
+    const perMin = AppConstants.pricingPerMin;
     return baseFare + (distanceKm * perKm) + (durationMin * perMin);
   }
 

@@ -49,7 +49,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   leading: CircleAvatar(
                     backgroundColor: AppTheme.meterPrimary.withAlpha(40),
                     child: Text(
-                      (conv.otherUserName ?? '?')[0].toUpperCase(),
+                      (conv.otherUserName?.isNotEmpty == true ? conv.otherUserName! : '?')[0].toUpperCase(),
                       style: const TextStyle(color: AppTheme.meterPrimary, fontWeight: FontWeight.w700),
                     ),
                   ),

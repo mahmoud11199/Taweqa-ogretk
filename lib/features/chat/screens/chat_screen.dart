@@ -73,7 +73,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   itemCount: state.messages.length,
                   itemBuilder: (context, index) {
                     final msg = state.messages[index];
-                    final isMe = msg.senderId == userId;
+                    final isMe = userId.isNotEmpty && msg.senderId == userId;
                     return Align(
                       alignment: isMe ? Alignment.centerLeft : Alignment.centerRight,
                       child: Container(

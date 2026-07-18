@@ -48,7 +48,9 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
         lng: _currentLng,
       ));
       _mapController.move(LatLng(_currentLat, _currentLng), 14);
-    } catch (_) {}
+    } catch (_) {
+      if (mounted) showToast(context, 'تعذر الحصول على الموقع', isError: true);
+    }
   }
 
   void _requestRide() {

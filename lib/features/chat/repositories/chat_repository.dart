@@ -56,9 +56,12 @@ class ChatRepository {
     });
   }
 
+  StreamController<ChatMessage>? _messageController;
+
   Stream<ChatMessage> subscribeToMessages(String conversationId) {
     _channel = _client.channel('messages:$conversationId');
-    final controller = StreamController<ChatMessage>();
+    _messageController?.close();
+    _messageController = StreamController<ChatMessage>();
 
     _channel!.onPostgresChanges(
       event: PostgresChangeEvent.insert,
@@ -71,12 +74,12 @@ class ChatRepository {
       ),
       callback: (payload) {
         final newData = payload.newRecord;
-        controller.add(ChatMessage.fromMap(newData));
+        _messageController!.add(ChatMessage.fromMap(newData));
       },
     );
 
     _channel!.subscribe();
-    return controller.stream;
+    return _messageController!.stream;
   }
 
   Future<void> markAsRead(String conversationId, String userId) async {
@@ -88,6 +91,7 @@ class ChatRepository {
 
   void dispose() {
     _messageSubscription?.cancel();
+    _messageController?.close();
     _channel?.unsubscribe();
   }
 }

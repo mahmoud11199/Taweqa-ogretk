@@ -79,7 +79,7 @@ class _DriverApplicationsScreenState extends State<DriverApplicationsScreen> {
                           style: const TextStyle(color: AppTheme.meterMuted, fontSize: 13)),
                     const SizedBox(height: 12),
                     if (app.payload['fields'] != null) ...[
-                      Text('البيانات:', style: const TextStyle(color: AppTheme.meterPrimary, fontSize: 12)),
+                      const Text('البيانات:', style: TextStyle(color: AppTheme.meterPrimary, fontSize: 12)),
                       const SizedBox(height: 4),
                       ...((app.payload['fields'] as Map<String, dynamic>?) ?? {}).entries.map((e) =>
                         Padding(

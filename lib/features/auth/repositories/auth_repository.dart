@@ -181,6 +181,6 @@ class AuthRepository {
   }
 
   void dispose() {
-    _client.removeAllChannels();
+    // Auth channels cleaned up by Supabase lifecycle
   }
 }

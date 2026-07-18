@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import '../../../core/config/supabase_config.dart';
@@ -28,7 +29,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       _authSubscription = SupabaseConfig.client.auth.onAuthStateChange.listen(
         (data) {
-          if (data.event == AuthChangeEvent.signedOut) {
+          if (data.event == AuthChangeEvent.signedOut && state is! AuthUnauthenticated) {
             add(LogoutRequested());
           } else if (data.event == AuthChangeEvent.signedIn &&
               state is! AuthAuthenticated) {
@@ -158,7 +159,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
               'p_user_id': user.id,
               'p_ref_code': event.refCode,
             });
-          } catch (_) {}
+      } catch (e) {
+        debugPrint('Background registration error: $e');
+      }
         }
 
         final full = await _tryFetchProfile();

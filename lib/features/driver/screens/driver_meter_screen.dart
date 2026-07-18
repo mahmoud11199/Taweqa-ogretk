@@ -52,6 +52,8 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
         LatLng(position.latitude, position.longitude),
         _mapController.camera.zoom,
       );
+    }, onError: (_) {
+      if (mounted) showToast(context, 'تعذر الحصول على الموقع', isError: true);
     });
   }
 
@@ -82,6 +84,7 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
       startLat: state.currentLat,
       startLng: state.currentLng,
     ));
+    _gpsTimer?.cancel();
     _gpsTimer = Timer.periodic(const Duration(seconds: 10), (_) => _updateRoute());
   }
 
@@ -130,9 +133,9 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
                     children: [
                       const Icon(Icons.local_taxi_rounded, size: 48, color: AppTheme.meterPrimary),
                       const SizedBox(height: 8),
-                      Text(
+                      const Text(
                         'توقع أجرتك',
-                        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       BlocBuilder<DriverBloc, DriverState>(
                         builder: (context, state) => Text(

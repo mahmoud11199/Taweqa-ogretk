@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/config/supabase_config.dart';
+import '../models/chat_message.dart';
 import '../repositories/chat_repository.dart';
 import 'chat_event.dart';
 import 'chat_state.dart';
@@ -55,6 +56,14 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     try {
       final user = SupabaseConfig.client.auth.currentUser;
       if (user == null) return;
+      final optimisticMessage = ChatMessage(
+        id: '',
+        conversationId: event.conversationId,
+        senderId: user.id,
+        text: event.text,
+        createdAt: DateTime.now(),
+      );
+      emit(state.copyWith(messages: [...state.messages, optimisticMessage]));
       await _repository.sendMessage(
         conversationId: event.conversationId,
         senderId: user.id,

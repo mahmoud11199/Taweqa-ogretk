@@ -197,9 +197,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ..clear()
                         ..addAll(fields),
                       onFilesChanged: (files) => setState(() {
-                        _driverFiles
-                          ..clear()
-                          ..addAll(files);
+                        _driverFiles.addAll(files);
                       }),
                     ),
                   ],

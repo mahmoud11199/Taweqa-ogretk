@@ -75,6 +75,8 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
             depositSuccess: true,
             paymobPaymentKey: null,
           ));
+        } else {
+          emit(state.copyWith(isLoading: false, error: 'المستخدم غير موجود'));
         }
       } else {
         emit(state.copyWith(isLoading: false, error: 'فشلت عملية الدفع'));
