@@ -6,7 +6,11 @@ import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_state.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../auth/screens/register_screen.dart';
+import '../../driver/bloc/driver_bloc.dart';
+import '../../driver/repositories/driver_repository.dart';
 import '../../driver/screens/driver_meter_screen.dart';
+import '../../passenger/bloc/passenger_bloc.dart';
+import '../../passenger/repositories/passenger_repository.dart';
 import '../../passenger/screens/passenger_home_screen.dart';
 import '../bloc/landing_cubit.dart';
 
@@ -29,9 +33,18 @@ class _LandingScreenState extends State<LandingScreen> {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
-          final screen = state.profile.isDriver
-              ? const DriverMeterScreen()
-              : const PassengerHomeScreen();
+          final Widget screen;
+          if (state.profile.isDriver) {
+            screen = BlocProvider(
+              create: (_) => DriverBloc(repository: DriverRepository()),
+              child: const DriverMeterScreen(),
+            );
+          } else {
+            screen = BlocProvider(
+              create: (_) => PassengerBloc(repository: PassengerRepository()),
+              child: const PassengerHomeScreen(),
+            );
+          }
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (_) => screen),
           );
