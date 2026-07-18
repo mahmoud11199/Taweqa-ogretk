@@ -6,6 +6,8 @@ import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_state.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../auth/screens/register_screen.dart';
+import '../../driver/screens/driver_meter_screen.dart';
+import '../../passenger/screens/passenger_home_screen.dart';
 import '../bloc/landing_cubit.dart';
 
 class LandingScreen extends StatefulWidget {
@@ -27,9 +29,12 @@ class _LandingScreenState extends State<LandingScreen> {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
-          // Navigate to main app based on role
-          final route = state.profile.isDriver ? '/driver' : '/passenger';
-          Navigator.of(context).pushReplacementNamed(route);
+          final screen = state.profile.isDriver
+              ? const DriverMeterScreen()
+              : const PassengerHomeScreen();
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => screen),
+          );
         }
       },
       child: Scaffold(
