@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../admin/screens/admin_dashboard_screen.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_state.dart';
 import '../../auth/screens/login_screen.dart';
@@ -29,9 +30,11 @@ class _LandingScreenState extends State<LandingScreen> {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
-          final screen = state.profile.isDriver
-              ? const DriverMeterScreen()
-              : const PassengerHomeScreen();
+          final screen = state.profile.isAdmin
+              ? const AdminDashboardScreen()
+              : state.profile.isDriver
+                  ? const DriverMeterScreen()
+                  : const PassengerHomeScreen();
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (_) => screen),
           );

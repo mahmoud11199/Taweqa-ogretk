@@ -25,6 +25,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       if (user == null) { emit(state.copyWith(isLoading: false)); return; }
       final wallet = await _repository.fetchWallet(user.id);
       emit(state.copyWith(isLoading: false, wallet: wallet));
+      add(LoadTransactions());
     } catch (e) {
       emit(state.copyWith(isLoading: false, error: e.toString()));
     }

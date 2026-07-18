@@ -20,7 +20,6 @@ class _WalletScreenState extends State<WalletScreen> {
   void initState() {
     super.initState();
     context.read<WalletBloc>().add(LoadWallet());
-    context.read<WalletBloc>().add(LoadTransactions());
   }
 
   @override

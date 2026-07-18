@@ -6,8 +6,8 @@ class PassengerState {
   final List<Map<String, dynamic>> nearbyDrivers;
   final RideRequest? activeRequest;
   final List<RideRequest> rideHistory;
-  final double pickupLat;
-  final double pickupLng;
+  final double? pickupLat;
+  final double? pickupLng;
   final String pickupAddress;
   final double? destLat;
   final double? destLng;
@@ -22,8 +22,8 @@ class PassengerState {
     this.nearbyDrivers = const [],
     this.activeRequest,
     this.rideHistory = const [],
-    this.pickupLat = 0,
-    this.pickupLng = 0,
+    this.pickupLat,
+    this.pickupLng,
     this.pickupAddress = '',
     this.destLat,
     this.destLng,

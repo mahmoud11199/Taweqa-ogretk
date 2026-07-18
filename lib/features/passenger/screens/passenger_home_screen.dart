@@ -7,7 +7,9 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/toast_widget.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_event.dart';
+import '../../auth/bloc/auth_state.dart';
 import '../../chat/screens/chat_list_screen.dart';
+import '../../landing/screens/landing_screen.dart';
 import '../../wallet/screens/wallet_screen.dart';
 import '../bloc/passenger_bloc.dart';
 import '../bloc/passenger_event.dart';
@@ -55,13 +57,13 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
 
   void _requestRide() {
     final state = context.read<PassengerBloc>().state;
-    if (state.pickupLat == 0) {
+    if (state.pickupLat == null) {
       showToast(context, 'يرجى تحديد موقع الالتقاط', isError: true);
       return;
     }
     context.read<PassengerBloc>().add(RequestRide(
-      pickupLat: state.pickupLat,
-      pickupLng: state.pickupLng,
+      pickupLat: state.pickupLat!,
+      pickupLng: state.pickupLng!,
       pickupAddress: state.pickupAddress,
       destLat: state.destLat,
       destLng: state.destLng,
@@ -71,8 +73,17 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.bgDeep,
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthUnauthenticated) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const LandingScreen()),
+            (route) => false,
+          );
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppTheme.bgDeep,
       drawer: Drawer(
         child: Container(
           color: AppTheme.bgDeep,
@@ -158,9 +169,9 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
                 builder: (context, state) {
                   return MarkerLayer(
                     markers: [
-                      if (state.pickupLat != 0)
+                      if (state.pickupLat != null && state.pickupLng != null)
                         Marker(
-                          point: LatLng(state.pickupLat, state.pickupLng),
+                          point: LatLng(state.pickupLat!, state.pickupLng!),
                           width: 40,
                           height: 40,
                           child: const Icon(Icons.location_on, color: AppTheme.success, size: 36),
@@ -259,6 +270,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 }

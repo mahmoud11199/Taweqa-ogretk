@@ -53,24 +53,29 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
   Future<void> _onSendMessage(
       SendMessage event, Emitter<ChatState> emit) async {
+    final user = SupabaseConfig.client.auth.currentUser;
+    if (user == null) return;
+    final optimisticMessage = ChatMessage(
+      id: '',
+      conversationId: event.conversationId,
+      senderId: user.id,
+      text: event.text,
+      createdAt: DateTime.now(),
+    );
+    emit(state.copyWith(messages: [...state.messages, optimisticMessage]));
     try {
-      final user = SupabaseConfig.client.auth.currentUser;
-      if (user == null) return;
-      final optimisticMessage = ChatMessage(
-        id: '',
-        conversationId: event.conversationId,
-        senderId: user.id,
-        text: event.text,
-        createdAt: DateTime.now(),
-      );
-      emit(state.copyWith(messages: [...state.messages, optimisticMessage]));
       await _repository.sendMessage(
         conversationId: event.conversationId,
         senderId: user.id,
         text: event.text,
       );
     } catch (e) {
-      emit(state.copyWith(error: e.toString()));
+      emit(state.copyWith(
+        error: e.toString(),
+        messages: state.messages
+            .where((m) => !(m.id.isEmpty && m.senderId == user.id && m.text == event.text))
+            .toList(),
+      ));
     }
   }
 
@@ -98,8 +103,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   void _onMessageReceived(
       MessageReceived event, Emitter<ChatState> emit) {
     final message = event.message;
-    final updatedMessages = [...state.messages, message];
-    emit(state.copyWith(messages: updatedMessages));
+    final filtered = state.messages.where((m) =>
+        m.id != '' || m.senderId != message.senderId || m.text != message.text,
+    ).toList();
+    emit(state.copyWith(messages: [...filtered, message]));
   }
 
   Future<void> _onMarkAsRead(

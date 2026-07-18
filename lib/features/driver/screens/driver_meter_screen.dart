@@ -8,7 +8,9 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/toast_widget.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_event.dart';
+import '../../auth/bloc/auth_state.dart';
 import '../../chat/screens/chat_list_screen.dart';
+import '../../landing/screens/landing_screen.dart';
 import '../../wallet/screens/wallet_screen.dart';
 import '../bloc/driver_bloc.dart';
 import '../bloc/driver_event.dart';
@@ -111,7 +113,16 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<DriverBloc, DriverState>(
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthUnauthenticated) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const LandingScreen()),
+            (route) => false,
+          );
+        }
+      },
+      child: BlocListener<DriverBloc, DriverState>(
       listener: (context, state) {
         if (state.error != null) {
           showToast(context, state.error!, isError: true);
@@ -213,45 +224,44 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
                   ),
                   BlocBuilder<DriverBloc, DriverState>(
                     builder: (context, state) {
-                      if (state.currentLat == 0) return const SizedBox();
-                      return MarkerLayer(
-                        markers: [
-                          Marker(
-                            point: LatLng(state.currentLat, state.currentLng),
-                            width: 40,
-                            height: 40,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: state.isAvailable
-                                    ? AppTheme.success
-                                    : AppTheme.error,
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 2),
-                              ),
-                              child: const Icon(
-                                Icons.navigation,
-                                color: Colors.white,
-                                size: 20,
-                              ),
+                      final markers = <Marker>[];
+                      if (state.currentLat != 0) {
+                        markers.add(Marker(
+                          point: LatLng(state.currentLat, state.currentLng),
+                          width: 40,
+                          height: 40,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: state.isAvailable
+                                  ? AppTheme.success
+                                  : AppTheme.error,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: const Icon(
+                              Icons.navigation,
+                              color: Colors.white,
+                              size: 20,
                             ),
                           ),
-                        ],
-                      );
-                    },
-                  ),
-                  BlocBuilder<DriverBloc, DriverState>(
-                    builder: (context, state) {
-                      if (state.routePoints.isEmpty) return const SizedBox();
-                      return PolylineLayer(
-                        polylines: [
-                          Polyline(
-                            points: state.routePoints
-                                .where((p) => p.length >= 2)
-                                .map((p) => LatLng(p[1], p[0]))
-                                .toList(),
-                            color: AppTheme.meterPrimary,
-                            strokeWidth: 4,
-                          ),
+                        ));
+                      }
+                      return Stack(
+                        children: [
+                          if (markers.isNotEmpty) MarkerLayer(markers: markers),
+                          if (state.routePoints.isNotEmpty)
+                            PolylineLayer(
+                              polylines: [
+                                Polyline(
+                                  points: state.routePoints
+                                      .where((p) => p.length >= 2)
+                                      .map((p) => LatLng(p[1], p[0]))
+                                      .toList(),
+                                  color: AppTheme.meterPrimary,
+                                  strokeWidth: 4,
+                                ),
+                              ],
+                            ),
                         ],
                       );
                     },
@@ -408,6 +418,7 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 }

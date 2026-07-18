@@ -64,7 +64,7 @@ class AppConstants {
       'https://api.github.com/repos/mahmoud11199/Taweqa-ogretk/releases';
 
   static String generateReferralCode() {
-    final rng = Random();
+    final rng = Random.secure();
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     return String.fromCharCodes(
       List.generate(10, (_) => chars.codeUnitAt(rng.nextInt(chars.length))),
