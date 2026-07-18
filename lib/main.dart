@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/config/supabase_config.dart';
+import 'core/theme/app_theme.dart';
 import 'features/auth/bloc/auth_bloc.dart';
 import 'features/auth/bloc/auth_event.dart';
 import 'features/auth/repositories/auth_repository.dart';
@@ -10,7 +11,9 @@ import 'app.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await SupabaseConfig.init();
+  try {
+    await SupabaseConfig.init();
+  } catch (_) {}
 
   final authRepository = AuthRepository();
   final landingRepository = LandingRepository();
@@ -28,4 +31,39 @@ void main() async {
       child: const TaweqeApp(),
     ),
   );
+}
+
+class ErrorApp extends StatelessWidget {
+  const ErrorApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.darkTheme,
+      home: Scaffold(
+        backgroundColor: AppTheme.bgDeep,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: AppTheme.error),
+              const SizedBox(height: 16),
+              const Text(
+                'توقع أجرتك',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text('حدث خطأ أثناء تهيئة التطبيق'),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => main(),
+                child: const Text('إعادة المحاولة'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
