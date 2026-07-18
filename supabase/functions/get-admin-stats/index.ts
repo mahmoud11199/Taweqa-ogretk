@@ -1,25 +1,23 @@
-// Supabase Edge Function: get-admin-stats
-// Returns admin dashboard statistics (alternative to DB RPC)
-
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 serve(async (req) => {
   const authHeader = req.headers.get('Authorization') || '';
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL') || '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '',
-    { global: { headers: { Authorization: authHeader } } },
-  );
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+
+  const authClient = createClient(supabaseUrl, serviceRoleKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
 
   try {
-    // Verify admin
-    const { data: { user } } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
+    const { data: { user } } = await authClient.auth.getUser(authHeader.replace('Bearer ', ''));
     if (!user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
-    const { data: profile } = await supabase
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+    const { data: profile } = await adminClient
       .from('profiles')
       .select('role')
       .eq('id', user.id)
@@ -31,19 +29,19 @@ serve(async (req) => {
 
     const [drivers, passengers, activeTrips, completedTrips, pendingApps, revenue] =
       await Promise.all([
-        supabase.from('drivers').select('id', { count: 'exact', head: true }),
-        supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'passenger'),
-        supabase.from('trips').select('id', { count: 'exact', head: true }).eq('status', 'active'),
-        supabase.from('trips').select('id', { count: 'exact', head: true }).eq('status', 'completed'),
-        supabase.from('driver_applications').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('trips').select('driver_cut').eq('status', 'completed'),
+        adminClient.from('drivers').select('id', { count: 'exact', head: true }),
+        adminClient.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'passenger'),
+        adminClient.from('trips').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+        adminClient.from('trips').select('id', { count: 'exact', head: true }).eq('status', 'completed'),
+        adminClient.from('driver_applications').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+        adminClient.from('trips').select('driver_cut').eq('status', 'completed'),
       ]);
 
     const totalRevenue = (revenue.data || []).reduce(
       (sum: number, t: any) => sum + (t.driver_cut || 0), 0,
     );
 
-    const availableDrivers = await supabase
+    const availableDrivers = await adminClient
       .from('drivers')
       .select('id', { count: 'exact', head: true })
       .eq('is_available', true);

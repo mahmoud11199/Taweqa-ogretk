@@ -13,14 +13,13 @@ const PAYMOB_IFRAME_ID = Deno.env.get('PAYMOB_IFRAME_ID') || '';
 
 serve(async (req) => {
   try {
-    const { amount } = await req.json();
+    const { amount, email, phone, first_name, last_name } = await req.json();
 
     // If real Paymob key is configured, call the actual API
     if (PAYMOB_API_KEY && PAYMOB_API_KEY !== '') {
       const amountCents = Math.round(amount * 100);
       const PAYMOB_INTEGRATION_ID = Deno.env.get('PAYMOB_INTEGRATION_ID') || '';
 
-      // Step 1: Get auth token
       const authRes = await fetch('https://accept.paymobsolutions.com/api/auth/tokens', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -29,7 +28,6 @@ serve(async (req) => {
       const auth = await authRes.json();
       const token = auth['token'] as string;
 
-      // Step 2: Create order
       const orderRes = await fetch('https://accept.paymobsolutions.com/api/ecommerce/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -44,7 +42,6 @@ serve(async (req) => {
       const order = await orderRes.json();
       const orderId = order['id'] as number;
 
-      // Step 3: Get payment key
       const paymentRes = await fetch('https://accept.paymobsolutions.com/api/acceptance/payment_keys', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -54,11 +51,19 @@ serve(async (req) => {
           expiration: 3600,
           order_id: orderId,
           billing_data: {
-            apartment: 'NA', email: 'user@example.com', floor: 'NA',
-            first_name: 'User', street: 'NA', building: 'NA',
-            phone_number: '01000000000', shipping_method: 'NA',
-            postal_code: 'NA', city: 'NA', country: 'EG',
-            last_name: 'NA', state: 'NA',
+            apartment: 'NA',
+            email: email || 'user@example.com',
+            floor: 'NA',
+            first_name: first_name || 'User',
+            street: 'NA',
+            building: 'NA',
+            phone_number: phone || '01000000000',
+            shipping_method: 'NA',
+            postal_code: 'NA',
+            city: 'NA',
+            country: 'EG',
+            last_name: last_name || 'NA',
+            state: 'NA',
           },
           currency: 'EGP',
           integration_id: parseInt(PAYMOB_INTEGRATION_ID),

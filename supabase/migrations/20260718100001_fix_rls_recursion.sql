@@ -21,6 +21,7 @@ do $$ begin
   drop policy if exists "trips_admin_all" on public.trips;
   drop policy if exists "wallets_admin_all" on public.wallets;
   drop policy if exists "rides_admin_all" on public.ride_requests;
+  drop policy if exists "settings_admin_all" on public.app_settings;
 exception when others then null;
 end $$;
 
@@ -40,4 +41,7 @@ create policy "wallets_admin_all" on public.wallets
   for all using (public.is_admin());
 
 create policy "rides_admin_all" on public.ride_requests
+  for all using (public.is_admin());
+
+create policy "settings_admin_all" on public.app_settings
   for all using (public.is_admin());

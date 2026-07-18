@@ -45,13 +45,15 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
       - name: Set Edge Function secrets
-        if: env.PAYMOB_API_KEY != ''
         run: |
-          supabase secrets set PAYMOB_API_KEY=${{ secrets.PAYMOB_API_KEY }}
-          supabase secrets set PAYMOB_INTEGRATION_ID=${{ secrets.PAYMOB_INTEGRATION_ID }}
-          supabase secrets set PAYMOB_IFRAME_ID=${{ secrets.PAYMOB_IFRAME_ID }}
+          if [ -n "${{ secrets.PAYMOB_API_KEY }}" ]; then
+            supabase secrets set PAYMOB_API_KEY=${{ secrets.PAYMOB_API_KEY }}
+            supabase secrets set PAYMOB_INTEGRATION_ID=${{ secrets.PAYMOB_INTEGRATION_ID }}
+            supabase secrets set PAYMOB_IFRAME_ID=${{ secrets.PAYMOB_IFRAME_ID }}
+          else
+            echo "⚠️ PAYMOB_API_KEY غير مضبوط — تخطي ضبط secrets Paymob"
+          fi
         env:
-          PAYMOB_API_KEY: ${{ secrets.PAYMOB_API_KEY }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
   build-android:
@@ -155,14 +157,14 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build iOS Release
+      - name: Build iOS Release (unsigned — dev only)
         run: >
           flutter build ios --release --no-codesign
           --dart-define=PAYMOB_API_KEY=${{ secrets.PAYMOB_API_KEY }}
           --dart-define=PAYMOB_INTEGRATION_ID=${{ secrets.PAYMOB_INTEGRATION_ID }}
           --dart-define=PAYMOB_IFRAME_ID=${{ secrets.PAYMOB_IFRAME_ID }}
 
-      - name: Create IPA
+      - name: Create IPA (unsigned — dev only)
         run: |
           mkdir -p build/ios/iphoneos/Runner/Payload
           cp -r build/ios/iphoneos/Runner.app build/ios/iphoneos/Runner/Payload/

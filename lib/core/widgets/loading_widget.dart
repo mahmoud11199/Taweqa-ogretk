@@ -64,7 +64,7 @@ class LoadingScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Image.asset('assets/images/logo.png', width: 80, height: 80),
+            const Icon(Icons.local_taxi_rounded, size: 80, color: AppTheme.meterPrimary),
             const SizedBox(height: 24),
             const SizedBox(
               width: 40,

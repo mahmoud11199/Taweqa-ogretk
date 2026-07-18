@@ -57,7 +57,26 @@ class ErrorApp extends StatelessWidget {
               const Text('حدث خطأ أثناء تهيئة التطبيق'),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: () => main(),
+                onPressed: () {
+                  WidgetsFlutterBinding.ensureInitialized();
+                  SupabaseConfig.init().then((_) {
+                    final authRepo = AuthRepository();
+                    final landingRepo = LandingRepository();
+                    runApp(
+                      MultiBlocProvider(
+                        providers: [
+                          BlocProvider<AuthBloc>(
+                            create: (_) => AuthBloc(repository: authRepo)..add(AppStarted()),
+                          ),
+                          BlocProvider<LandingCubit>(
+                            create: (_) => LandingCubit(repository: landingRepo),
+                          ),
+                        ],
+                        child: const TaweqeApp(),
+                      ),
+                    );
+                  }).catchError((_) {});
+                },
                 child: const Text('إعادة المحاولة'),
               ),
             ],

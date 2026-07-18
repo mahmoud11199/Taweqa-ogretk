@@ -200,6 +200,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         await _repository.updatePhoneNumber(user.id, event.newPhone);
         final profile = await _repository.getCurrentProfile();
         emit(AuthAuthenticated(profile: profile));
+      } else {
+        emit(AuthFailure('يجب تسجيل الدخول أولاً'));
       }
     } catch (e) {
       emit(AuthFailure(_translateError(e)));
@@ -216,6 +218,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           user.email!, event.oldPassword, event.newPassword,
         );
         emit(AuthSuccess(message: 'تم تغيير كلمة السر بنجاح'));
+      } else {
+        emit(AuthFailure('يجب تسجيل الدخول أولاً'));
       }
     } catch (e) {
       emit(AuthFailure(_translateError(e)));
