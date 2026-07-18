@@ -26,7 +26,7 @@ fun getSigningProperties(): Properties? {
 }
 
 android {
-    namespace = "com.mahmoud11199.taweqa_ogretk"
+    namespace = "com.example.taweqa_ogretk"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
