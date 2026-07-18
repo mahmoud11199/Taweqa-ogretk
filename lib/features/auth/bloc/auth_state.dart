@@ -17,12 +17,6 @@ class AuthAuthenticated extends AuthState {
   AuthAuthenticated({required this.profile});
 }
 
-class AuthRoleSelected extends AuthState {
-  final String role;
-  final DriverType? driverType;
-
-  AuthRoleSelected({required this.role, this.driverType});
-}
 
 class AuthFailure extends AuthState {
   final String message;

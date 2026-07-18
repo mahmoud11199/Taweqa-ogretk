@@ -28,6 +28,18 @@ class ChatMessage {
       createdAt: DateTime.parse(map['created_at'] as String),
     );
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'conversation_id': conversationId,
+      'sender_id': senderId,
+      'text': text,
+      'image_url': imageUrl,
+      'is_read': isRead,
+      'created_at': createdAt.toIso8601String(),
+    };
+  }
 }
 
 class Conversation {
@@ -64,5 +76,18 @@ class Conversation {
       otherUserAvatar: map['other_user_avatar'] as String?,
       unreadCount: (map['unread_count'] as num?)?.toInt() ?? 0,
     );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'user1_id': user1Id,
+      'user2_id': user2Id,
+      'last_message': lastMessage,
+      'last_message_at': lastMessageAt?.toIso8601String(),
+      'other_user_name': otherUserName,
+      'other_user_avatar': otherUserAvatar,
+      'unread_count': unreadCount,
+    };
   }
 }

@@ -21,6 +21,15 @@ class Wallet {
           : null,
     );
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'user_id': userId,
+      'balance': balance,
+      'pending_balance': pendingBalance,
+      'updated_at': lastUpdated?.toIso8601String(),
+    };
+  }
 }
 
 class Transaction {
@@ -68,20 +77,19 @@ class Transaction {
       createdAt: DateTime.parse(map['created_at'] as String),
     );
   }
-}
 
-enum TransactionType { deposit, withdrawal, payment }
-
-extension TransactionTypeExtension on TransactionType {
-  String get apiValue => name;
-  String get label {
-    switch (this) {
-      case TransactionType.deposit:
-        return 'إيداع';
-      case TransactionType.withdrawal:
-        return 'سحب';
-      case TransactionType.payment:
-        return 'دفع';
-    }
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'user_id': userId,
+      'type': type,
+      'amount': amount,
+      'balance_before': balanceBefore,
+      'balance_after': balanceAfter,
+      'description': description,
+      'status': status,
+      'paymob_ref': paymobRef,
+      'created_at': createdAt.toIso8601String(),
+    };
   }
 }

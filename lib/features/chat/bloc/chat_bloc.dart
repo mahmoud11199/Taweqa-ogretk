@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/config/supabase_config.dart';
-import '../models/chat_message.dart';
 import '../repositories/chat_repository.dart';
 import 'chat_event.dart';
 import 'chat_state.dart';
@@ -90,7 +89,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   void _onMessageReceived(
       MessageReceived event, Emitter<ChatState> emit) {
     final message = event.message;
-    final updatedMessages = [...state.messages, message as ChatMessage];
+    final updatedMessages = [...state.messages, message];
     emit(state.copyWith(messages: updatedMessages));
   }
 

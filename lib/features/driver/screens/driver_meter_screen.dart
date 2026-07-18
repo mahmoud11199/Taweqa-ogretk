@@ -6,9 +6,15 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/toast_widget.dart';
+import '../../auth/bloc/auth_bloc.dart';
+import '../../auth/bloc/auth_event.dart';
+import '../../chat/screens/chat_list_screen.dart';
+import '../../wallet/screens/wallet_screen.dart';
 import '../bloc/driver_bloc.dart';
 import '../bloc/driver_event.dart';
 import '../bloc/driver_state.dart';
+import 'earnings_screen.dart';
+import 'trip_history_screen.dart';
 
 class DriverMeterScreen extends StatefulWidget {
   const DriverMeterScreen({super.key});
@@ -109,6 +115,83 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
       },
       child: Scaffold(
         backgroundColor: AppTheme.bgDeep,
+        drawer: Drawer(
+          child: Container(
+            color: AppTheme.bgDeep,
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                DrawerHeader(
+                  decoration: const BoxDecoration(color: AppTheme.meterCard),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      const Icon(Icons.local_taxi_rounded, size: 48, color: AppTheme.meterPrimary),
+                      const SizedBox(height: 8),
+                      Text(
+                        'توقع أجرتك',
+                        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      BlocBuilder<DriverBloc, DriverState>(
+                        builder: (context, state) => Text(
+                          state.driverInfo?.carModel ?? 'سائق',
+                          style: const TextStyle(color: AppTheme.meterMuted, fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.map, color: AppTheme.meterPrimary),
+                  title: const Text('الصفحة الرئيسية', style: TextStyle(color: Colors.white)),
+                  onTap: () => Navigator.pop(context),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.history, color: AppTheme.meterPrimary),
+                  title: const Text('سجل الرحلات', style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const TripHistoryScreen()));
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.monetization_on, color: AppTheme.meterPrimary),
+                  title: const Text('الأرباح', style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const EarningsScreen()));
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.wallet, color: AppTheme.meterPrimary),
+                  title: const Text('المحفظة', style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen()));
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.chat, color: AppTheme.meterPrimary),
+                  title: const Text('الدردشة', style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatListScreen()));
+                  },
+                ),
+                const Divider(color: AppTheme.meterCard),
+                ListTile(
+                  leading: const Icon(Icons.logout, color: AppTheme.error),
+                  title: const Text('تسجيل الخروج', style: TextStyle(color: AppTheme.error)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.read<AuthBloc>().add(LogoutRequested());
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
         body: SafeArea(
           child: Stack(
             children: [

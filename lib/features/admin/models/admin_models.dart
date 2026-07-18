@@ -28,6 +28,18 @@ class AdminStats {
       totalRevenue: (map['total_revenue'] as num?)?.toDouble() ?? 0,
     );
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'total_drivers': totalDrivers,
+      'available_drivers': availableDrivers,
+      'total_passengers': totalPassengers,
+      'active_trips': activeTrips,
+      'completed_trips': completedTrips,
+      'pending_applications': pendingApplications,
+      'total_revenue': totalRevenue,
+    };
+  }
 }
 
 class AdminDriver {
@@ -63,6 +75,19 @@ class AdminDriver {
       rating: (map['rating'] as num?)?.toDouble(),
     );
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'full_name': fullName,
+      'phone': phone,
+      'is_available': isAvailable,
+      'driver_type': driverType,
+      'car_model': carModel,
+      'car_plate': carPlate,
+      'rating': rating,
+    };
+  }
 }
 
 class DriverApplication {
@@ -91,5 +116,16 @@ class DriverApplication {
       payload: map['payload'] as Map<String, dynamic>? ?? {},
       createdAt: DateTime.parse(map['created_at'] as String),
     );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'user_id': userId,
+      'full_name': fullName,
+      'phone': phone,
+      'status': status,
+      'payload': payload,
+      'created_at': createdAt.toIso8601String(),
+    };
   }
 }

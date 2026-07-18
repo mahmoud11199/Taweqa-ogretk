@@ -78,4 +78,31 @@ class RideRequest {
       createdAt: DateTime.parse(map['created_at'] as String),
     );
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'passenger_id': passengerId,
+      'driver_id': driverId,
+      'pickup_lat': pickupLat,
+      'pickup_lng': pickupLng,
+      'pickup_address': pickupAddress,
+      'dest_lat': destLat,
+      'dest_lng': destLng,
+      'dest_address': destAddress,
+      'status': status,
+      'estimated_fare': estimatedFare,
+      'estimated_distance': estimatedDistance,
+      'estimated_duration': estimatedDuration,
+      'driver_name': driverName,
+      'driver_phone': driverPhone,
+      'car_model': carModel,
+      'car_plate': carPlate,
+      'car_color': carColor,
+      'driver_lat': driverLat,
+      'driver_lng': driverLng,
+      'driver_rating': driverRating,
+      'created_at': createdAt.toIso8601String(),
+    };
+  }
 }

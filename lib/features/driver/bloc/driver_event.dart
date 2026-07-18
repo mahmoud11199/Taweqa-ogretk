@@ -1,4 +1,3 @@
-import 'dart:io';
 
 abstract class DriverEvent {}
 
@@ -69,7 +68,3 @@ class UpdateDriverProfile extends DriverEvent {
   });
 }
 
-class UploadDriverAvatar extends DriverEvent {
-  final File file;
-  UploadDriverAvatar(this.file);
-}

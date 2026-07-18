@@ -9,8 +9,12 @@ import 'features/auth/bloc/auth_event.dart';
 import 'features/auth/repositories/auth_repository.dart';
 import 'features/chat/bloc/chat_bloc.dart';
 import 'features/chat/repositories/chat_repository.dart';
+import 'features/driver/bloc/driver_bloc.dart';
+import 'features/driver/repositories/driver_repository.dart';
 import 'features/landing/bloc/landing_cubit.dart';
 import 'features/landing/repositories/landing_repository.dart';
+import 'features/passenger/bloc/passenger_bloc.dart';
+import 'features/passenger/repositories/passenger_repository.dart';
 import 'features/wallet/bloc/wallet_bloc.dart';
 import 'features/wallet/repositories/wallet_repository.dart';
 import 'app.dart';
@@ -23,6 +27,8 @@ void main() async {
 
   final authRepository = AuthRepository();
   final landingRepository = LandingRepository();
+  final driverRepository = DriverRepository();
+  final passengerRepository = PassengerRepository();
   final adminRepository = AdminRepository();
   final walletRepository = WalletRepository();
   final chatRepository = ChatRepository();
@@ -35,6 +41,12 @@ void main() async {
         ),
         BlocProvider<LandingCubit>(
           create: (_) => LandingCubit(repository: landingRepository),
+        ),
+        BlocProvider<DriverBloc>(
+          create: (_) => DriverBloc(repository: driverRepository),
+        ),
+        BlocProvider<PassengerBloc>(
+          create: (_) => PassengerBloc(repository: passengerRepository),
         ),
         BlocProvider<AdminBloc>(
           create: (_) => AdminBloc(repository: adminRepository),
@@ -80,6 +92,8 @@ class ErrorApp extends StatelessWidget {
                     SupabaseConfig.init().then((_) {
                     final authRepo = AuthRepository();
                     final landingRepo = LandingRepository();
+                    final driverRepo = DriverRepository();
+                    final passengerRepo = PassengerRepository();
                     final adminRepo = AdminRepository();
                     final walletRepo = WalletRepository();
                     final chatRepo = ChatRepository();
@@ -91,6 +105,12 @@ class ErrorApp extends StatelessWidget {
                           ),
                           BlocProvider<LandingCubit>(
                             create: (_) => LandingCubit(repository: landingRepo),
+                          ),
+                          BlocProvider<DriverBloc>(
+                            create: (_) => DriverBloc(repository: driverRepo),
+                          ),
+                          BlocProvider<PassengerBloc>(
+                            create: (_) => PassengerBloc(repository: passengerRepo),
                           ),
                           BlocProvider<AdminBloc>(
                             create: (_) => AdminBloc(repository: adminRepo),

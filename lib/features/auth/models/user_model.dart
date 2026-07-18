@@ -57,6 +57,8 @@ class UserProfile {
       'phone': phone,
       'email': email,
       'avatar_url': avatarUrl,
+      'rating': rating,
+      'metadata': metadata,
     };
   }
 }
@@ -103,6 +105,8 @@ class DriverInfo {
       'car_model': carModel,
       'car_plate': carPlate,
       'car_color': carColor,
+      'current_lat': currentLat,
+      'current_lng': currentLng,
     };
   }
 }

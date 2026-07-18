@@ -5,9 +5,14 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/toast_widget.dart';
+import '../../auth/bloc/auth_bloc.dart';
+import '../../auth/bloc/auth_event.dart';
+import '../../chat/screens/chat_list_screen.dart';
+import '../../wallet/screens/wallet_screen.dart';
 import '../bloc/passenger_bloc.dart';
 import '../bloc/passenger_event.dart';
 import '../bloc/passenger_state.dart';
+import 'ride_history_screen.dart';
 
 class PassengerHomeScreen extends StatefulWidget {
   const PassengerHomeScreen({super.key});
@@ -66,6 +71,67 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.bgDeep,
+      drawer: Drawer(
+        child: Container(
+          color: AppTheme.bgDeep,
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              const DrawerHeader(
+                decoration: BoxDecoration(color: AppTheme.meterCard),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Icon(Icons.person, size: 48, color: AppTheme.meterPrimary),
+                    SizedBox(height: 8),
+                    Text('توقع أجرتك', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text('راكب', style: TextStyle(color: AppTheme.meterMuted, fontSize: 13)),
+                  ],
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.map, color: AppTheme.meterPrimary),
+                title: const Text('الصفحة الرئيسية', style: TextStyle(color: Colors.white)),
+                onTap: () => Navigator.pop(context),
+              ),
+              ListTile(
+                leading: const Icon(Icons.history, color: AppTheme.meterPrimary),
+                title: const Text('سجل الرحلات', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const RideHistoryScreen()));
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.wallet, color: AppTheme.meterPrimary),
+                title: const Text('المحفظة', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen()));
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.chat, color: AppTheme.meterPrimary),
+                title: const Text('الدردشة', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatListScreen()));
+                },
+              ),
+              const Divider(color: AppTheme.meterCard),
+              ListTile(
+                leading: const Icon(Icons.logout, color: AppTheme.error),
+                title: const Text('تسجيل الخروج', style: TextStyle(color: AppTheme.error)),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.read<AuthBloc>().add(LogoutRequested());
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
       body: Stack(
         children: [
           FlutterMap(

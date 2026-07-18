@@ -1,3 +1,5 @@
+import '../models/chat_message.dart';
+
 abstract class ChatEvent {}
 
 class LoadConversations extends ChatEvent {}
@@ -24,7 +26,7 @@ class SubscribeToMessages extends ChatEvent {
 }
 
 class MessageReceived extends ChatEvent {
-  final dynamic message;
+  final ChatMessage message;
   MessageReceived(this.message);
 }
 
