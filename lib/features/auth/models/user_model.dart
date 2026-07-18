@@ -107,26 +107,6 @@ class DriverInfo {
   }
 }
 
-class DriverApplication {
-  final String userId;
-  final String status;
-  final Map<String, dynamic> payload;
-
-  DriverApplication({
-    required this.userId,
-    required this.status,
-    required this.payload,
-  });
-
-  factory DriverApplication.fromMap(Map<String, dynamic> map) {
-    return DriverApplication(
-      userId: map['user_id'] as String,
-      status: map['status'] as String? ?? 'pending',
-      payload: map['payload'] as Map<String, dynamic>? ?? {},
-    );
-  }
-}
-
 enum DriverType { private, tukTuk, motorcycle }
 
 extension DriverTypeExtension on DriverType {

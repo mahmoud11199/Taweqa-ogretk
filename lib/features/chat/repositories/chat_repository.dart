@@ -6,6 +6,7 @@ import '../models/chat_message.dart';
 class ChatRepository {
   final SupabaseClient _client = SupabaseConfig.client;
   StreamSubscription? _messageSubscription;
+  RealtimeChannel? _channel;
 
   Future<List<Conversation>> fetchConversations(String userId) async {
     final response = await _client
@@ -56,10 +57,10 @@ class ChatRepository {
   }
 
   Stream<ChatMessage> subscribeToMessages(String conversationId) {
-    final channel = _client.channel('messages:$conversationId');
+    _channel = _client.channel('messages:$conversationId');
     final controller = StreamController<ChatMessage>();
 
-    channel.onPostgresChanges(
+    _channel!.onPostgresChanges(
       event: PostgresChangeEvent.insert,
       schema: 'public',
       table: 'messages',
@@ -74,7 +75,7 @@ class ChatRepository {
       },
     );
 
-    channel.subscribe();
+    _channel!.subscribe();
     return controller.stream;
   }
 
@@ -87,5 +88,6 @@ class ChatRepository {
 
   void dispose() {
     _messageSubscription?.cancel();
+    _channel?.unsubscribe();
   }
 }

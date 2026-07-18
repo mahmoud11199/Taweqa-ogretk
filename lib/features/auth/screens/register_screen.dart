@@ -193,8 +193,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   if (_selectedRole == 'driver') ...[
                     const SizedBox(height: 16),
                     DriverField(
-                      onFieldsChanged: (fields) => _driverFields.addAll(fields),
-                      onFilesChanged: (files) => _driverFiles.addAll(files),
+                      onFieldsChanged: (fields) => _driverFields
+                        ..clear()
+                        ..addAll(fields),
+                      onFilesChanged: (files) => setState(() {
+                        _driverFiles
+                          ..clear()
+                          ..addAll(files);
+                      }),
                     ),
                   ],
                   const SizedBox(height: 24),

@@ -2,11 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/config/supabase_config.dart';
 import 'core/theme/app_theme.dart';
+import 'features/admin/bloc/admin_bloc.dart';
+import 'features/admin/repositories/admin_repository.dart';
 import 'features/auth/bloc/auth_bloc.dart';
 import 'features/auth/bloc/auth_event.dart';
 import 'features/auth/repositories/auth_repository.dart';
+import 'features/chat/bloc/chat_bloc.dart';
+import 'features/chat/repositories/chat_repository.dart';
 import 'features/landing/bloc/landing_cubit.dart';
 import 'features/landing/repositories/landing_repository.dart';
+import 'features/wallet/bloc/wallet_bloc.dart';
+import 'features/wallet/repositories/wallet_repository.dart';
 import 'app.dart';
 
 void main() async {
@@ -17,6 +23,9 @@ void main() async {
 
   final authRepository = AuthRepository();
   final landingRepository = LandingRepository();
+  final adminRepository = AdminRepository();
+  final walletRepository = WalletRepository();
+  final chatRepository = ChatRepository();
 
   runApp(
     MultiBlocProvider(
@@ -26,6 +35,15 @@ void main() async {
         ),
         BlocProvider<LandingCubit>(
           create: (_) => LandingCubit(repository: landingRepository),
+        ),
+        BlocProvider<AdminBloc>(
+          create: (_) => AdminBloc(repository: adminRepository),
+        ),
+        BlocProvider<WalletBloc>(
+          create: (_) => WalletBloc(repository: walletRepository),
+        ),
+        BlocProvider<ChatBloc>(
+          create: (_) => ChatBloc(repository: chatRepository),
         ),
       ],
       child: const TaweqeApp(),
@@ -59,9 +77,12 @@ class ErrorApp extends StatelessWidget {
               ElevatedButton(
                 onPressed: () {
                   WidgetsFlutterBinding.ensureInitialized();
-                  SupabaseConfig.init().then((_) {
+                    SupabaseConfig.init().then((_) {
                     final authRepo = AuthRepository();
                     final landingRepo = LandingRepository();
+                    final adminRepo = AdminRepository();
+                    final walletRepo = WalletRepository();
+                    final chatRepo = ChatRepository();
                     runApp(
                       MultiBlocProvider(
                         providers: [
@@ -70,6 +91,15 @@ class ErrorApp extends StatelessWidget {
                           ),
                           BlocProvider<LandingCubit>(
                             create: (_) => LandingCubit(repository: landingRepo),
+                          ),
+                          BlocProvider<AdminBloc>(
+                            create: (_) => AdminBloc(repository: adminRepo),
+                          ),
+                          BlocProvider<WalletBloc>(
+                            create: (_) => WalletBloc(repository: walletRepo),
+                          ),
+                          BlocProvider<ChatBloc>(
+                            create: (_) => ChatBloc(repository: chatRepo),
                           ),
                         ],
                         child: const TaweqeApp(),

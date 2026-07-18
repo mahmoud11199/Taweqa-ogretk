@@ -112,31 +112,34 @@ class _LandingScreenState extends State<LandingScreen> {
                     }
 
                     final release = state.release;
+                    final apkUrl = release?.apkUrl;
+                    final iosUrl = release?.iosUrl;
                     return Column(
                       children: [
-                        if (release?.apkUrl != null)
+                        if (apkUrl != null) ...[
                           _DownloadButton(
                             icon: Icons.android,
                             label: 'تحميل التطبيق (Android)',
                             version: release!.version,
                             onTap: () => launchUrl(
-                              Uri.parse(release.apkUrl!),
+                              Uri.parse(apkUrl),
                               mode: LaunchMode.externalApplication,
                             ),
                           ),
-                        if (release?.iosUrl != null) ...[
+                        ],
+                        if (iosUrl != null) ...[
                           const SizedBox(height: 12),
                           _DownloadButton(
                             icon: Icons.apple,
                             label: 'تحميل (iOS)',
                             version: release!.version,
                             onTap: () => launchUrl(
-                              Uri.parse(release.iosUrl!),
+                              Uri.parse(iosUrl),
                               mode: LaunchMode.externalApplication,
                             ),
                           ),
                         ],
-                        if (release?.apkUrl != null && release?.webUrl != null)
+                        if (release?.webUrl != null)
                           const SizedBox(height: 12),
                         if (release == null)
                           const Padding(

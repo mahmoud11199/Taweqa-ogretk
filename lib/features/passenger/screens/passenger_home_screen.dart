@@ -30,6 +30,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
   void _getCurrentLocation() async {
     try {
       final pos = await Geolocator.getCurrentPosition();
+      if (!mounted) return;
       _currentLat = pos.latitude;
       _currentLng = pos.longitude;
       context.read<PassengerBloc>().add(UpdatePickupLocation(

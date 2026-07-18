@@ -39,6 +39,7 @@ class _DriverFieldState extends State<DriverField> {
 
   Future<void> _pickDocument(String key) async {
     final xFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (!mounted) return;
     if (xFile != null) {
       final file = File(xFile.path);
       setState(() {
