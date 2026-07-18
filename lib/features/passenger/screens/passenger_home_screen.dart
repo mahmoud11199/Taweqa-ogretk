@@ -170,7 +170,9 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
                           height: 40,
                           child: const Icon(Icons.flag, color: AppTheme.error, size: 36),
                         ),
-                      ...state.nearbyDrivers.map((d) => Marker(
+                      ...state.nearbyDrivers.where((d) =>
+                        d['current_lat'] != null && d['current_lng'] != null
+                      ).map((d) => Marker(
                         point: LatLng(
                           (d['current_lat'] as num).toDouble(),
                           (d['current_lng'] as num).toDouble(),

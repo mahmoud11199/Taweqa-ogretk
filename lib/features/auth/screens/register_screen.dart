@@ -51,7 +51,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (_selectedRole == 'driver') {
       final required = ['car_model', 'car_plate', 'car_color'];
       for (final field in required) {
-        if ((_driverFields[field] == null || (_driverFields[field] as String).isEmpty) &&
+        if (((_driverFields[field] as String?)?.isEmpty ?? true) &&
             (_driverFiles[field] == null)) {
           showToast(context, 'يرجى إكمال جميع الحقول المطلوبة للسائق', isError: true);
           return;
@@ -83,7 +83,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         if (state is AuthFailure) {
           showToast(context, state.message, isError: true);
         }
-        if (state is AuthSuccess || state is AuthAuthenticated) {
+        if (state is AuthAuthenticated) {
           Navigator.of(context).popUntil((route) => route.isFirst);
         }
       },

@@ -8,6 +8,9 @@ class UserProfile {
   final String? email;
   final String? avatarUrl;
   final double? rating;
+  final bool banned;
+  final DateTime createdAt;
+  final DateTime updatedAt;
   final Map<String, dynamic>? metadata;
 
   UserProfile({
@@ -18,8 +21,12 @@ class UserProfile {
     this.email,
     this.avatarUrl,
     this.rating,
+    this.banned = false,
+    DateTime? createdAt,
+    DateTime? updatedAt,
     this.metadata,
-  });
+  }) : createdAt = createdAt ?? DateTime.now(),
+       updatedAt = updatedAt ?? DateTime.now();
 
   bool get isDriver => role == 'driver';
   bool get isPassenger => role == 'passenger';
@@ -34,6 +41,9 @@ class UserProfile {
       email: map['email'] as String?,
       avatarUrl: map['avatar_url'] as String?,
       rating: (map['rating'] as num?)?.toDouble(),
+      banned: map['banned'] as bool? ?? false,
+      createdAt: map['created_at'] != null ? DateTime.parse(map['created_at'] as String) : DateTime.now(),
+      updatedAt: map['updated_at'] != null ? DateTime.parse(map['updated_at'] as String) : DateTime.now(),
       metadata: map['metadata'] as Map<String, dynamic>?,
     );
   }
@@ -46,6 +56,7 @@ class UserProfile {
       role: meta?['role'] as String? ?? 'passenger',
       phone: meta?['phone'] as String?,
       email: user.email,
+      banned: false,
     );
   }
 
@@ -58,6 +69,9 @@ class UserProfile {
       'email': email,
       'avatar_url': avatarUrl,
       'rating': rating,
+      'banned': banned,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
       'metadata': metadata,
     };
   }
@@ -72,6 +86,8 @@ class DriverInfo {
   final String? carColor;
   final double? currentLat;
   final double? currentLng;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
   DriverInfo({
     required this.id,
@@ -82,7 +98,10 @@ class DriverInfo {
     this.carColor,
     this.currentLat,
     this.currentLng,
-  });
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) : createdAt = createdAt ?? DateTime.now(),
+       updatedAt = updatedAt ?? DateTime.now();
 
   factory DriverInfo.fromMap(Map<String, dynamic> map) {
     return DriverInfo(
@@ -94,6 +113,8 @@ class DriverInfo {
       carColor: map['car_color'] as String?,
       currentLat: (map['current_lat'] as num?)?.toDouble(),
       currentLng: (map['current_lng'] as num?)?.toDouble(),
+      createdAt: map['created_at'] != null ? DateTime.parse(map['created_at'] as String) : DateTime.now(),
+      updatedAt: map['updated_at'] != null ? DateTime.parse(map['updated_at'] as String) : DateTime.now(),
     );
   }
 
@@ -107,6 +128,8 @@ class DriverInfo {
       'car_color': carColor,
       'current_lat': currentLat,
       'current_lng': currentLng,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
     };
   }
 }

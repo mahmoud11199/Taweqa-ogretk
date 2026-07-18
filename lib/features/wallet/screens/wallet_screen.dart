@@ -4,6 +4,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/helpers.dart';
 import '../bloc/wallet_bloc.dart';
 import '../bloc/wallet_event.dart';
+import '../models/wallet_model.dart';
 import '../bloc/wallet_state.dart';
 import 'add_funds_screen.dart';
 
@@ -117,7 +118,7 @@ class _WalletScreenState extends State<WalletScreen> {
 }
 
 class _TransactionTile extends StatelessWidget {
-  final dynamic transaction;
+  final Transaction transaction;
 
   const _TransactionTile({required this.transaction});
 

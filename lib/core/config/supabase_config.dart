@@ -18,4 +18,8 @@ class SupabaseConfig {
     );
     _client = Supabase.instance.client;
   }
+
+  static void initWithClient(SupabaseClient client) {
+    _client = client;
+  }
 }

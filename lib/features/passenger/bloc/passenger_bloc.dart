@@ -26,7 +26,9 @@ class PassengerBloc extends Bloc<PassengerEvent, PassengerState> {
     try {
       final drivers = await _repository.fetchNearbyDrivers(event.lat, event.lng);
       emit(state.copyWith(nearbyDrivers: drivers));
-    } catch (_) {}
+    } catch (e) {
+      // Nearby drivers fetch failed — silently skipped
+    }
   }
 
   Future<void> _onRequestRide(
@@ -34,7 +36,7 @@ class PassengerBloc extends Bloc<PassengerEvent, PassengerState> {
     emit(state.copyWith(isLoading: true, clearError: true));
     try {
       final user = SupabaseConfig.client.auth.currentUser;
-      if (user == null) return;
+      if (user == null) { emit(state.copyWith(isLoading: false)); return; }
       final request = await _repository.requestRide(
         passengerId: user.id,
         pickupLat: event.pickupLat,
@@ -95,7 +97,7 @@ class PassengerBloc extends Bloc<PassengerEvent, PassengerState> {
     emit(state.copyWith(isLoading: true));
     try {
       final user = SupabaseConfig.client.auth.currentUser;
-      if (user == null) return;
+      if (user == null) { emit(state.copyWith(isLoading: false)); return; }
       final history = await _repository.fetchHistory(user.id);
       emit(state.copyWith(isLoading: false, rideHistory: history));
     } catch (e) {
@@ -107,7 +109,9 @@ class PassengerBloc extends Bloc<PassengerEvent, PassengerState> {
       RateDriver event, Emitter<PassengerState> emit) async {
     try {
       await _repository.rateDriver(event.requestId, event.rating, review: event.review);
-    } catch (_) {}
+    } catch (e) {
+      // Rating submission failed — silently skipped
+    }
   }
 
   void _onUpdatePickupLocation(

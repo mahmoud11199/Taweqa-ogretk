@@ -20,7 +20,10 @@ class RideRequest {
   final double? driverLat;
   final double? driverLng;
   final double? driverRating;
+  final double? rating;
+  final String? review;
   final DateTime createdAt;
+  final DateTime updatedAt;
 
   RideRequest({
     required this.id,
@@ -44,8 +47,11 @@ class RideRequest {
     this.driverLat,
     this.driverLng,
     this.driverRating,
+    this.rating,
+    this.review,
     required this.createdAt,
-  });
+    DateTime? updatedAt,
+  }) : updatedAt = updatedAt ?? DateTime.now();
 
   bool get isPending => status == 'pending';
   bool get isAccepted => status == 'accepted';
@@ -75,7 +81,10 @@ class RideRequest {
       driverLat: (map['driver_lat'] as num?)?.toDouble(),
       driverLng: (map['driver_lng'] as num?)?.toDouble(),
       driverRating: (map['driver_rating'] as num?)?.toDouble(),
+      rating: (map['rating'] as num?)?.toDouble(),
+      review: map['review'] as String?,
       createdAt: DateTime.parse(map['created_at'] as String),
+      updatedAt: map['updated_at'] != null ? DateTime.parse(map['updated_at'] as String) : DateTime.now(),
     );
   }
 
@@ -102,7 +111,10 @@ class RideRequest {
       'driver_lat': driverLat,
       'driver_lng': driverLng,
       'driver_rating': driverRating,
+      'rating': rating,
+      'review': review,
       'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
     };
   }
 }

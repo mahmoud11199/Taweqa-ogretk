@@ -2,23 +2,23 @@ class Wallet {
   final String userId;
   final double balance;
   final double? pendingBalance;
-  final DateTime? lastUpdated;
+  final DateTime updatedAt;
 
   Wallet({
     required this.userId,
     required this.balance,
     this.pendingBalance,
-    this.lastUpdated,
-  });
+    DateTime? updatedAt,
+  }) : updatedAt = updatedAt ?? DateTime.now();
 
   factory Wallet.fromMap(Map<String, dynamic> map) {
     return Wallet(
       userId: map['user_id'] as String,
       balance: (map['balance'] as num?)?.toDouble() ?? 0,
       pendingBalance: (map['pending_balance'] as num?)?.toDouble(),
-      lastUpdated: map['updated_at'] != null
+      updatedAt: map['updated_at'] != null
           ? DateTime.parse(map['updated_at'] as String)
-          : null,
+          : DateTime.now(),
     );
   }
 
@@ -27,7 +27,7 @@ class Wallet {
       'user_id': userId,
       'balance': balance,
       'pending_balance': pendingBalance,
-      'updated_at': lastUpdated?.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
     };
   }
 }

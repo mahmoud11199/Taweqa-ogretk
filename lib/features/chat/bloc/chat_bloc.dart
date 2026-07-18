@@ -26,7 +26,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     emit(state.copyWith(isLoading: true, clearError: true));
     try {
       final user = SupabaseConfig.client.auth.currentUser;
-      if (user == null) return;
+      if (user == null) { emit(state.copyWith(isLoading: false)); return; }
       final conversations = await _repository.fetchConversations(user.id);
       emit(state.copyWith(isLoading: false, conversations: conversations));
     } catch (e) {
@@ -103,8 +103,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   }
 
   @override
-  Future<void> close() {
-    _messageSub?.cancel();
+  Future<void> close() async {
+    await _messageSub?.cancel();
     _repository.dispose();
     return super.close();
   }

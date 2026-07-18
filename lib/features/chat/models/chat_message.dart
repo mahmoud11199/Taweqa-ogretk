@@ -51,6 +51,7 @@ class Conversation {
   final String? otherUserName;
   final String? otherUserAvatar;
   final int unreadCount;
+  final DateTime createdAt;
 
   Conversation({
     required this.id,
@@ -61,7 +62,8 @@ class Conversation {
     this.otherUserName,
     this.otherUserAvatar,
     this.unreadCount = 0,
-  });
+    DateTime? createdAt,
+  }) : createdAt = createdAt ?? DateTime.now();
 
   factory Conversation.fromMap(Map<String, dynamic> map) {
     return Conversation(
@@ -75,6 +77,7 @@ class Conversation {
       otherUserName: map['other_user_name'] as String?,
       otherUserAvatar: map['other_user_avatar'] as String?,
       unreadCount: (map['unread_count'] as num?)?.toInt() ?? 0,
+      createdAt: map['created_at'] != null ? DateTime.parse(map['created_at'] as String) : DateTime.now(),
     );
   }
 
@@ -88,6 +91,7 @@ class Conversation {
       'other_user_name': otherUserName,
       'other_user_avatar': otherUserAvatar,
       'unread_count': unreadCount,
+      'created_at': createdAt.toIso8601String(),
     };
   }
 }

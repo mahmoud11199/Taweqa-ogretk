@@ -46,7 +46,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final userId = SupabaseConfig.client.auth.currentUser?.id ?? '';
+    final currentUser = SupabaseConfig.client.auth.currentUser;
+    final userId = currentUser?.id ?? '';
 
     return Scaffold(
       backgroundColor: AppTheme.bgDeep,

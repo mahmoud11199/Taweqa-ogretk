@@ -25,19 +25,23 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<LogoutRequested>(_onLogoutRequested);
     on<AuthEventError>(_onAuthEventError);
 
-    _authSubscription = SupabaseConfig.client.auth.onAuthStateChange.listen(
-      (data) {
-        if (data.event == AuthChangeEvent.signedOut) {
-          add(LogoutRequested());
-        } else if (data.event == AuthChangeEvent.signedIn &&
-            state is! AuthAuthenticated) {
-          add(AppStarted());
-        } else if (data.event == AuthChangeEvent.tokenRefreshed &&
-            state is! AuthAuthenticated) {
-          add(AppStarted());
-        }
-      },
-    );
+    try {
+      _authSubscription = SupabaseConfig.client.auth.onAuthStateChange.listen(
+        (data) {
+          if (data.event == AuthChangeEvent.signedOut) {
+            add(LogoutRequested());
+          } else if (data.event == AuthChangeEvent.signedIn &&
+              state is! AuthAuthenticated) {
+            add(AppStarted());
+          } else if (data.event == AuthChangeEvent.tokenRefreshed &&
+              state is! AuthAuthenticated) {
+            add(AppStarted());
+          }
+        },
+      );
+    } catch (_) {
+      // Supabase not initialized — auth subscription skipped
+    }
   }
 
   String _translateError(Object e) {
@@ -257,8 +261,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   @override
-  Future<void> close() {
-    _authSubscription?.cancel();
+  Future<void> close() async {
+    await _authSubscription?.cancel();
     _repository.dispose();
     return super.close();
   }

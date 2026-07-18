@@ -22,7 +22,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     emit(state.copyWith(isLoading: true, clearError: true));
     try {
       final user = SupabaseConfig.client.auth.currentUser;
-      if (user == null) return;
+      if (user == null) { emit(state.copyWith(isLoading: false)); return; }
       final wallet = await _repository.fetchWallet(user.id);
       emit(state.copyWith(isLoading: false, wallet: wallet));
     } catch (e) {
@@ -34,7 +34,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       LoadTransactions event, Emitter<WalletState> emit) async {
     try {
       final user = SupabaseConfig.client.auth.currentUser;
-      if (user == null) return;
+      if (user == null) { emit(state.copyWith()); return; }
       final transactions = await _repository.fetchTransactions(user.id);
       emit(state.copyWith(transactions: transactions));
     } catch (e) {
@@ -47,7 +47,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     emit(state.copyWith(isLoading: true));
     try {
       final user = SupabaseConfig.client.auth.currentUser;
-      if (user == null) return;
+      if (user == null) { emit(state.copyWith(isLoading: false)); return; }
       final paymentKey = await _repository.initPaymobPayment(
         userId: user.id,
         amount: event.amount,
@@ -89,7 +89,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     emit(state.copyWith(isLoading: true));
     try {
       final user = SupabaseConfig.client.auth.currentUser;
-      if (user == null) return;
+      if (user == null) { emit(state.copyWith(isLoading: false)); return; }
       await _repository.deductFare(user.id, event.amount, event.tripId);
       final wallet = await _repository.fetchWallet(user.id);
       emit(state.copyWith(isLoading: false, wallet: wallet));

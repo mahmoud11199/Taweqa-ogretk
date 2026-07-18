@@ -129,12 +129,12 @@ class _LandingScreenState extends State<LandingScreen> {
                         if (release?.webUrl != null)
                           const SizedBox(height: 12),
                         if (release == null)
-                          const Padding(
-                            padding: EdgeInsets.only(top: 16),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 16),
                             child: Text(
-                              'لم نتمكن من جلب روابط التحميل، يرجى المحاولة لاحقاً',
+                              state.error ?? 'لم نتمكن من جلب روابط التحميل، يرجى المحاولة لاحقاً',
                               textAlign: TextAlign.center,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 color: AppTheme.error,
                                 fontSize: 13,
                               ),

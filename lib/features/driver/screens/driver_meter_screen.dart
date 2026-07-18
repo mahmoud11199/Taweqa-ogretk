@@ -56,6 +56,7 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
   }
 
   void _updateRoute() async {
+    if (!mounted) return;
     final state = context.read<DriverBloc>().state;
     if (state.currentLat == 0 || state.currentLng == 0) return;
     if (!_tripActive) return;
@@ -242,6 +243,7 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
                         polylines: [
                           Polyline(
                             points: state.routePoints
+                                .where((p) => p.length >= 2)
                                 .map((p) => LatLng(p[1], p[0]))
                                 .toList(),
                             color: AppTheme.meterPrimary,
@@ -310,7 +312,7 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
                               children: [
                                 _InfoChip(
                                   icon: Icons.timer_outlined,
-                                  label: '${state.durationMin.toStringAsFixed(0)} د',
+                                  label:                               '${state.durationMin.isFinite ? state.durationMin.toStringAsFixed(0) : '0'} د',
                                 ),
                                 _InfoChip(
                                   icon: Icons.route_outlined,

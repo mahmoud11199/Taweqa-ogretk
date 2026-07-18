@@ -28,7 +28,7 @@ class DriverBloc extends Bloc<DriverEvent, DriverState> {
     emit(state.copyWith(isLoading: true, clearError: true));
     try {
       final user = SupabaseConfig.client.auth.currentUser;
-      if (user == null) return;
+      if (user == null) { emit(state.copyWith(isLoading: false)); return; }
       final data = await _repository.fetchDriverProfile(user.id);
       final driverInfo = DriverInfo.fromMap(data);
       emit(state.copyWith(
@@ -48,7 +48,7 @@ class DriverBloc extends Bloc<DriverEvent, DriverState> {
     emit(state.copyWith(isLoading: true));
     try {
       final user = SupabaseConfig.client.auth.currentUser;
-      if (user == null) return;
+      if (user == null) { emit(state.copyWith(isLoading: false)); return; }
       await _repository.updateAvailability(user.id, event.isAvailable);
       emit(state.copyWith(isLoading: false, isAvailable: event.isAvailable));
     } catch (e) {
@@ -63,7 +63,9 @@ class DriverBloc extends Bloc<DriverEvent, DriverState> {
       if (user == null) return;
       await _repository.updateLocation(user.id, event.lat, event.lng);
       emit(state.copyWith(currentLat: event.lat, currentLng: event.lng));
-    } catch (_) {}
+    } catch (e) {
+      // Location update failed (GPS error, network issue) — silently skipped
+    }
   }
 
   Future<void> _onStartTrip(
@@ -71,7 +73,7 @@ class DriverBloc extends Bloc<DriverEvent, DriverState> {
     emit(state.copyWith(isLoading: true));
     try {
       final user = SupabaseConfig.client.auth.currentUser;
-      if (user == null) return;
+      if (user == null) { emit(state.copyWith(isLoading: false)); return; }
       final trip = await _repository.createTrip(
         driverId: user.id,
         startLat: event.startLat,
@@ -143,7 +145,7 @@ class DriverBloc extends Bloc<DriverEvent, DriverState> {
     emit(state.copyWith(isLoading: true));
     try {
       final user = SupabaseConfig.client.auth.currentUser;
-      if (user == null) return;
+      if (user == null) { emit(state.copyWith(isLoading: false)); return; }
       final trips = await _repository.fetchTripHistory(user.id);
       emit(state.copyWith(isLoading: false, tripHistory: trips));
     } catch (e) {
@@ -156,7 +158,7 @@ class DriverBloc extends Bloc<DriverEvent, DriverState> {
     emit(state.copyWith(isLoading: true));
     try {
       final user = SupabaseConfig.client.auth.currentUser;
-      if (user == null) return;
+      if (user == null) { emit(state.copyWith(isLoading: false)); return; }
       final earnings = await _repository.fetchEarnings(user.id);
       emit(state.copyWith(isLoading: false, earnings: earnings));
     } catch (e) {
@@ -169,7 +171,7 @@ class DriverBloc extends Bloc<DriverEvent, DriverState> {
     emit(state.copyWith(isLoading: true));
     try {
       final user = SupabaseConfig.client.auth.currentUser;
-      if (user == null) return;
+      if (user == null) { emit(state.copyWith(isLoading: false)); return; }
       final updates = <String, dynamic>{};
       if (event.driverType != null) updates['driver_type'] = event.driverType;
       if (event.carModel != null) updates['car_model'] = event.carModel;
