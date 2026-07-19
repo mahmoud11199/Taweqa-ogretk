@@ -47,6 +47,7 @@ class AdminDriver {
   final String fullName;
   final String? phone;
   final bool isAvailable;
+  final bool banned;
   final String? driverType;
   final String? carModel;
   final String? carPlate;
@@ -57,6 +58,7 @@ class AdminDriver {
     required this.fullName,
     this.phone,
     required this.isAvailable,
+    this.banned = false,
     this.driverType,
     this.carModel,
     this.carPlate,
@@ -64,11 +66,13 @@ class AdminDriver {
   });
 
   factory AdminDriver.fromMap(Map<String, dynamic> map) {
+    final profile = map['profiles'] as Map<String, dynamic>? ?? {};
     return AdminDriver(
       id: map['id'] as String,
-      fullName: map['full_name'] as String? ?? '',
-      phone: map['phone'] as String?,
+      fullName: profile['full_name'] as String? ?? '',
+      phone: profile['phone'] as String?,
       isAvailable: map['is_available'] as bool? ?? false,
+      banned: profile['banned'] as bool? ?? false,
       driverType: map['driver_type'] as String?,
       carModel: map['car_model'] as String?,
       carPlate: map['car_plate'] as String?,
@@ -82,6 +86,7 @@ class AdminDriver {
       'full_name': fullName,
       'phone': phone,
       'is_available': isAvailable,
+      'banned': banned,
       'driver_type': driverType,
       'car_model': carModel,
       'car_plate': carPlate,

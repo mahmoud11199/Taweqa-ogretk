@@ -13,6 +13,7 @@ import 'drivers_management_screen.dart';
 import 'passengers_management_screen.dart';
 import 'trips_management_screen.dart';
 import 'driver_applications_screen.dart';
+import 'app_settings_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -164,6 +165,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   icon: Icons.pending_actions,
                   label: 'طلبات التسجيل',
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DriverApplicationsScreen())),
+                ),
+                _MenuTile(
+                  icon: Icons.settings,
+                  label: 'إعدادات التطبيق',
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AppSettingsScreen())),
                 ),
               ],
             ),

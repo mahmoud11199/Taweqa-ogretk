@@ -15,23 +15,11 @@ class AdminRepository {
         .from('drivers')
         .select('''
           id, is_available, driver_type, car_model, car_plate,
-          profiles!inner(full_name, phone)
+          profiles!inner(full_name, phone, banned)
         ''')
         .order('created_at', ascending: false);
     final list = response as List<dynamic>;
-    return list.map((e) {
-      final map = e as Map<String, dynamic>;
-      final profile = map['profiles'] as Map<String, dynamic>? ?? {};
-      return AdminDriver(
-        id: map['id'] as String,
-        fullName: profile['full_name'] as String? ?? '',
-        phone: profile['phone'] as String?,
-        isAvailable: map['is_available'] as bool? ?? false,
-        driverType: map['driver_type'] as String?,
-        carModel: map['car_model'] as String?,
-        carPlate: map['car_plate'] as String?,
-      );
-    }).toList();
+    return list.map((e) => AdminDriver.fromMap(e as Map<String, dynamic>)).toList();
   }
 
   Future<List<dynamic>> fetchPassengers() async {

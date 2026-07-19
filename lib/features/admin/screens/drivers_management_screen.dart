@@ -105,6 +105,28 @@ class _DriversManagementScreenState extends State<DriversManagementScreen> {
                     ),
                     Text(driver.driverType ?? '',
                         style: const TextStyle(color: AppTheme.meterPrimary, fontSize: 12)),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () => context.read<AdminBloc>().add(ToggleDriverBan(
+                        userId: driver.id,
+                        banned: !driver.banned,
+                      )),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: driver.banned ? AppTheme.error.withAlpha(30) : AppTheme.success.withAlpha(30),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          driver.banned ? 'محظور' : 'نشط',
+                          style: TextStyle(
+                            color: driver.banned ? AppTheme.error : AppTheme.success,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               );
