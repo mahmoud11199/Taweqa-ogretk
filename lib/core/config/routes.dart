@@ -16,4 +16,7 @@ class Routes {
   static const String adminTrips = '/admin/trips';
   static const String adminWallets = '/admin/wallets';
   static const String adminSettings = '/admin/settings';
+  static const String tripDetails = '/trip-details';
+  static const String rating = '/rating';
+  static const String paymob = '/paymob';
 }

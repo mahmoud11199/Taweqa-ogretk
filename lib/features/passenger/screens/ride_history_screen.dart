@@ -5,6 +5,7 @@ import '../../../core/utils/helpers.dart';
 import '../bloc/passenger_bloc.dart';
 import '../bloc/passenger_event.dart';
 import '../bloc/passenger_state.dart';
+import '../../rating/screens/rating_screen.dart';
 
 class RideHistoryScreen extends StatefulWidget {
   const RideHistoryScreen({super.key});
@@ -85,12 +86,38 @@ class _RideHistoryScreenState extends State<RideHistoryScreen> {
                         child: Text('→ ${ride.destAddress}',
                             style: const TextStyle(color: AppTheme.meterMuted, fontSize: 13)),
                       ),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(timeAgo(ride.createdAt),
-                          style: const TextStyle(color: AppTheme.meterMuted, fontSize: 12)),
-                    ),
-                  ],
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(timeAgo(ride.createdAt),
+                            style: const TextStyle(color: AppTheme.meterMuted, fontSize: 12)),
+                      ),
+                      if (ride.isCompleted && ride.driverName != null && ride.rating == null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: SizedBox(
+                            width: double.infinity,
+                            height: 36,
+                            child: ElevatedButton.icon(
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => RatingScreen(
+                                    requestId: ride.id,
+                                    driverName: ride.driverName!,
+                                  ),
+                                ),
+                              ),
+                              icon: const Icon(Icons.star_rate, size: 18),
+                              label: const Text('تقييم', style: TextStyle(fontWeight: FontWeight.w700)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.accent,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                 ),
               );
             },

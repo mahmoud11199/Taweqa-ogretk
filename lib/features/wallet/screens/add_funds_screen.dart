@@ -5,6 +5,7 @@ import '../../../core/widgets/toast_widget.dart';
 import '../bloc/wallet_bloc.dart';
 import '../bloc/wallet_event.dart';
 import '../bloc/wallet_state.dart';
+import 'paymob_mock_screen.dart';
 
 class AddFundsScreen extends StatefulWidget {
   const AddFundsScreen({super.key});
@@ -18,6 +19,7 @@ class _AddFundsScreenState extends State<AddFundsScreen> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   String _selectedMethod = 'card';
+  bool _paymentInProgress = false;
 
   @override
   void dispose() {
@@ -58,9 +60,19 @@ class _AddFundsScreenState extends State<AddFundsScreen> {
         if (state.error != null) {
           showToast(context, state.error!, isError: true);
         }
-        if (state.paymobPaymentKey != null) {
-          showToast(context, 'تم تهيئة الدفع، يرجى إكمال الدفع في النافذة المفتوحة');
-          // TODO: Open Paymob iframe/webview with paymentKey
+        if (state.paymobPaymentKey != null && !_paymentInProgress) {
+          _paymentInProgress = true;
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => PaymobMockScreen(paymentKey: state.paymobPaymentKey!),
+            ),
+          ).then((success) {
+            _paymentInProgress = false;
+            if (success == true && mounted) {
+              context.read<WalletBloc>().add(VerifyDeposit(state.paymobPaymentKey!));
+            }
+          });
         }
         if (state.depositSuccess) {
           showToast(context, '✅ تم إضافة الرصيد بنجاح');

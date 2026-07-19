@@ -68,7 +68,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => ChatScreen(conversationId: conv.id)),
+                      MaterialPageRoute(builder: (_) => ChatScreen(
+                        conversationId: conv.id,
+                        otherUserName: conv.otherUserName ?? '',
+                      )),
                     );
                   },
                 ),

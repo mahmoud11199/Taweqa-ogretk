@@ -6,6 +6,7 @@ import '../bloc/driver_bloc.dart';
 import '../bloc/driver_event.dart';
 import '../bloc/driver_state.dart';
 import '../models/trip_model.dart';
+import '../../trip/screens/trip_details_screen.dart';
 
 class TripHistoryScreen extends StatefulWidget {
   const TripHistoryScreen({super.key});
@@ -46,7 +47,15 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
             itemCount: state.tripHistory.length,
             itemBuilder: (context, index) {
               final trip = state.tripHistory[index];
-              return _TripCard(trip: trip);
+              return _TripCard(
+                trip: trip,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => TripDetailsScreen(trip: trip),
+                  ),
+                ),
+              );
             },
           );
         },
@@ -57,8 +66,9 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
 
 class _TripCard extends StatelessWidget {
   final Trip trip;
+  final VoidCallback? onTap;
 
-  const _TripCard({required this.trip});
+  const _TripCard({required this.trip, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +83,9 @@ class _TripCard extends StatelessWidget {
             ? 'ملغاة'
             : 'نشطة';
 
-    return Container(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -132,6 +144,7 @@ class _TripCard extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }

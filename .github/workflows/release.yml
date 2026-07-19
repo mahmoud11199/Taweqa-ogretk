@@ -19,7 +19,7 @@ jobs:
     name: Deploy Supabase (DB + Edge Functions)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v2
@@ -60,22 +60,22 @@ jobs:
     name: Build Android APKs
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
 
       - name: Setup Flutter
-        uses: subosito/flutter-action@v3
+        uses: subosito/flutter-action@v2
         with:
           channel: stable
           flutter-version: 3.41.x
 
       - name: Setup Java JDK 17
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: zulu
           java-version: 17
 
       - name: Cache pub
-        uses: actions/cache@v6
+        uses: actions/cache@v4
         with:
           path: ~/.pub-cache
           key: flutter-pub-${{ hashFiles('pubspec.lock') }}
@@ -114,7 +114,7 @@ jobs:
           --dart-define=PAYMOB_IFRAME_ID=${{ secrets.PAYMOB_IFRAME_ID }}
 
       - name: Upload APKs
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: android-apks
           path: build/app/outputs/flutter-apk/*.apk
@@ -123,10 +123,10 @@ jobs:
     name: Build iOS IPA
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
 
       - name: Setup Flutter
-        uses: subosito/flutter-action@v3
+        uses: subosito/flutter-action@v2
         with:
           channel: stable
           flutter-version: 3.41.x
@@ -135,7 +135,7 @@ jobs:
         run: pod repo update --silent
 
       - name: Cache pub
-        uses: actions/cache@v6
+        uses: actions/cache@v4
         with:
           path: ~/.pub-cache
           key: flutter-pub-${{ hashFiles('pubspec.lock') }}
@@ -172,7 +172,7 @@ jobs:
           zip -r app.ipa Payload
 
       - name: Upload IPA
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: ios-ipa
           path: build/ios/iphoneos/Runner/app.ipa
@@ -181,16 +181,16 @@ jobs:
     name: Build Web
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
 
       - name: Setup Flutter
-        uses: subosito/flutter-action@v3
+        uses: subosito/flutter-action@v2
         with:
           channel: stable
           flutter-version: 3.41.x
 
       - name: Cache pub
-        uses: actions/cache@v6
+        uses: actions/cache@v4
         with:
           path: ~/.pub-cache
           key: flutter-pub-${{ hashFiles('pubspec.lock') }}
@@ -221,7 +221,7 @@ jobs:
           --dart-define=PAYMOB_IFRAME_ID=${{ secrets.PAYMOB_IFRAME_ID }}
 
       - name: Upload Web build
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: web-build
           path: build/web
@@ -239,22 +239,22 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Download web build
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           name: web-build
           path: build/web
 
       - name: Setup Pages
-        uses: actions/configure-pages@v6
+        uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v3
         with:
           path: build/web
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@v4
 
   create-release:
     name: Create GitHub Release
@@ -263,10 +263,10 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           path: artifacts
 
@@ -279,7 +279,7 @@ jobs:
           echo "version=v$(date +'%Y.%m.%d')-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: Create Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.version }}
           name: Release ${{ steps.tag.outputs.version }}

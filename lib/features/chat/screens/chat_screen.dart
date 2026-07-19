@@ -8,8 +8,9 @@ import '../bloc/chat_state.dart';
 
 class ChatScreen extends StatefulWidget {
   final String conversationId;
+  final String otherUserName;
 
-  const ChatScreen({super.key, required this.conversationId});
+  const ChatScreen({super.key, required this.conversationId, this.otherUserName = ''});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -51,7 +52,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.bgDeep,
-      appBar: AppBar(title: const Text('المحادثة')),
+      appBar: AppBar(title: Text(widget.otherUserName.isNotEmpty ? widget.otherUserName : 'المحادثة')),
       body: Column(
         children: [
           Expanded(

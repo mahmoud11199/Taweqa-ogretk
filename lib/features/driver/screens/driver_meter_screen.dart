@@ -11,6 +11,7 @@ import '../../auth/bloc/auth_event.dart';
 import '../../auth/bloc/auth_state.dart';
 import '../../chat/screens/chat_list_screen.dart';
 import '../../landing/screens/landing_screen.dart';
+import '../../settings/screens/settings_screen.dart';
 import '../../wallet/screens/wallet_screen.dart';
 import '../bloc/driver_bloc.dart';
 import '../bloc/driver_event.dart';
@@ -192,6 +193,14 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatListScreen()));
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.settings, color: AppTheme.meterPrimary),
+                  title: const Text('الإعدادات', style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
                   },
                 ),
                 const Divider(color: AppTheme.meterCard),

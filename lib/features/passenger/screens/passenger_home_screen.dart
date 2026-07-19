@@ -10,6 +10,7 @@ import '../../auth/bloc/auth_event.dart';
 import '../../auth/bloc/auth_state.dart';
 import '../../chat/screens/chat_list_screen.dart';
 import '../../landing/screens/landing_screen.dart';
+import '../../settings/screens/settings_screen.dart';
 import '../../wallet/screens/wallet_screen.dart';
 import '../bloc/passenger_bloc.dart';
 import '../bloc/passenger_event.dart';
@@ -27,6 +28,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
   final MapController _mapController = MapController();
   double _currentLat = 26.8206;
   double _currentLng = 30.8025;
+  bool _isSelectingDestination = false;
 
   @override
   void initState() {
@@ -132,6 +134,14 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatListScreen()));
                 },
               ),
+              ListTile(
+                leading: const Icon(Icons.settings, color: AppTheme.meterPrimary),
+                title: const Text('الإعدادات', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
+                },
+              ),
               const Divider(color: AppTheme.meterCard),
               ListTile(
                 leading: const Icon(Icons.logout, color: AppTheme.error),
@@ -153,11 +163,20 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
               initialCenter: LatLng(_currentLat, _currentLng),
               initialZoom: 14,
               onTap: (tapPos, latlng) {
-                context.read<PassengerBloc>().add(UpdatePickupLocation(
-                  lat: latlng.latitude,
-                  lng: latlng.longitude,
-                  address: 'موقع محدد',
-                ));
+                if (_isSelectingDestination) {
+                  context.read<PassengerBloc>().add(UpdateDestination(
+                    lat: latlng.latitude,
+                    lng: latlng.longitude,
+                    address: 'الوجهة المحددة',
+                  ));
+                  setState(() => _isSelectingDestination = false);
+                } else {
+                  context.read<PassengerBloc>().add(UpdatePickupLocation(
+                    lat: latlng.latitude,
+                    lng: latlng.longitude,
+                    address: 'موقع محدد',
+                  ));
+                }
               },
             ),
             children: [
@@ -204,68 +223,89 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
             top: 16,
             left: 16,
             right: 16,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppTheme.meterCard,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    blurRadius: 16,
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  TextFormField(
-                    decoration: const InputDecoration(
-                      hintText: 'موقع الالتقاط',
-                      prefixIcon: Icon(Icons.my_location, color: AppTheme.success),
-                      filled: true,
-                      fillColor: AppTheme.bgDeep,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Container(
+                  alignment: Alignment.centerRight,
+                  child: IconButton(
+                    icon: const Icon(Icons.my_location, color: AppTheme.meterPrimary, size: 28),
+                    onPressed: _getCurrentLocation,
+                    style: IconButton.styleFrom(
+                      backgroundColor: AppTheme.meterCard,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    enabled: false,
                   ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    decoration: const InputDecoration(
-                      hintText: 'الوجهة (اختياري)',
-                      prefixIcon: Icon(Icons.flag, color: AppTheme.error),
-                      filled: true,
-                      fillColor: AppTheme.bgDeep,
-                    ),
-                    onTap: () {
-                      // TODO: Open destination picker
-                    },
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppTheme.meterCard,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.3),
+                        blurRadius: 16,
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  BlocBuilder<PassengerBloc, PassengerState>(
-                    builder: (context, state) {
-                      return SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: ElevatedButton(
-                          onPressed: state.isLoading ? null : _requestRide,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.success,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: state.isLoading
-                              ? const SizedBox(
-                                  width: 20, height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                )
-                              : const Text('طلب رحلة', style: TextStyle(fontWeight: FontWeight.w700)),
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        decoration: const InputDecoration(
+                          hintText: 'موقع الالتقاط',
+                          prefixIcon: Icon(Icons.my_location, color: AppTheme.success),
+                          filled: true,
+                          fillColor: AppTheme.bgDeep,
                         ),
-                      );
-                    },
+                        enabled: false,
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        decoration: InputDecoration(
+                          hintText: _isSelectingDestination ? 'اختر الوجهة على الخريطة...' : 'الوجهة (اختياري)',
+                          prefixIcon: Icon(Icons.flag, color: AppTheme.error),
+                          suffixIcon: Icon(
+                            _isSelectingDestination ? Icons.my_location : Icons.edit_location,
+                            color: _isSelectingDestination ? AppTheme.accent : AppTheme.meterMuted,
+                            size: 20,
+                          ),
+                          filled: true,
+                          fillColor: AppTheme.bgDeep,
+                        ),
+                        enabled: false,
+                        onTap: () => setState(() => _isSelectingDestination = !_isSelectingDestination),
+                      ),
+                      const SizedBox(height: 12),
+                      BlocBuilder<PassengerBloc, PassengerState>(
+                        builder: (context, state) {
+                          return SizedBox(
+                            width: double.infinity,
+                            height: 48,
+                            child: ElevatedButton(
+                              onPressed: state.isLoading ? null : _requestRide,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.success,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: state.isLoading
+                                  ? const SizedBox(
+                                      width: 20, height: 20,
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                    )
+                                  : const Text('طلب رحلة', style: TextStyle(fontWeight: FontWeight.w700)),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],

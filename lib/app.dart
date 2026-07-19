@@ -13,7 +13,9 @@ import 'features/admin/screens/passengers_management_screen.dart';
 import 'features/admin/screens/trips_management_screen.dart';
 import 'features/admin/screens/driver_applications_screen.dart';
 import 'features/wallet/screens/wallet_screen.dart';
+import 'features/wallet/screens/paymob_mock_screen.dart';
 import 'features/chat/screens/chat_list_screen.dart';
+import 'features/settings/screens/settings_screen.dart';
 
 class TaweqeApp extends StatelessWidget {
   const TaweqeApp({super.key});
@@ -56,6 +58,11 @@ class TaweqeApp extends StatelessWidget {
             screen = const WalletScreen();
           case Routes.driverApplication:
             screen = const DriverApplicationsScreen();
+          case Routes.settings:
+            screen = const SettingsScreen();
+          case Routes.paymob:
+            final key = settings.arguments as String? ?? '';
+            screen = PaymobMockScreen(paymentKey: key);
           default:
             screen = Scaffold(
               backgroundColor: AppTheme.bgDeep,
