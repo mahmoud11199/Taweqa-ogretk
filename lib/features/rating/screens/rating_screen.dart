@@ -42,8 +42,7 @@ class _RatingScreenState extends State<RatingScreen> {
               ? null
               : _reviewController.text.trim(),
         ));
-    showToast(context, 'تم إرسال التقييم بنجاح');
-    Navigator.pop(context);
+    Navigator.pop(context, true);
   }
 
   @override

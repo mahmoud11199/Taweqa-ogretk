@@ -38,6 +38,14 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
 
   void _getCurrentLocation() async {
     try {
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+        if (mounted) showToast(context, 'يرجى منح صلاحية الموقع', isError: true);
+        return;
+      }
       final pos = await Geolocator.getCurrentPosition();
       if (!mounted) return;
       _currentLat = pos.latitude;
@@ -274,7 +282,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
                           filled: true,
                           fillColor: AppTheme.bgDeep,
                         ),
-                        enabled: false,
+                        readOnly: true,
                         onTap: () => setState(() => _isSelectingDestination = !_isSelectingDestination),
                       ),
                       const SizedBox(height: 12),

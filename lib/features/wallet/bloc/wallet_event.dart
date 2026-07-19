@@ -8,10 +8,12 @@ class InitDeposit extends WalletEvent {
   final double amount;
   final String email;
   final String phone;
+  final String method;
   InitDeposit({
     required this.amount,
     required this.email,
     required this.phone,
+    this.method = 'card',
   });
 }
 

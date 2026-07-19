@@ -50,6 +50,7 @@ class _AddFundsScreenState extends State<AddFundsScreen> {
       amount: amount,
       email: email,
       phone: phone,
+      method: _selectedMethod,
     ));
   }
 

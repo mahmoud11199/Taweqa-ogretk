@@ -149,10 +149,21 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
                         'توقع أجرتك',
                         style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                       ),
-                      BlocBuilder<DriverBloc, DriverState>(
-                        builder: (context, state) => Text(
-                          state.driverInfo?.carModel ?? 'سائق',
-                          style: const TextStyle(color: AppTheme.meterMuted, fontSize: 13),
+                      BlocBuilder<AuthBloc, AuthState>(
+                        builder: (context, authState) => Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              authState is AuthAuthenticated ? authState.profile.fullName : 'سائق',
+                              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                            ),
+                            BlocBuilder<DriverBloc, DriverState>(
+                              builder: (context, state) => Text(
+                                state.driverInfo?.carModel ?? '',
+                                style: const TextStyle(color: AppTheme.meterMuted, fontSize: 12),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],

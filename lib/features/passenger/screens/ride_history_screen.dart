@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/helpers.dart';
+import '../../../core/widgets/toast_widget.dart';
 import '../bloc/passenger_bloc.dart';
 import '../bloc/passenger_event.dart';
 import '../bloc/passenger_state.dart';
@@ -98,15 +99,20 @@ class _RideHistoryScreenState extends State<RideHistoryScreen> {
                             width: double.infinity,
                             height: 36,
                             child: ElevatedButton.icon(
-                              onPressed: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => RatingScreen(
-                                    requestId: ride.id,
-                                    driverName: ride.driverName!,
+                              onPressed: () async {
+                                final result = await Navigator.push<bool>(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => RatingScreen(
+                                      requestId: ride.id,
+                                      driverName: ride.driverName!,
+                                    ),
                                   ),
-                                ),
-                              ),
+                                );
+                                if (result == true && context.mounted) {
+                                  showToast(context, 'تم إرسال التقييم بنجاح');
+                                }
+                              },
                               icon: const Icon(Icons.star_rate, size: 18),
                               label: const Text('تقييم', style: TextStyle(fontWeight: FontWeight.w700)),
                               style: ElevatedButton.styleFrom(

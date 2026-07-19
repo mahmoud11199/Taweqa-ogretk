@@ -41,16 +41,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       },
       child: Scaffold(
         backgroundColor: AppTheme.bgDeep,
-      appBar: AppBar(
-        title: const Text('لوحة التحكم'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => context.read<AuthBloc>().add(LogoutRequested()),
-          ),
-        ],
-      ),
-      body: BlocBuilder<AdminBloc, AdminState>(
+        appBar: AppBar(
+          title: const Text('لوحة التحكم'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.logout),
+              onPressed: () => context.read<AuthBloc>().add(LogoutRequested()),
+            ),
+          ],
+        ),
+        body: BlocBuilder<AdminBloc, AdminState>(
         builder: (context, state) {
           if (state.isLoading && state.stats == null) {
             return const Center(
