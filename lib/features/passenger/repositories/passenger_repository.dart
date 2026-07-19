@@ -88,9 +88,9 @@ class PassengerRepository {
         final route = routes[0] as Map<String, dynamic>;
         final distanceKm = (route['distance'] as num) / 1000;
         final durationMin = (route['duration'] as num) / 60;
-    const baseFare = AppConstants.pricingBaseFare;
-    const perKm = AppConstants.pricingPerKm;
-    const perMin = AppConstants.pricingPerMin;
+        const baseFare = AppConstants.pricingBaseFare;
+        const perKm = AppConstants.pricingPerKm;
+        const perMin = AppConstants.pricingPerMin;
         final fare = baseFare + (distanceKm * perKm) + (durationMin * perMin);
         return {
           'distance_km': distanceKm,

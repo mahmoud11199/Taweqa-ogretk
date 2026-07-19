@@ -19,6 +19,7 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
+  int _lastMessageCount = 0;
 
   @override
   void initState() {
@@ -26,21 +27,16 @@ class _ChatScreenState extends State<ChatScreen> {
     context.read<ChatBloc>().add(LoadMessages(widget.conversationId));
     context.read<ChatBloc>().add(SubscribeToMessages(widget.conversationId));
     context.read<ChatBloc>().add(MarkAsRead(widget.conversationId));
-    _scrollController.addListener(_onScroll);
   }
 
-  void _onScroll() {
-    if (_scrollController.position.maxScrollExtent > 0) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 100),
-            curve: Curves.easeOut,
-          );
-        }
-      });
-    }
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(
+          _scrollController.position.maxScrollExtent,
+        );
+      }
+    });
   }
 
   void _sendMessage() {
@@ -82,6 +78,10 @@ class _ChatScreenState extends State<ChatScreen> {
                   return const Center(
                     child: Text('لا توجد رسائل', style: TextStyle(color: AppTheme.meterMuted)),
                   );
+                }
+                if (state.messages.length > _lastMessageCount) {
+                  _lastMessageCount = state.messages.length;
+                  _scrollToBottom();
                 }
                 return ListView.builder(
                   controller: _scrollController,

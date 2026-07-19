@@ -36,6 +36,7 @@ class WalletRepository {
     required double amount,
     required String email,
     required String phone,
+    String method = 'card',
   }) async {
     // Call Supabase Edge Function to get Paymob payment key
     final functionResponse = await _client.functions.invoke('init-paymob-payment', body: {
@@ -43,6 +44,7 @@ class WalletRepository {
       'amount': amount,
       'email': email,
       'phone': phone,
+      'method': method,
     });
     final data = functionResponse.data as Map<String, dynamic>;
     return data['payment_key'] as String;

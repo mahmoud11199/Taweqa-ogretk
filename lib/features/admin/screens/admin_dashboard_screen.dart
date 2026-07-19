@@ -127,6 +127,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         value: '${stats?.pendingApplications ?? 0}',
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _StatCard(
+                        icon: Icons.checklist,
+                        label: 'رحلات مكتملة',
+                        value: '${stats?.completedTrips ?? 0}',
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 24),

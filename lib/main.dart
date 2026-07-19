@@ -19,12 +19,7 @@ import 'features/wallet/bloc/wallet_bloc.dart';
 import 'features/wallet/repositories/wallet_repository.dart';
 import 'app.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  try {
-    await SupabaseConfig.init();
-  } catch (_) {}
-
+Widget _buildApp() {
   final authRepository = AuthRepository();
   final landingRepository = LandingRepository();
   final driverRepository = DriverRepository();
@@ -33,34 +28,43 @@ void main() async {
   final walletRepository = WalletRepository();
   final chatRepository = ChatRepository();
 
-  runApp(
-    MultiBlocProvider(
-      providers: [
-        BlocProvider<AuthBloc>(
-          create: (_) => AuthBloc(repository: authRepository)..add(AppStarted()),
-        ),
-        BlocProvider<LandingCubit>(
-          create: (_) => LandingCubit(repository: landingRepository),
-        ),
-        BlocProvider<DriverBloc>(
-          create: (_) => DriverBloc(repository: driverRepository),
-        ),
-        BlocProvider<PassengerBloc>(
-          create: (_) => PassengerBloc(repository: passengerRepository),
-        ),
-        BlocProvider<AdminBloc>(
-          create: (_) => AdminBloc(repository: adminRepository),
-        ),
-        BlocProvider<WalletBloc>(
-          create: (_) => WalletBloc(repository: walletRepository),
-        ),
-        BlocProvider<ChatBloc>(
-          create: (_) => ChatBloc(repository: chatRepository),
-        ),
-      ],
-      child: const TaweqeApp(),
-    ),
+  return MultiBlocProvider(
+    providers: [
+      BlocProvider<AuthBloc>(
+        create: (_) => AuthBloc(repository: authRepository)..add(AppStarted()),
+      ),
+      BlocProvider<LandingCubit>(
+        create: (_) => LandingCubit(repository: landingRepository),
+      ),
+      BlocProvider<DriverBloc>(
+        create: (_) => DriverBloc(repository: driverRepository),
+      ),
+      BlocProvider<PassengerBloc>(
+        create: (_) => PassengerBloc(repository: passengerRepository),
+      ),
+      BlocProvider<AdminBloc>(
+        create: (_) => AdminBloc(repository: adminRepository),
+      ),
+      BlocProvider<WalletBloc>(
+        create: (_) => WalletBloc(repository: walletRepository),
+      ),
+      BlocProvider<ChatBloc>(
+        create: (_) => ChatBloc(repository: chatRepository),
+      ),
+    ],
+    child: const TaweqeApp(),
   );
+}
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await SupabaseConfig.init();
+  } catch (_) {
+    runApp(const ErrorApp());
+    return;
+  }
+  runApp(_buildApp());
 }
 
 class ErrorApp extends StatelessWidget {
@@ -88,43 +92,8 @@ class ErrorApp extends StatelessWidget {
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () {
-                  WidgetsFlutterBinding.ensureInitialized();
-                    SupabaseConfig.init().then((_) {
-                    final authRepo = AuthRepository();
-                    final landingRepo = LandingRepository();
-                    final driverRepo = DriverRepository();
-                    final passengerRepo = PassengerRepository();
-                    final adminRepo = AdminRepository();
-                    final walletRepo = WalletRepository();
-                    final chatRepo = ChatRepository();
-                    runApp(
-                      MultiBlocProvider(
-                        providers: [
-                          BlocProvider<AuthBloc>(
-                            create: (_) => AuthBloc(repository: authRepo)..add(AppStarted()),
-                          ),
-                          BlocProvider<LandingCubit>(
-                            create: (_) => LandingCubit(repository: landingRepo),
-                          ),
-                          BlocProvider<DriverBloc>(
-                            create: (_) => DriverBloc(repository: driverRepo),
-                          ),
-                          BlocProvider<PassengerBloc>(
-                            create: (_) => PassengerBloc(repository: passengerRepo),
-                          ),
-                          BlocProvider<AdminBloc>(
-                            create: (_) => AdminBloc(repository: adminRepo),
-                          ),
-                          BlocProvider<WalletBloc>(
-                            create: (_) => WalletBloc(repository: walletRepo),
-                          ),
-                          BlocProvider<ChatBloc>(
-                            create: (_) => ChatBloc(repository: chatRepo),
-                          ),
-                        ],
-                        child: const TaweqeApp(),
-                      ),
-                    );
+                  SupabaseConfig.init().then((_) {
+                    runApp(_buildApp());
                   }).catchError((_) {});
                 },
                 child: const Text('إعادة المحاولة'),
