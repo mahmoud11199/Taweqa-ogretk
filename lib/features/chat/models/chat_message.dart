@@ -19,9 +19,9 @@ class ChatMessage {
 
   factory ChatMessage.fromMap(Map<String, dynamic> map) {
     return ChatMessage(
-      id: map['id'] as String,
-      conversationId: map['conversation_id'] as String,
-      senderId: map['sender_id'] as String,
+      id: (map['id'] as String?) ?? '',
+      conversationId: (map['conversation_id'] as String?) ?? '',
+      senderId: (map['sender_id'] as String?) ?? '',
       text: map['text'] as String? ?? '',
       imageUrl: map['image_url'] as String?,
       isRead: map['is_read'] as bool? ?? false,

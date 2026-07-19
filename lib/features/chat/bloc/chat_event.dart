@@ -12,7 +12,8 @@ class OpenConversation extends ChatEvent {
 class SendMessage extends ChatEvent {
   final String conversationId;
   final String text;
-  SendMessage({required this.conversationId, required this.text});
+  final String? imageUrl;
+  SendMessage({required this.conversationId, required this.text, this.imageUrl});
 }
 
 class LoadMessages extends ChatEvent {

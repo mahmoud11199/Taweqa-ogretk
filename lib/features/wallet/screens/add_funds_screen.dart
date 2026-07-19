@@ -63,15 +63,17 @@ class _AddFundsScreenState extends State<AddFundsScreen> {
         }
         if (state.paymobPaymentKey != null && !_paymentInProgress) {
           _paymentInProgress = true;
+          final walletBloc = context.read<WalletBloc>();
+          final pk = state.paymobPaymentKey!;
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => PaymobMockScreen(paymentKey: state.paymobPaymentKey!),
+              builder: (_) => PaymobMockScreen(paymentKey: pk),
             ),
           ).then((success) {
             _paymentInProgress = false;
             if (success == true && mounted) {
-              context.read<WalletBloc>().add(VerifyDeposit(state.paymobPaymentKey!));
+              walletBloc.add(VerifyDeposit(pk));
             }
           });
         }

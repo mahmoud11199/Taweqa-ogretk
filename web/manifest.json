@@ -1,13 +1,16 @@
 {
-    "name": "توقع أجرتك",
-    "short_name": "توقع أجرتك",
+    "name": "عدادي مَرِنْ - توقع أجرتك",
+    "short_name": "عدادي مَرِنْ",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0F172A",
     "theme_color": "#0F172A",
-    "description": "توقع أجرتك - تطبيق التوك توك الذكي لحساب الأجرة والتتبع",
-    "orientation": "portrait-primary",
+    "description": "عدادي مَرِنْ - التطبيق الذكي لحساب الأجرة وتتبع رحلات التوك توك في مصر",
+    "orientation": "any",
     "prefer_related_applications": false,
+    "scope": "/",
+    "lang": "ar",
+    "dir": "rtl",
     "icons": [
         {
             "src": "icons/Icon-192.png",

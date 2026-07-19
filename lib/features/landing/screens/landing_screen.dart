@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../admin/screens/admin_dashboard_screen.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_state.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../auth/screens/register_screen.dart';
 import '../../driver/screens/driver_meter_screen.dart';
 import '../../passenger/screens/passenger_home_screen.dart';
+import '../../admin/screens/admin_dashboard_screen.dart';
 import '../bloc/landing_cubit.dart';
+import '../widgets/navbar_section.dart';
+import '../widgets/hero_section.dart';
+import '../widgets/features_section.dart';
+import '../widgets/how_it_works_section.dart';
+import '../widgets/download_section.dart';
+import '../widgets/footer_section.dart';
 
 class LandingScreen extends StatefulWidget {
   const LandingScreen({super.key});
@@ -19,10 +24,28 @@ class LandingScreen extends StatefulWidget {
 }
 
 class _LandingScreenState extends State<LandingScreen> {
+  final _scrollController = ScrollController();
+  final _featuresKey = GlobalKey();
+  final _howItWorksKey = GlobalKey();
+  final _downloadKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
     context.read<LandingCubit>().loadRelease();
+  }
+
+  void _scrollTo(GlobalKey key) {
+    final context = key.currentContext;
+    if (context != null) {
+      Scrollable.ensureVisible(context, duration: const Duration(milliseconds: 500), curve: Curves.easeInOut);
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -35,216 +58,49 @@ class _LandingScreenState extends State<LandingScreen> {
               : state.profile.isDriver
                   ? const DriverMeterScreen()
                   : const PassengerHomeScreen();
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => screen),
-          );
+          Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => screen));
         }
       },
       child: Scaffold(
         backgroundColor: AppTheme.bgDeep,
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: Column(
-              children: [
-                const SizedBox(height: 40),
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: AppTheme.meterPrimary.withAlpha(30),
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: const Icon(
-                    Icons.local_taxi_rounded,
-                    size: 56,
-                    color: AppTheme.meterPrimary,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'توقع أجرتك',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    letterSpacing: 1,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'التوك توك الذكي',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: AppTheme.meterPrimary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                const Text(
-                  'احسب أجرتك بسهولة، تتبع رحلاتك، واستلم مدفوعاتك بدون تعقيد',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppTheme.meterMuted,
-                    height: 1.6,
-                  ),
-                ),
-                const SizedBox(height: 48),
-                BlocBuilder<LandingCubit, LandingState>(
-                  builder: (context, state) {
-                    if (state.isLoading) {
-                      return const Center(
-                        child: CircularProgressIndicator(
-                          color: AppTheme.meterPrimary,
-                        ),
-                      );
-                    }
-
-                    final release = state.release;
-                    final apkUrl = release?.apkUrl;
-                    final iosUrl = release?.iosUrl;
-                    return Column(
-                      children: [
-                        if (apkUrl != null) ...[
-                          _DownloadButton(
-                            icon: Icons.android,
-                            label: 'تحميل التطبيق (Android)',
-                            version: release!.version,
-                            onTap: () => launchUrl(
-                              Uri.parse(apkUrl),
-                              mode: LaunchMode.externalApplication,
-                            ),
-                          ),
-                        ],
-                        if (iosUrl != null) ...[
-                          const SizedBox(height: 12),
-                          _DownloadButton(
-                            icon: Icons.apple,
-                            label: 'تحميل (iOS)',
-                            version: release!.version,
-                            onTap: () => launchUrl(
-                              Uri.parse(iosUrl),
-                              mode: LaunchMode.externalApplication,
-                            ),
-                          ),
-                        ],
-                        if (release == null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 16),
-                            child: Text(
-                              state.error ?? 'لم نتمكن من جلب روابط التحميل، يرجى المحاولة لاحقاً',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: AppTheme.error,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                      ],
-                    );
-                  },
-                ),
-                const SizedBox(height: 40),
-                const Divider(color: AppTheme.meterMuted),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const LoginScreen()),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.success,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: const Text(
-                      'تسجيل الدخول',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const RegisterScreen()),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.meterPrimary,
-                      side: const BorderSide(color: AppTheme.meterPrimary),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: const Text(
-                      'إنشاء حساب جديد',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                BlocBuilder<LandingCubit, LandingState>(
-                  builder: (context, ls) => Text(
-                    'الإصدار ${ls.appVersion ?? '1.0.0'}',
-                    style: const TextStyle(
-                      color: AppTheme.meterMuted,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              ],
+        body: Column(
+          children: [
+            NavbarSection(
+              onLogin: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen())),
+              onRegister: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterScreen())),
+              onScrollToFeatures: () => _scrollTo(_featuresKey),
+              onScrollToHowItWorks: () => _scrollTo(_howItWorksKey),
+              onScrollToDownload: () => _scrollTo(_downloadKey),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DownloadButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String version;
-  final VoidCallback onTap;
-
-  const _DownloadButton({
-    required this.icon,
-    required this.label,
-    required this.version,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 52,
-      child: ElevatedButton.icon(
-        onPressed: onTap,
-        icon: Icon(icon),
-        label: Text('$label v$version'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.meterCard,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
+            Expanded(
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                child: Column(
+                  children: [
+                    HeroSection(
+                      onGetStarted: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterScreen())),
+                      onLearnMore: () => _scrollTo(_featuresKey),
+                    ),
+                    FeaturesSection(key: _featuresKey),
+                    HowItWorksSection(key: _howItWorksKey),
+                    BlocBuilder<LandingCubit, LandingState>(
+                      builder: (_, state) {
+                        if (state.isLoading) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(vertical: 64),
+                            color: AppTheme.meterCard,
+                            child: const Center(child: CircularProgressIndicator(color: AppTheme.meterPrimary)),
+                          );
+                        }
+                        return DownloadSection(key: _downloadKey, apkUrl: state.release?.apkUrl, iosUrl: state.release?.iosUrl);
+                      },
+                    ),
+                    const FooterSection(),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

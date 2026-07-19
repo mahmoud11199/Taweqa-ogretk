@@ -39,8 +39,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         }
         if (state is PasswordResetSent) {
           showToast(context, state.message);
+          final nav = Navigator.of(context);
           Future.delayed(const Duration(milliseconds: 800), () {
-            if (mounted) Navigator.pop(context);
+            if (mounted) nav.pop();
           });
         }
       },

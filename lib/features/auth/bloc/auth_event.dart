@@ -74,3 +74,34 @@ class AuthEventError extends AuthEvent {
   final String message;
   AuthEventError(this.message);
 }
+
+class SendPhoneOtp extends AuthEvent {
+  final String phone;
+  SendPhoneOtp({required this.phone});
+}
+
+class VerifyPhoneOtp extends AuthEvent {
+  final String phone;
+  final String otp;
+  VerifyPhoneOtp({required this.phone, required this.otp});
+}
+
+class RegisterWithPhone extends AuthEvent {
+  final String name;
+  final String phone;
+  final String role;
+  final String? refCode;
+  final DriverType? driverType;
+  final Map<String, dynamic> driverFields;
+  final Map<String, File?> driverFiles;
+
+  RegisterWithPhone({
+    required this.name,
+    required this.phone,
+    required this.role,
+    this.refCode,
+    this.driverType,
+    this.driverFields = const {},
+    this.driverFiles = const {},
+  });
+}

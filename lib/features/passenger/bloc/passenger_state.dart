@@ -15,6 +15,9 @@ class PassengerState {
   final double? estimatedFare;
   final double? estimatedDistance;
   final double? estimatedDuration;
+  final String? joinedTripId;
+  final String? joinedDriverId;
+  final List<RideRequest> scheduledTrips;
 
   const PassengerState({
     this.isLoading = false,
@@ -22,6 +25,7 @@ class PassengerState {
     this.nearbyDrivers = const [],
     this.activeRequest,
     this.rideHistory = const [],
+    this.scheduledTrips = const [],
     this.pickupLat,
     this.pickupLng,
     this.pickupAddress = '',
@@ -31,6 +35,8 @@ class PassengerState {
     this.estimatedFare,
     this.estimatedDistance,
     this.estimatedDuration,
+    this.joinedTripId,
+    this.joinedDriverId,
   });
 
   PassengerState copyWith({
@@ -39,6 +45,7 @@ class PassengerState {
     List<Map<String, dynamic>>? nearbyDrivers,
     RideRequest? activeRequest,
     List<RideRequest>? rideHistory,
+    List<RideRequest>? scheduledTrips,
     double? pickupLat,
     double? pickupLng,
     String? pickupAddress,
@@ -48,6 +55,8 @@ class PassengerState {
     double? estimatedFare,
     double? estimatedDistance,
     double? estimatedDuration,
+    String? joinedTripId,
+    String? joinedDriverId,
     bool clearError = false,
   }) {
     return PassengerState(
@@ -56,6 +65,7 @@ class PassengerState {
       nearbyDrivers: nearbyDrivers ?? this.nearbyDrivers,
       activeRequest: activeRequest ?? this.activeRequest,
       rideHistory: rideHistory ?? this.rideHistory,
+      scheduledTrips: scheduledTrips ?? this.scheduledTrips,
       pickupLat: pickupLat ?? this.pickupLat,
       pickupLng: pickupLng ?? this.pickupLng,
       pickupAddress: pickupAddress ?? this.pickupAddress,
@@ -65,6 +75,8 @@ class PassengerState {
       estimatedFare: estimatedFare ?? this.estimatedFare,
       estimatedDistance: estimatedDistance ?? this.estimatedDistance,
       estimatedDuration: estimatedDuration ?? this.estimatedDuration,
+      joinedTripId: joinedTripId ?? this.joinedTripId,
+      joinedDriverId: joinedDriverId ?? this.joinedDriverId,
     );
   }
 }

@@ -13,7 +13,8 @@ import '../widgets/driver_field.dart';
 import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+  final String? phone;
+  const RegisterScreen({super.key, this.phone});
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -33,6 +34,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final Map<String, dynamic> _driverFiles = {};
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.phone != null) {
+      _phoneController.text = widget.phone!;
+    }
+  }
 
   @override
   void dispose() {

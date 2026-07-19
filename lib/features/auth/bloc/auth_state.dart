@@ -32,3 +32,13 @@ class PasswordResetSent extends AuthState {
   final String message;
   PasswordResetSent({required this.message});
 }
+
+class PhoneOtpSent extends AuthState {
+  final String phone;
+  PhoneOtpSent({required this.phone});
+}
+
+class PhoneOtpVerified extends AuthState {
+  final String phone;
+  PhoneOtpVerified({required this.phone});
+}

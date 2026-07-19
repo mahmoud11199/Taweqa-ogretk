@@ -1,6 +1,12 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'core/blocs/connectivity_cubit.dart';
 import 'core/config/supabase_config.dart';
+import 'core/services/background_location_service.dart';
+import 'core/services/in_app_notification_service.dart';
+import 'core/services/notification_service.dart';
+import 'core/services/sync_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/admin/bloc/admin_bloc.dart';
 import 'features/admin/repositories/admin_repository.dart';
@@ -10,6 +16,8 @@ import 'features/auth/repositories/auth_repository.dart';
 import 'features/chat/bloc/chat_bloc.dart';
 import 'features/chat/repositories/chat_repository.dart';
 import 'features/driver/bloc/driver_bloc.dart';
+import 'features/subscription/bloc/subscription_bloc.dart';
+import 'features/subscription/repositories/subscription_repository.dart';
 import 'features/driver/repositories/driver_repository.dart';
 import 'features/landing/bloc/landing_cubit.dart';
 import 'features/landing/repositories/landing_repository.dart';
@@ -27,9 +35,13 @@ Widget _buildApp() {
   final adminRepository = AdminRepository();
   final walletRepository = WalletRepository();
   final chatRepository = ChatRepository();
+  final subscriptionRepository = SubscriptionRepository();
 
   return MultiBlocProvider(
     providers: [
+      BlocProvider<ConnectivityCubit>(
+        create: (_) => ConnectivityCubit(),
+      ),
       BlocProvider<AuthBloc>(
         create: (_) => AuthBloc(repository: authRepository)..add(AppStarted()),
       ),
@@ -51,6 +63,9 @@ Widget _buildApp() {
       BlocProvider<ChatBloc>(
         create: (_) => ChatBloc(repository: chatRepository),
       ),
+      BlocProvider<SubscriptionBloc>(
+        create: (_) => SubscriptionBloc(repository: subscriptionRepository),
+      ),
     ],
     child: const TaweqeApp(),
   );
@@ -59,7 +74,12 @@ Widget _buildApp() {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
+    await Firebase.initializeApp();
     await SupabaseConfig.init();
+    await NotificationService.initialize();
+    await BackgroundLocationService.initialize();
+    await InAppNotificationService.initialize();
+    await SyncService.startMonitoring();
   } catch (_) {
     runApp(const ErrorApp());
     return;
@@ -91,10 +111,16 @@ class ErrorApp extends StatelessWidget {
               const Text('حدث خطأ أثناء تهيئة التطبيق'),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: () {
-                  SupabaseConfig.init().then((_) {
+                onPressed: () async {
+                  try {
+                    await Firebase.initializeApp();
+                    await SupabaseConfig.init();
+                    await NotificationService.initialize();
+                    await BackgroundLocationService.initialize();
+                    await InAppNotificationService.initialize();
+                    await SyncService.startMonitoring();
                     runApp(_buildApp());
-                  }).catchError((_) {});
+                  } catch (_) {}
                 },
                 child: const Text('إعادة المحاولة'),
               ),

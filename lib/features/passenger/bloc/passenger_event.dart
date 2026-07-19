@@ -67,6 +67,51 @@ class UpdatePickupLocation extends PassengerEvent {
   });
 }
 
+class ScheduleRide extends PassengerEvent {
+  final double pickupLat;
+  final double pickupLng;
+  final String pickupAddress;
+  final double? destLat;
+  final double? destLng;
+  final String? destAddress;
+  final DateTime scheduledAt;
+  ScheduleRide({
+    required this.pickupLat,
+    required this.pickupLng,
+    required this.pickupAddress,
+    this.destLat,
+    this.destLng,
+    this.destAddress,
+    required this.scheduledAt,
+  });
+}
+
+class FetchMyScheduledTrips extends PassengerEvent {}
+
+class CancelScheduledTrip extends PassengerEvent {
+  final String tripId;
+  CancelScheduledTrip(this.tripId);
+}
+
+class JoinSharedRide extends PassengerEvent {
+  final String shareCode;
+  final double pickupLat;
+  final double pickupLng;
+  final String pickupAddress;
+  final double? destLat;
+  final double? destLng;
+  final String? destAddress;
+  JoinSharedRide({
+    required this.shareCode,
+    required this.pickupLat,
+    required this.pickupLng,
+    required this.pickupAddress,
+    this.destLat,
+    this.destLng,
+    this.destAddress,
+  });
+}
+
 class UpdateDestination extends PassengerEvent {
   final double lat;
   final double lng;

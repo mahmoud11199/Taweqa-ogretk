@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import '../../../core/config/supabase_config.dart';
+import '../../../core/services/in_app_notification_service.dart';
 import '../models/user_model.dart';
 import '../repositories/auth_repository.dart';
 import 'auth_event.dart';
@@ -25,6 +26,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<UploadAvatar>(_onUploadAvatar);
     on<LogoutRequested>(_onLogoutRequested);
     on<AuthEventError>(_onAuthEventError);
+    on<SendPhoneOtp>(_onSendPhoneOtp);
+    on<VerifyPhoneOtp>(_onVerifyPhoneOtp);
+    on<RegisterWithPhone>(_onRegisterWithPhone);
 
     try {
       _authSubscription = SupabaseConfig.client.auth.onAuthStateChange.listen(
@@ -86,6 +90,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
     final cached = UserProfile.fromSupabaseUser(user);
     emit(AuthAuthenticated(profile: cached));
+    await InAppNotificationService.startListening(user.id);
     final full = await _tryFetchProfile();
     if (full != null && !isClosed) {
       emit(AuthAuthenticated(profile: full));
@@ -105,6 +110,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
       final cached = UserProfile.fromSupabaseUser(response.user!);
       emit(AuthAuthenticated(profile: cached));
+      await InAppNotificationService.startListening(response.user!.id);
       final full = await _tryFetchProfile();
       if (full != null && !isClosed) {
         emit(AuthAuthenticated(profile: full));
@@ -136,6 +142,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final user = response.user!;
       final cached = UserProfile.fromSupabaseUser(user);
       emit(AuthAuthenticated(profile: cached));
+      await InAppNotificationService.startListening(user.id);
 
       // Background: ensure profile, wallet, driver setup, referral
       try {
@@ -252,15 +259,98 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       LogoutRequested event, Emitter<AuthState> emit) async {
     emit(AuthLoading(message: 'جاري تسجيل الخروج...'));
     try {
+      await InAppNotificationService.stopListening();
       await SupabaseConfig.client.auth.signOut();
       emit(AuthUnauthenticated());
     } catch (_) {
+      await InAppNotificationService.stopListening();
       emit(AuthUnauthenticated());
     }
   }
 
   void _onAuthEventError(AuthEventError event, Emitter<AuthState> emit) {
     emit(AuthFailure(event.message));
+  }
+
+  Future<void> _onSendPhoneOtp(SendPhoneOtp event, Emitter<AuthState> emit) async {
+    emit(AuthLoading(message: 'جاري إرسال رمز التحقق...'));
+    try {
+      await _repository.sendPhoneOtp(event.phone);
+      emit(PhoneOtpSent(phone: event.phone));
+    } catch (e) {
+      emit(AuthFailure('فشل إرسال رمز التحقق: ${_translateError(e)}'));
+    }
+  }
+
+  Future<void> _onVerifyPhoneOtp(VerifyPhoneOtp event, Emitter<AuthState> emit) async {
+    emit(AuthLoading(message: 'جاري التحقق...'));
+    try {
+      await _repository.verifyPhoneOtp(event.phone, event.otp);
+      final user = SupabaseConfig.client.auth.currentUser;
+      if (user == null) {
+        emit(AuthFailure('فشل التحقق، يرجى المحاولة مرة أخرى'));
+        return;
+      }
+      emit(PhoneOtpVerified(phone: event.phone));
+      final profile = await _tryFetchProfile();
+      if (profile != null && !isClosed) {
+        emit(AuthAuthenticated(profile: profile));
+        await InAppNotificationService.startListening(user.id);
+      } else {
+        // New user: needs registration
+      }
+    } catch (e) {
+      emit(AuthFailure('رمز التحقق غير صحيح'));
+    }
+  }
+
+  Future<void> _onRegisterWithPhone(RegisterWithPhone event, Emitter<AuthState> emit) async {
+    emit(AuthLoading(message: 'جاري إنشاء الحساب...'));
+    try {
+      final user = SupabaseConfig.client.auth.currentUser;
+      if (user == null) {
+        emit(AuthFailure('يرجى التحقق من رقم الهاتف أولاً'));
+        return;
+      }
+      final cached = UserProfile(
+        id: user.id,
+        fullName: event.name,
+        role: event.role,
+        phone: event.phone,
+      );
+      emit(AuthAuthenticated(profile: cached));
+      await InAppNotificationService.startListening(user.id);
+      try {
+        await _repository.ensureProfileExists(user, event.name, event.role, event.phone);
+        if (event.role == 'driver' && event.driverType != null) {
+          await _repository.ensureDriverRow(user.id, event.driverType!.apiValue);
+          await _repository.submitDriverApplication(
+            userId: user.id,
+            name: event.name,
+            phone: event.phone,
+            driverType: event.driverType!.apiValue,
+            fields: event.driverFields,
+            files: event.driverFiles,
+          );
+        }
+        if (event.refCode != null && event.refCode!.isNotEmpty) {
+          try {
+            await SupabaseConfig.client.rpc('apply_referral', params: {
+              'p_user_id': user.id,
+              'p_ref_code': event.refCode,
+            });
+          } catch (e) {
+            debugPrint('Background registration error: $e');
+          }
+        }
+        final full = await _tryFetchProfile();
+        if (full != null && !isClosed) {
+          emit(AuthAuthenticated(profile: full));
+        }
+      } catch (_) {}
+    } catch (e) {
+      emit(AuthFailure(_translateError(e)));
+    }
   }
 
   @override

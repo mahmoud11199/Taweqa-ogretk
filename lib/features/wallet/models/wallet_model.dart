@@ -65,10 +65,10 @@ class Transaction {
 
   factory Transaction.fromMap(Map<String, dynamic> map) {
     return Transaction(
-      id: map['id'] as String,
-      userId: map['user_id'] as String,
-      type: map['type'] as String,
-      amount: (map['amount'] as num).toDouble(),
+      id: (map['id'] as String?) ?? '',
+      userId: (map['user_id'] as String?) ?? '',
+      type: (map['type'] as String?) ?? '',
+      amount: (map['amount'] as num?)?.toDouble() ?? 0,
       balanceBefore: (map['balance_before'] as num?)?.toDouble(),
       balanceAfter: (map['balance_after'] as num?)?.toDouble(),
       description: map['description'] as String?,

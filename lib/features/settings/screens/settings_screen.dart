@@ -50,10 +50,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               MaterialPageRoute(builder: (_) => const EditProfileScreen()),
             ),
           ),
-          _SettingsTile(
+          const _SettingsTile(
             icon: Icons.info,
             title: 'الإصدار',
-            trailing: const Text(
+            trailing: Text(
               '1.0.0',
               style: TextStyle(color: AppTheme.meterMuted, fontSize: 14),
             ),

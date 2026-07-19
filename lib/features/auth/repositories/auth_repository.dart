@@ -180,6 +180,17 @@ class AuthRepository {
     }
   }
 
+  Future<void> sendPhoneOtp(String phone) async {
+    await _client.auth.signInWithOtp(phone: phone);
+  }
+
+  Future<void> verifyPhoneOtp(String phone, String token) async {
+    final response = await _client.auth.verifyOTP(phone: phone, token: token, type: OtpType.sms);
+    if (response.user == null) {
+      throw Exception('رمز التحقق غير صحيح');
+    }
+  }
+
   void dispose() {
     // Auth channels cleaned up by Supabase lifecycle
   }

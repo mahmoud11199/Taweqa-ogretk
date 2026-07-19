@@ -60,6 +60,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       conversationId: event.conversationId,
       senderId: user.id,
       text: event.text,
+      imageUrl: event.imageUrl,
       createdAt: DateTime.now(),
     );
     emit(state.copyWith(messages: [...state.messages, optimisticMessage]));
@@ -68,6 +69,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         conversationId: event.conversationId,
         senderId: user.id,
         text: event.text,
+        imageUrl: event.imageUrl,
       );
     } catch (e) {
       emit(state.copyWith(

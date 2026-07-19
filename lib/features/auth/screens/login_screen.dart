@@ -5,6 +5,7 @@ import '../../../core/widgets/toast_widget.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
+import 'phone_login_screen.dart';
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
 
@@ -157,6 +158,19 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: const Text(
                       'نسيت كلمة السر؟',
                       style: TextStyle(color: AppTheme.accent),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const PhoneLoginScreen(),
+                      ),
+                    ),
+                    child: const Text(
+                      'تسجيل الدخول برقم الهاتف',
+                      style: TextStyle(color: AppTheme.meterPrimary),
                     ),
                   ),
                   const SizedBox(height: 8),

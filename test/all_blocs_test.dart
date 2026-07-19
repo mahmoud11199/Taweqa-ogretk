@@ -4,6 +4,7 @@ import 'package:taweqa_ogretk/core/config/supabase_config.dart';
 import 'package:taweqa_ogretk/features/auth/bloc/auth_bloc.dart';
 import 'package:taweqa_ogretk/features/auth/bloc/auth_event.dart';
 import 'package:taweqa_ogretk/features/auth/bloc/auth_state.dart';
+import 'package:taweqa_ogretk/core/models/vehicle_category.dart';
 import 'package:taweqa_ogretk/features/auth/models/user_model.dart';
 import 'package:taweqa_ogretk/features/auth/repositories/auth_repository.dart';
 import 'package:taweqa_ogretk/features/driver/bloc/driver_bloc.dart';
@@ -17,6 +18,14 @@ import 'package:taweqa_ogretk/features/wallet/bloc/wallet_bloc.dart';
 import 'package:taweqa_ogretk/features/wallet/repositories/wallet_repository.dart';
 import 'package:taweqa_ogretk/features/chat/bloc/chat_bloc.dart';
 import 'package:taweqa_ogretk/features/chat/repositories/chat_repository.dart';
+import 'package:taweqa_ogretk/features/admin/bloc/admin_bloc.dart';
+import 'package:taweqa_ogretk/features/admin/bloc/admin_event.dart';
+import 'package:taweqa_ogretk/features/admin/repositories/admin_repository.dart';
+import 'package:taweqa_ogretk/features/admin/models/admin_models.dart';
+import 'package:taweqa_ogretk/features/subscription/bloc/subscription_bloc.dart';
+import 'package:taweqa_ogretk/features/subscription/bloc/subscription_event.dart';
+import 'package:taweqa_ogretk/features/subscription/repositories/subscription_repository.dart';
+import 'package:taweqa_ogretk/core/models/subscription.dart';
 
 // ---------------------------------------------------------------------------
 // Mock repositories – return empty/null data, no real Supabase calls
@@ -34,13 +43,14 @@ class MockAuthRepository extends AuthRepository {
 
 class MockDriverRepository extends DriverRepository {
   @override
-  double calculateFare(double distanceKm, double durationMin) {
-    return 5.0 + distanceKm * 3.5 + durationMin * 0.5;
+  double calculateFare(double distanceKm, double durationMin, {VehicleCategory? category, double waitTimeMin = 0, bool passengerDiscount = false}) {
+    final fare = 5.0 + distanceKm * 3.5 + durationMin * 0.5 + waitTimeMin * 0.25;
+    return passengerDiscount ? fare * 0.85 : fare;
   }
 
   @override
-  double calculateDriverCut(double fare) {
-    return fare * 0.85;
+  double calculateDriverCut(double fare, {bool premiumDriver = false}) {
+    return premiumDriver ? fare * 0.90 : fare * 0.85;
   }
 
   @override
@@ -84,6 +94,17 @@ class MockDriverRepository extends DriverRepository {
       createdAt: DateTime.now(),
     );
   }
+
+  @override
+  Future<Trip> fetchTripById(String tripId) async {
+    return Trip(
+      id: tripId,
+      driverId: 'driver-1',
+      startLat: 0,
+      startLng: 0,
+      createdAt: DateTime.now(),
+    );
+  }
 }
 
 class MockPassengerRepository extends PassengerRepository {}
@@ -93,6 +114,70 @@ class MockWalletRepository extends WalletRepository {}
 class MockChatRepository extends ChatRepository {
   @override
   void dispose() {}
+}
+
+class MockAdminRepository extends AdminRepository {
+  @override
+  Future<AdminStats> fetchStats() async {
+    return AdminStats(
+      totalDrivers: 10,
+      availableDrivers: 5,
+      totalPassengers: 20,
+      activeTrips: 3,
+      completedTrips: 50,
+      pendingApplications: 2,
+      totalRevenue: 5000,
+    );
+  }
+
+  @override
+  Future<List<AdminDriver>> fetchDrivers() async {
+    return [
+      AdminDriver(id: '1', fullName: 'سائق 1', isAvailable: true),
+      AdminDriver(id: '2', fullName: 'سائق 2', isAvailable: false, banned: true),
+    ];
+  }
+
+  @override
+  Future<List<AdminDriver>> fetchPassengers() async {
+    return [];
+  }
+
+  @override
+  Future<List<dynamic>> fetchAllTrips() async {
+    return [];
+  }
+
+  @override
+  Future<List<DriverApplication>> fetchDriverApplications() async {
+    return [];
+  }
+
+  @override
+  Future<void> toggleDriverBan(String userId, bool banned) async {}
+}
+
+class MockSubscriptionRepository extends SubscriptionRepository {
+  @override
+  Future<Subscription> createSubscription({
+    required String userId,
+    required String tierType,
+    required double price,
+  }) async {
+    return Subscription(
+      id: 'sub-1',
+      userId: userId,
+      tierType: tierType,
+      price: price,
+      expiresAt: DateTime.now().add(const Duration(days: 30)),
+      createdAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<List<Subscription>> fetchHistory(String userId) async {
+    return [];
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -208,6 +293,9 @@ void main() {
         durationMin: 15,
       ));
       await Future(() {});
+      await Future(() {});
+      await Future(() {});
+      await Future(() {});
       expect(bloc.state.isLoading, false);
       expect(bloc.state.currentTrip, null);
       expect(bloc.state.distanceKm, 0);
@@ -304,6 +392,86 @@ void main() {
       expect(bloc.state.conversations, isEmpty);
       expect(bloc.state.activeConversationId, null);
       bloc.close();
+    });
+  });
+
+  group('AdminBloc', () {
+    late MockAdminRepository repo;
+
+    setUp(() {
+      repo = MockAdminRepository();
+    });
+
+    test('initial state has correct defaults', () {
+      final bloc = AdminBloc(repository: repo);
+      expect(bloc.state.isLoading, false);
+      expect(bloc.state.drivers, isEmpty);
+      expect(bloc.state.passengers, isEmpty);
+      expect(bloc.state.trips, isEmpty);
+      expect(bloc.state.driverApplications, isEmpty);
+      bloc.close();
+    });
+
+    test('LoadAdminStats emits stats', () async {
+      final bloc = AdminBloc(repository: repo);
+      bloc.add(LoadAdminStats());
+      await Future(() {});
+      await Future(() {});
+      expect(bloc.state.stats, isNotNull);
+      expect(bloc.state.stats!.totalDrivers, 10);
+      expect(bloc.state.stats!.totalRevenue, 5000);
+      await bloc.close();
+    });
+
+    test('LoadDrivers emits driver list', () async {
+      final bloc = AdminBloc(repository: repo);
+      bloc.add(LoadDrivers());
+      await Future(() {});
+      await Future(() {});
+      expect(bloc.state.drivers.length, 2);
+      expect(bloc.state.drivers[0].fullName, 'سائق 1');
+      await bloc.close();
+    });
+
+    test('ToggleDriverBan fires without error', () async {
+      final bloc = AdminBloc(repository: repo);
+      bloc.add(ToggleDriverBan(userId: '1', banned: true));
+      await Future(() {});
+      expect(bloc.state.error, null);
+      await bloc.close();
+    });
+  });
+
+  group('SubscriptionBloc', () {
+    late MockSubscriptionRepository repo;
+
+    setUp(() {
+      repo = MockSubscriptionRepository();
+    });
+
+    test('initial state has correct defaults', () {
+      final bloc = SubscriptionBloc(repository: repo);
+      expect(bloc.state.isLoading, false);
+      expect(bloc.state.activeSubscription, null);
+      expect(bloc.state.subscribeSuccess, false);
+      bloc.close();
+    });
+
+    test('Subscribe sets isLoading false (no user)', () async {
+      final bloc = SubscriptionBloc(repository: repo);
+      bloc.add(Subscribe(tierType: 'driver_premium', price: 299));
+      await Future(() {});
+      await Future(() {});
+      expect(bloc.state.isLoading, false);
+      await bloc.close();
+    });
+
+    test('CancelSubscription fires without error', () async {
+      final bloc = SubscriptionBloc(repository: repo);
+      bloc.add(CancelSubscription());
+      await Future(() {});
+      expect(bloc.state.error, null);
+      await bloc.close();
     });
   });
 }

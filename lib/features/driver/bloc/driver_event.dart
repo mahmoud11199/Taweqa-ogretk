@@ -26,13 +26,20 @@ class EndTrip extends DriverEvent {
   final double endLng;
   final double distanceKm;
   final double durationMin;
+  final double waitTimeMin;
   EndTrip({
     required this.tripId,
     required this.endLat,
     required this.endLng,
     required this.distanceKm,
     required this.durationMin,
+    this.waitTimeMin = 0,
   });
+}
+
+class ToggleWaitTime extends DriverEvent {
+  final bool isWaiting;
+  ToggleWaitTime({required this.isWaiting});
 }
 
 class CancelTrip extends DriverEvent {
@@ -54,6 +61,29 @@ class UpdateRoute extends DriverEvent {
 class FetchTripHistory extends DriverEvent {}
 
 class FetchEarnings extends DriverEvent {}
+
+class LoadTripPassengers extends DriverEvent {
+  final String tripId;
+  LoadTripPassengers(this.tripId);
+}
+
+class GenerateShareCode extends DriverEvent {
+  final String tripId;
+  GenerateShareCode(this.tripId);
+}
+
+class UpdatePassengerStatus extends DriverEvent {
+  final String tripPassengerId;
+  final String status;
+  UpdatePassengerStatus({required this.tripPassengerId, required this.status});
+}
+
+class FetchScheduledTrips extends DriverEvent {}
+
+class AcceptScheduledTrip extends DriverEvent {
+  final String tripId;
+  AcceptScheduledTrip(this.tripId);
+}
 
 class UpdateDriverProfile extends DriverEvent {
   final String? driverType;

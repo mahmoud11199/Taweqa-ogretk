@@ -14,6 +14,8 @@ class Trip {
   final String? passengerPhone;
   final double? passengerRating;
   final String status;
+  final String tripType;
+  final DateTime? scheduledAt;
   final DateTime createdAt;
   final DateTime? completedAt;
 
@@ -33,6 +35,8 @@ class Trip {
     this.passengerPhone,
     this.passengerRating,
     this.status = 'active',
+    this.tripType = 'instant',
+    this.scheduledAt,
     required this.createdAt,
     this.completedAt,
   });
@@ -40,14 +44,16 @@ class Trip {
   bool get isActive => status == 'active';
   bool get isCompleted => status == 'completed';
   bool get isCancelled => status == 'cancelled';
+  bool get isScheduled => tripType == 'scheduled';
+  bool get isUpcoming => isScheduled && scheduledAt != null && scheduledAt!.isAfter(DateTime.now());
 
   factory Trip.fromMap(Map<String, dynamic> map) {
     return Trip(
       id: map['id'] as String,
       driverId: map['driver_id'] as String,
       passengerId: map['passenger_id'] as String?,
-      startLat: (map['start_lat'] as num).toDouble(),
-      startLng: (map['start_lng'] as num).toDouble(),
+      startLat: (map['start_lat'] as num?)?.toDouble() ?? 0,
+      startLng: (map['start_lng'] as num?)?.toDouble() ?? 0,
       endLat: (map['end_lat'] as num?)?.toDouble(),
       endLng: (map['end_lng'] as num?)?.toDouble(),
       distanceKm: (map['distance_km'] as num?)?.toDouble(),
@@ -58,6 +64,10 @@ class Trip {
       passengerPhone: map['passenger_phone'] as String?,
       passengerRating: (map['passenger_rating'] as num?)?.toDouble(),
       status: map['status'] as String? ?? 'active',
+      tripType: map['trip_type'] as String? ?? 'instant',
+      scheduledAt: map['scheduled_at'] != null
+          ? DateTime.parse(map['scheduled_at'] as String)
+          : null,
       createdAt: DateTime.parse(map['created_at'] as String),
       completedAt: map['completed_at'] != null
           ? DateTime.parse(map['completed_at'] as String)
@@ -82,6 +92,8 @@ class Trip {
       'passenger_phone': passengerPhone,
       'passenger_rating': passengerRating,
       'status': status,
+      'trip_type': tripType,
+      'scheduled_at': scheduledAt?.toIso8601String(),
       'created_at': createdAt.toIso8601String(),
       'completed_at': completedAt?.toIso8601String(),
     };
@@ -91,7 +103,8 @@ class Trip {
 enum TripStatus {
   active,
   completed,
-  cancelled;
+  cancelled,
+  scheduled;
 
   String get apiValue => name;
 

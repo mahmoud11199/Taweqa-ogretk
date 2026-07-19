@@ -15,6 +15,8 @@ import '../../wallet/screens/wallet_screen.dart';
 import '../bloc/passenger_bloc.dart';
 import '../bloc/passenger_event.dart';
 import '../bloc/passenger_state.dart';
+import 'join_shared_ride_screen.dart';
+import 'my_scheduled_trips_screen.dart';
 import 'ride_history_screen.dart';
 
 class PassengerHomeScreen extends StatefulWidget {
@@ -66,19 +68,50 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
   }
 
   void _requestRide() {
-    final state = context.read<PassengerBloc>().state;
-    if (state.pickupLat == null) {
+    final s = context.read<PassengerBloc>().state;
+    if (s.pickupLat == null) {
       showToast(context, 'يرجى تحديد موقع الالتقاط', isError: true);
       return;
     }
     context.read<PassengerBloc>().add(RequestRide(
-      pickupLat: state.pickupLat!,
-      pickupLng: state.pickupLng!,
-      pickupAddress: state.pickupAddress,
-      destLat: state.destLat,
-      destLng: state.destLng,
-      destAddress: state.destAddress,
+      pickupLat: s.pickupLat!,
+      pickupLng: s.pickupLng!,
+      pickupAddress: s.pickupAddress,
+      destLat: s.destLat,
+      destLng: s.destLng,
+      destAddress: s.destAddress,
     ));
+  }
+
+  void _scheduleRide() async {
+    final s = context.read<PassengerBloc>().state;
+    if (s.pickupLat == null) {
+      showToast(context, 'يرجى تحديد موقع الالتقاط', isError: true);
+      return;
+    }
+    final date = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().add(const Duration(hours: 1)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 30)),
+    );
+    if (date == null || !mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+    if (time == null || !mounted) return;
+    final scheduledAt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    context.read<PassengerBloc>().add(ScheduleRide(
+      pickupLat: s.pickupLat!,
+      pickupLng: s.pickupLng!,
+      pickupAddress: s.pickupAddress,
+      destLat: s.destLat,
+      destLng: s.destLng,
+      destAddress: s.destAddress,
+      scheduledAt: scheduledAt,
+    ));
+    if (mounted) showToast(context, 'تم جدولة الرحلة بنجاح');
   }
 
   @override
@@ -273,7 +306,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
                       TextFormField(
                         decoration: InputDecoration(
                           hintText: _isSelectingDestination ? 'اختر الوجهة على الخريطة...' : 'الوجهة (اختياري)',
-                          prefixIcon: Icon(Icons.flag, color: AppTheme.error),
+                          prefixIcon: const Icon(Icons.flag, color: AppTheme.error),
                           suffixIcon: Icon(
                             _isSelectingDestination ? Icons.my_location : Icons.edit_location,
                             color: _isSelectingDestination ? AppTheme.accent : AppTheme.meterMuted,
@@ -288,25 +321,91 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
                       const SizedBox(height: 12),
                       BlocBuilder<PassengerBloc, PassengerState>(
                         builder: (context, state) {
-                          return SizedBox(
-                            width: double.infinity,
-                            height: 48,
-                            child: ElevatedButton(
-                              onPressed: state.isLoading ? null : _requestRide,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.success,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
+                          return Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: SizedBox(
+                                      height: 48,
+                                      child: ElevatedButton(
+                                        onPressed: state.isLoading ? null : _requestRide,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: AppTheme.success,
+                                          foregroundColor: Colors.white,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                        ),
+                                        child: state.isLoading
+                                            ? const SizedBox(
+                                                width: 20, height: 20,
+                                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                              )
+                                            : const Text('طلب رحلة', style: TextStyle(fontWeight: FontWeight.w700)),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  SizedBox(
+                                    height: 48,
+                                    child: ElevatedButton(
+                                      onPressed: state.isLoading ? null : _scheduleRide,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppTheme.meterPrimary,
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                      ),
+                                      child: const Text('جدولة', style: TextStyle(fontWeight: FontWeight.w700)),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              child: state.isLoading
-                                  ? const SizedBox(
-                                      width: 20, height: 20,
-                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                    )
-                                  : const Text('طلب رحلة', style: TextStyle(fontWeight: FontWeight.w700)),
-                            ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: SizedBox(
+                                      height: 40,
+                                      child: OutlinedButton(
+                                        onPressed: () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(builder: (_) => const JoinSharedRideScreen()),
+                                        ),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: AppTheme.meterPrimary,
+                                          side: const BorderSide(color: AppTheme.meterPrimary),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                        ),
+                                        child: const Text('انضمام لرحلة تشاركية', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  SizedBox(
+                                    height: 40,
+                                    child: OutlinedButton(
+                                      onPressed: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(builder: (_) => const MyScheduledTripsScreen()),
+                                      ),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: AppTheme.accent,
+                                        side: const BorderSide(color: AppTheme.accent),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                      ),
+                                      child: const Text('رحلاتي المجدولة', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           );
                         },
                       ),

@@ -1,3 +1,5 @@
+import 'package:geolocator/geolocator.dart';
+
 String formatCurrency(double amount) {
   return '${amount.toStringAsFixed(2)} ج';
 }
@@ -15,4 +17,12 @@ String timeAgo(DateTime date) {
   if (diff.inMinutes < 60) return _pluralAr(diff.inMinutes, 'دقيقة', 'دقيقتين', 'دقائق');
   if (diff.inHours < 24) return _pluralAr(diff.inHours, 'ساعة', 'ساعتين', 'ساعات');
   return _pluralAr(diff.inDays, 'يوم', 'يومين', 'أيام');
+}
+
+bool isMockedLocation(Position position) {
+  try {
+    return position.isMocked;
+  } catch (_) {
+    return false;
+  }
 }

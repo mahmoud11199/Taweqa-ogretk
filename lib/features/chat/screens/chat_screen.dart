@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/config/supabase_config.dart';
 import '../bloc/chat_bloc.dart';
@@ -19,6 +21,7 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
+  final _picker = ImagePicker();
   int _lastMessageCount = 0;
 
   @override
@@ -39,14 +42,36 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-  void _sendMessage() {
+  void _sendMessage({String? imageUrl}) {
     final text = _messageController.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty && imageUrl == null) return;
     context.read<ChatBloc>().add(SendMessage(
       conversationId: widget.conversationId,
       text: text,
+      imageUrl: imageUrl,
     ));
     _messageController.clear();
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final file = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+      if (file == null) return;
+      final user = SupabaseConfig.client.auth.currentUser;
+      if (user == null) return;
+      final bytes = await File(file.path).readAsBytes();
+      final ext = file.path.split('.').last;
+      final fileName = 'chat/${widget.conversationId}/${DateTime.now().millisecondsSinceEpoch}.$ext';
+      await SupabaseConfig.client.storage.from('chat_images').uploadBinary(fileName, bytes);
+      final imageUrl = SupabaseConfig.client.storage.from('chat_images').getPublicUrl(fileName);
+      _sendMessage(imageUrl: imageUrl);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('فشل رفع الصورة: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -105,9 +130,33 @@ class _ChatScreenState extends State<ChatScreen> {
                         constraints: BoxConstraints(
                           maxWidth: MediaQuery.of(context).size.width * 0.75,
                         ),
-                        child: Text(
-                          msg.text,
-                          style: const TextStyle(color: Colors.white, fontSize: 14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (msg.imageUrl != null)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 4),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(
+                                    msg.imageUrl!,
+                                    width: 200,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, color: AppTheme.meterMuted),
+                                    loadingBuilder: (_, child, progress) => progress == null ? child : const SizedBox(
+                                      width: 200, height: 150,
+                                      child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            if (msg.text.isNotEmpty)
+                              Text(
+                                msg.text,
+                                style: const TextStyle(color: Colors.white, fontSize: 14),
+                              ),
+                          ],
                         ),
                       ),
                     );
@@ -138,9 +187,12 @@ class _ChatScreenState extends State<ChatScreen> {
                     onSubmitted: (_) => _sendMessage(),
                   ),
                 ),
-                const SizedBox(width: 8),
                 IconButton(
-                  onPressed: _sendMessage,
+                  onPressed: _pickImage,
+                  icon: const Icon(Icons.attach_file, color: AppTheme.meterMuted),
+                ),
+                IconButton(
+                  onPressed: () => _sendMessage(),
                   icon: const Icon(Icons.send_rounded, color: AppTheme.meterPrimary),
                 ),
               ],

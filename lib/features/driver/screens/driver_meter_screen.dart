@@ -5,6 +5,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/widgets/toast_widget.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_event.dart';
@@ -12,11 +13,15 @@ import '../../auth/bloc/auth_state.dart';
 import '../../chat/screens/chat_list_screen.dart';
 import '../../landing/screens/landing_screen.dart';
 import '../../settings/screens/settings_screen.dart';
+import '../../subscription/bloc/subscription_bloc.dart';
+import '../../subscription/bloc/subscription_event.dart';
+import '../../subscription/screens/subscription_plans_screen.dart';
 import '../../wallet/screens/wallet_screen.dart';
 import '../bloc/driver_bloc.dart';
 import '../bloc/driver_event.dart';
 import '../bloc/driver_state.dart';
 import 'earnings_screen.dart';
+import 'scheduled_trips_screen.dart';
 import 'trip_history_screen.dart';
 
 class DriverMeterScreen extends StatefulWidget {
@@ -47,6 +52,10 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
       ),
     ).listen((position) {
       if (!mounted) return;
+      if (isMockedLocation(position)) {
+        showToast(context, 'تحذير: تم اكتشاف موقع وهمي!', isError: true);
+        return;
+      }
       context.read<DriverBloc>().add(UpdateDriverLocation(
         lat: position.latitude,
         lng: position.longitude,
@@ -77,30 +86,40 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
   }
 
   void _startTrip() {
-    final state = context.read<DriverBloc>().state;
-    if (state.currentLat == 0 || state.currentLng == 0) {
+    final s = context.read<DriverBloc>().state;
+    if (s.currentLat == 0 || s.currentLng == 0) {
       showToast(context, 'لم يتم تحديد الموقع بعد', isError: true);
       return;
     }
     setState(() => _tripActive = true);
     context.read<DriverBloc>().add(StartTrip(
-      startLat: state.currentLat,
-      startLng: state.currentLng,
+      startLat: s.currentLat,
+      startLng: s.currentLng,
     ));
     _gpsTimer?.cancel();
     _gpsTimer = Timer.periodic(const Duration(seconds: 10), (_) => _updateRoute());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final bloc = context.read<DriverBloc>();
+      bloc.stream.firstWhere((st) => st.currentTrip != null).then((st) {
+        if (st.currentTrip != null) {
+          bloc.add(GenerateShareCode(st.currentTrip!.id));
+          bloc.add(LoadTripPassengers(st.currentTrip!.id));
+        }
+      });
+    });
   }
 
   void _endTrip() {
     _gpsTimer?.cancel();
-    final state = context.read<DriverBloc>().state;
-    if (state.currentTrip == null) return;
+    final s = context.read<DriverBloc>().state;
+    if (s.currentTrip == null) return;
     context.read<DriverBloc>().add(EndTrip(
-      tripId: state.currentTrip!.id,
-      endLat: state.currentLat,
-      endLng: state.currentLng,
-      distanceKm: state.distanceKm,
-      durationMin: state.durationMin,
+      tripId: s.currentTrip!.id,
+      endLat: s.currentLat,
+      endLng: s.currentLng,
+      distanceKm: s.distanceKm,
+      durationMin: s.durationMin,
+      waitTimeMin: s.waitTimeMin,
     ));
     setState(() => _tripActive = false);
   }
@@ -183,6 +202,14 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
                   },
                 ),
                 ListTile(
+                  leading: const Icon(Icons.schedule, color: AppTheme.meterPrimary),
+                  title: const Text('الرحلات المجدولة', style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ScheduledTripsScreen()));
+                  },
+                ),
+                ListTile(
                   leading: const Icon(Icons.monetization_on, color: AppTheme.meterPrimary),
                   title: const Text('الأرباح', style: TextStyle(color: Colors.white)),
                   onTap: () {
@@ -196,6 +223,15 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen()));
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.card_giftcard, color: AppTheme.meterPrimary),
+                  title: const Text('الباقات', style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.read<SubscriptionBloc>().add(LoadSubscription());
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionPlansScreen()));
                   },
                 ),
                 ListTile(
@@ -358,6 +394,124 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
                                 ),
                               ],
                             ),
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                GestureDetector(
+                                  onTap: () => context.read<DriverBloc>().add(
+                                    ToggleWaitTime(isWaiting: !state.isWaiting),
+                                  ),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: state.isWaiting ? AppTheme.accent.withValues(alpha: 0.2) : AppTheme.meterCard,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: state.isWaiting ? AppTheme.accent : AppTheme.meterMuted,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.hourglass_bottom,
+                                          size: 16,
+                                          color: state.isWaiting ? AppTheme.accent : AppTheme.meterMuted,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'انتظار: ${state.waitTimeMin.toStringAsFixed(0)} د',
+                                          style: TextStyle(
+                                            color: state.isWaiting ? AppTheme.accent : AppTheme.meterMuted,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: () {
+                                    final s = context.read<DriverBloc>().state;
+                                    if (s.currentTrip != null && s.shareCode == null) {
+                                      context.read<DriverBloc>().add(GenerateShareCode(s.currentTrip!.id));
+                                    }
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: state.shareCode != null
+                                          ? AppTheme.success.withValues(alpha: 0.2)
+                                          : AppTheme.meterCard,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: state.shareCode != null ? AppTheme.success : AppTheme.meterMuted,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.share,
+                                          size: 16,
+                                          color: state.shareCode != null ? AppTheme.success : AppTheme.meterMuted,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          state.shareCode != null
+                                              ? 'الكود: ${state.shareCode}'
+                                              : 'مشاركة الرحلة',
+                                          style: TextStyle(
+                                            color: state.shareCode != null ? AppTheme.success : AppTheme.meterMuted,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (state.tripPassengers.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              const Text('الركاب:', style: TextStyle(color: AppTheme.meterMuted, fontSize: 12)),
+                              const SizedBox(height: 4),
+                              ...state.tripPassengers.map((tp) => Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                margin: const EdgeInsets.only(bottom: 4),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.bgDeep,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      tp.status == 'dropped_off' ? Icons.check_circle : Icons.person,
+                                      size: 16,
+                                      color: tp.status == 'dropped_off' ? AppTheme.success : AppTheme.meterPrimary,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        tp.passengerName ?? 'راكب',
+                                        style: const TextStyle(color: Colors.white, fontSize: 12),
+                                      ),
+                                    ),
+                                    Text(
+                                      tp.status == 'pending' ? 'انتظار' :
+                                      tp.status == 'picked_up' ? 'تم الصعود' : 'تم التوصيل',
+                                      style: TextStyle(
+                                        color: tp.status == 'dropped_off' ? AppTheme.success : AppTheme.meterMuted,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )),
+                            ],
                           ],
                         ],
                       ),

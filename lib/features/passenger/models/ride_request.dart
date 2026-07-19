@@ -22,6 +22,7 @@ class RideRequest {
   final double? driverRating;
   final double? rating;
   final String? review;
+  final DateTime? scheduledAt;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -49,6 +50,7 @@ class RideRequest {
     this.driverRating,
     this.rating,
     this.review,
+    this.scheduledAt,
     required this.createdAt,
     DateTime? updatedAt,
   }) : updatedAt = updatedAt ?? DateTime.now();
@@ -83,6 +85,7 @@ class RideRequest {
       driverRating: (map['driver_rating'] as num?)?.toDouble(),
       rating: (map['rating'] as num?)?.toDouble(),
       review: map['review'] as String?,
+      scheduledAt: map['scheduled_at'] != null ? DateTime.parse(map['scheduled_at'] as String) : null,
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: map['updated_at'] != null ? DateTime.parse(map['updated_at'] as String) : DateTime.now(),
     );

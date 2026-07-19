@@ -1,8 +1,5 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/config/supabase_config.dart';
-import '../../../core/constants/app_constants.dart';
 import '../models/wallet_model.dart';
 
 class WalletRepository {
@@ -52,15 +49,11 @@ class WalletRepository {
 
   Future<bool> verifyPaymobPayment(String transactionRef) async {
     try {
-      final response = await http.post(
-        Uri.parse('https://accept.paymobsolutions.com/api/acceptance/transactions/$transactionRef'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'api_key': AppConstants.paymobApiKey}),
-      );
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return data['success'] == true;
-      }
+      final functionResponse = await _client.functions.invoke('verify-paymob-payment', body: {
+        'transaction_ref': transactionRef,
+      });
+      final data = functionResponse.data as Map<String, dynamic>?;
+      return data?['success'] == true;
     } catch (_) {}
     return false;
   }
