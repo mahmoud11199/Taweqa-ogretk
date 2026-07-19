@@ -4,6 +4,8 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/helpers.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_event.dart';
+import '../../auth/bloc/auth_state.dart';
+import '../../landing/screens/landing_screen.dart';
 import '../bloc/admin_bloc.dart';
 import '../bloc/admin_event.dart';
 import '../bloc/admin_state.dart';
@@ -28,8 +30,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.bgDeep,
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthUnauthenticated) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const LandingScreen()),
+            (route) => false,
+          );
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppTheme.bgDeep,
       appBar: AppBar(
         title: const Text('لوحة التحكم'),
         actions: [
@@ -151,6 +162,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           );
         },
       ),
+    ),
     );
   }
 }
