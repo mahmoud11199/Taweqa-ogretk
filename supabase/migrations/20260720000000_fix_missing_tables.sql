@@ -222,4 +222,27 @@ values
   ('عائلة', 12, 2.5, 0.6, 1.2)
 on conflict do nothing;
 
+-- ============================================================
+--  9. إصلاح RLS policies — user_devices + passengers + transactions
+-- ============================================================
+alter table if exists public.user_devices enable row level security;
+
+drop policy if exists "Users can manage own passenger record" on public.passengers;
+drop policy if exists passengers_select_own on public.passengers;
+drop policy if exists passengers_insert_own on public.passengers;
+drop policy if exists passengers_update_own on public.passengers;
+create policy passengers_select_own on public.passengers for select to authenticated using (auth.uid() = id);
+create policy passengers_insert_own on public.passengers for insert to authenticated with check (auth.uid() = id);
+create policy passengers_update_own on public.passengers for update to authenticated using (auth.uid() = id) with check (auth.uid() = id);
+
+drop policy if exists transactions_insert_own on public.transactions;
+create policy transactions_insert_own on public.transactions for insert to authenticated with check (auth.uid() = user_id);
+
+drop policy if exists user_devices_select_own on public.user_devices;
+drop policy if exists user_devices_insert_own on public.user_devices;
+drop policy if exists user_devices_update_own on public.user_devices;
+create policy user_devices_select_own on public.user_devices for select to authenticated using (auth.uid() = user_id);
+create policy user_devices_insert_own on public.user_devices for insert to authenticated with check (auth.uid() = user_id);
+create policy user_devices_update_own on public.user_devices for update to authenticated using (auth.uid() = user_id);
+
 select '✅ تم تطبيق جميع الإصلاحات بنجاح' as info;
