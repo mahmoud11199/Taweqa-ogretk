@@ -92,11 +92,11 @@ async function handleVerify(intentionId: string, userId: string, supabaseUrl: st
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const { data: existingTx } = await admin
+  const { data: existingTx, error: txError } = await admin
     .from('wallet_transactions')
     .select('id, status')
-    .eq('reference', intentionId)
-    .single();
+    .eq('reference_id', intentionId)
+    .maybeSingle();
 
   if (existingTx && existingTx.status === 'completed') {
     return { success: true, error: 'already_completed' };
@@ -110,7 +110,7 @@ async function handleVerify(intentionId: string, userId: string, supabaseUrl: st
 
   await admin.from('wallet_transactions').insert({
     user_id: userId, amount: data.amount, type: 'charge', status: 'completed',
-    reference: intentionId, description: `شحن المحفظة عبر Paymob - ${data.amount} ج`,
+    reference_id: intentionId, description: `شحن المحفظة عبر Paymob - ${data.amount} ج`,
   });
   await admin.rpc('apply_wallet_charge', { p_user_id: userId, p_amount: data.amount });
 

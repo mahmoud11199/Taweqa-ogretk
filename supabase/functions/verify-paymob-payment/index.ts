@@ -68,14 +68,20 @@ Deno.serve(async (req) => {
                    data.is_paid === true || data.payment_status === 'paid';
 
     if (isPaid) {
-      const { data: existingTx } = await supabase
+      const { data: existingTx, error: txError } = await supabase
         .from('wallet_transactions')
         .select('id, status')
-        .eq('reference', transactionRef)
+        .eq('reference_id', transactionRef)
         .maybeSingle();
 
       if (existingTx && existingTx.status !== 'completed') {
         await supabase.from('wallet_transactions').update({ status: 'completed' }).eq('id', existingTx.id);
+        await supabase.rpc('apply_wallet_charge', { p_user_id: authData.user.id, p_amount: data.amount });
+      } else if (!existingTx && !txError) {
+        await supabase.from('wallet_transactions').insert({
+          user_id: authData.user.id, amount: data.amount, type: 'charge', status: 'completed',
+          reference_id: transactionRef, description: `شحن المحفظة عبر Paymob - ${data.amount} ج`,
+        });
         await supabase.rpc('apply_wallet_charge', { p_user_id: authData.user.id, p_amount: data.amount });
       }
 
