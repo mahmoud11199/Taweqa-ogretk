@@ -1,3 +1,5 @@
+import '../../../core/utils/helpers.dart';
+
 class ChatMessage {
   final String id;
   final String conversationId;
@@ -24,7 +26,7 @@ class ChatMessage {
       senderId: (map['sender_id'] as String?) ?? '',
       text: map['text'] as String? ?? '',
       imageUrl: map['image_url'] as String?,
-      isRead: map['is_read'] as bool? ?? false,
+      isRead: boolFromDynamic(map['is_read']),
       createdAt: DateTime.parse(map['created_at'] as String),
     );
   }

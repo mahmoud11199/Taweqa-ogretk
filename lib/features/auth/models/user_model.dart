@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/utils/helpers.dart';
 
 class UserProfile {
   final String id;
@@ -41,7 +42,7 @@ class UserProfile {
       email: map['email'] as String?,
       avatarUrl: map['avatar_url'] as String?,
       rating: (map['rating'] as num?)?.toDouble(),
-      banned: map['banned'] as bool? ?? false,
+      banned: boolFromDynamic(map['banned']),
       createdAt: map['created_at'] != null ? DateTime.parse(map['created_at'] as String) : DateTime.now(),
       updatedAt: map['updated_at'] != null ? DateTime.parse(map['updated_at'] as String) : DateTime.now(),
       metadata: map['metadata'] as Map<String, dynamic>?,
@@ -106,7 +107,7 @@ class DriverInfo {
   factory DriverInfo.fromMap(Map<String, dynamic> map) {
     return DriverInfo(
       id: map['id'] as String,
-      isAvailable: map['is_available'] as bool? ?? false,
+      isAvailable: boolFromDynamic(map['is_available']),
       driverType: map['driver_type'] as String?,
       carModel: map['car_model'] as String?,
       carPlate: map['car_plate'] as String?,

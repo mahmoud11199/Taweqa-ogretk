@@ -1,3 +1,5 @@
+import '../../../core/utils/helpers.dart';
+
 class AdminStats {
   final int totalDrivers;
   final int availableDrivers;
@@ -71,8 +73,8 @@ class AdminDriver {
       id: map['id'] as String,
       fullName: profile['full_name'] as String? ?? '',
       phone: profile['phone'] as String?,
-      isAvailable: map['is_available'] as bool? ?? false,
-      banned: profile['banned'] as bool? ?? false,
+      isAvailable: boolFromDynamic(map['is_available']),
+      banned: boolFromDynamic(profile['banned']),
       driverType: map['driver_type'] as String?,
       carModel: map['car_model'] as String?,
       carPlate: map['car_plate'] as String?,

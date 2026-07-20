@@ -1,4 +1,14 @@
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
+
+bool boolFromDynamic(dynamic value, {bool defaultValue = false}) {
+  if (value == null) return defaultValue;
+  if (value is bool) return value;
+  if (value is int) return value != 0;
+  return defaultValue;
+}
+
+bool get isWeb => kIsWeb;
 
 String formatCurrency(double amount) {
   return '${amount.toStringAsFixed(2)} ج';

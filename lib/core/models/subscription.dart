@@ -1,3 +1,5 @@
+import '../utils/helpers.dart';
+
 class Subscription {
   final String id;
   final String userId;
@@ -28,7 +30,7 @@ class Subscription {
       tierType: map['tier_type'] as String,
       price: (map['price'] as num).toDouble(),
       expiresAt: DateTime.parse(map['expires_at'] as String),
-      isActive: map['is_active'] as bool? ?? true,
+      isActive: boolFromDynamic(map['is_active'], defaultValue: true),
       createdAt: DateTime.parse(map['created_at'] as String),
     );
   }

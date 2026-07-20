@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 
 class LocalDatabase {
@@ -160,26 +161,31 @@ class LocalDatabase {
   // ── Generic helpers ──
 
   static Future<int> insert(String table, Map<String, dynamic> row) async {
+    if (kIsWeb) return 0;
     final db = await database;
     return db.insert(table, row, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   static Future<int> update(String table, Map<String, dynamic> row, String id) async {
+    if (kIsWeb) return 0;
     final db = await database;
     return db.update(table, row, where: 'id = ?', whereArgs: [id]);
   }
 
   static Future<int> delete(String table, String id) async {
+    if (kIsWeb) return 0;
     final db = await database;
     return db.delete(table, where: 'id = ?', whereArgs: [id]);
   }
 
   static Future<List<Map<String, dynamic>>> query(String table, {String? where, List<dynamic>? whereArgs, String? orderBy, int? limit}) async {
+    if (kIsWeb) return [];
     final db = await database;
     return db.query(table, where: where, whereArgs: whereArgs, orderBy: orderBy, limit: limit);
   }
 
   static Future<Map<String, dynamic>?> get(String table, String id) async {
+    if (kIsWeb) return null;
     final db = await database;
     final rows = await db.query(table, where: 'id = ?', whereArgs: [id], limit: 1);
     return rows.isNotEmpty ? rows.first : null;
@@ -188,6 +194,7 @@ class LocalDatabase {
   // ── Sync queue ──
 
   static Future<void> addToSyncQueue(String tableName, String operation, String recordId, Map<String, dynamic> payload) async {
+    if (kIsWeb) return;
     final db = await database;
     await db.insert('sync_queue', {
       'table_name': tableName,
@@ -199,16 +206,19 @@ class LocalDatabase {
   }
 
   static Future<List<Map<String, dynamic>>> getPendingSyncItems() async {
+    if (kIsWeb) return [];
     final db = await database;
     return db.query('sync_queue', orderBy: 'created_at ASC', limit: 50);
   }
 
   static Future<void> removeSyncItem(int id) async {
+    if (kIsWeb) return;
     final db = await database;
     await db.delete('sync_queue', where: 'id = ?', whereArgs: [id]);
   }
 
   static Future<void> clearSyncQueue() async {
+    if (kIsWeb) return;
     final db = await database;
     await db.delete('sync_queue');
   }
