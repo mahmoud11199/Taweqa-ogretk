@@ -10,7 +10,7 @@ class NotificationService {
   static bool _initialized = false;
   static int _notificationId = 0;
 
-  static Future<void> initialize() async {
+  static Future<void> initialize({bool firebaseAvailable = true}) async {
     if (_initialized) return;
     _initialized = true;
 
@@ -21,31 +21,35 @@ class NotificationService {
       onDidReceiveNotificationResponse: _onNotificationTap,
     );
 
-    final messaging = FirebaseMessaging.instance;
+    if (!firebaseAvailable) return;
 
-    await messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+    try {
+      final messaging = FirebaseMessaging.instance;
 
-    _fcmToken = await messaging.getToken();
-    await _saveToken(_fcmToken);
+      await messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
 
-    messaging.onTokenRefresh.listen(_saveToken);
+      _fcmToken = await messaging.getToken();
+      await _saveToken(_fcmToken);
 
-    FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+      messaging.onTokenRefresh.listen(_saveToken);
 
-    FirebaseMessaging.onBackgroundMessage(_handleBackgroundMessage);
+      FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
 
-    FirebaseMessaging.onMessageOpenedApp.listen((message) {
-      _handleNotificationTap(message);
-    });
+      FirebaseMessaging.onBackgroundMessage(_handleBackgroundMessage);
 
-    final initialMessage = await messaging.getInitialMessage();
-    if (initialMessage != null) {
-      _handleNotificationTap(initialMessage);
-    }
+      FirebaseMessaging.onMessageOpenedApp.listen((message) {
+        _handleNotificationTap(message);
+      });
+
+      final initialMessage = await messaging.getInitialMessage();
+      if (initialMessage != null) {
+        _handleNotificationTap(initialMessage);
+      }
+    } catch (_) {}
   }
 
   static Future<void> _saveToken(String? token) async {

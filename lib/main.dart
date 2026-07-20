@@ -71,24 +71,49 @@ Widget _buildApp() {
   );
 }
 
+Future<bool> _tryInit(bool hasFirebase) async {
+  if (!hasFirebase) {
+    try {
+      await Firebase.initializeApp();
+      hasFirebase = true;
+    } catch (_) {}
+  }
+  await SupabaseConfig.init();
+  await NotificationService.initialize(firebaseAvailable: hasFirebase);
+  await BackgroundLocationService.initialize();
+  await InAppNotificationService.initialize();
+  await SyncService.startMonitoring();
+  return true;
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  bool firebaseOk = false;
   try {
     await Firebase.initializeApp();
-    await SupabaseConfig.init();
-    await NotificationService.initialize();
-    await BackgroundLocationService.initialize();
-    await InAppNotificationService.initialize();
-    await SyncService.startMonitoring();
+    firebaseOk = true;
+  } catch (_) {}
+
+  try {
+    await _tryInit(firebaseOk);
   } catch (_) {
-    runApp(const ErrorApp());
+    runApp(ErrorApp(hasFirebase: firebaseOk));
     return;
   }
   runApp(_buildApp());
 }
 
-class ErrorApp extends StatelessWidget {
-  const ErrorApp({super.key});
+class ErrorApp extends StatefulWidget {
+  final bool hasFirebase;
+  const ErrorApp({super.key, required this.hasFirebase});
+
+  @override
+  State<ErrorApp> createState() => _ErrorAppState();
+}
+
+class _ErrorAppState extends State<ErrorApp> {
+  bool _retrying = false;
 
   @override
   Widget build(BuildContext context) {
@@ -108,20 +133,26 @@ class ErrorApp extends StatelessWidget {
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              const Text('حدث خطأ أثناء تهيئة التطبيق'),
+              Text(_retrying ? 'جاري إعادة المحاولة...' : 'حدث خطأ أثناء تهيئة التطبيق'),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: () async {
-                  try {
-                    await Firebase.initializeApp();
-                    await SupabaseConfig.init();
-                    await NotificationService.initialize();
-                    await BackgroundLocationService.initialize();
-                    await InAppNotificationService.initialize();
-                    await SyncService.startMonitoring();
-                    runApp(_buildApp());
-                  } catch (_) {}
-                },
+                onPressed: _retrying
+                    ? null
+                    : () async {
+                        setState(() => _retrying = true);
+                        try {
+                          final fb = widget.hasFirebase;
+                          await _tryInit(fb);
+                          if (context.mounted) runApp(_buildApp());
+                        } catch (_) {
+                          if (context.mounted) {
+                            setState(() => _retrying = false);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('لم تنجح المحاولة، تحقق من اتصال الإنترنت')),
+                            );
+                          }
+                        }
+                      },
                 child: const Text('إعادة المحاولة'),
               ),
             ],
