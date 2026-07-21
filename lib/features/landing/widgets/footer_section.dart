@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../../core/theme/app_theme.dart';
 
 class FooterSection extends StatelessWidget {
   const FooterSection({super.key});
@@ -10,7 +9,7 @@ class FooterSection extends StatelessWidget {
     final isWide = MediaQuery.of(context).size.width >= 900;
     return Container(
       padding: EdgeInsets.symmetric(horizontal: isWide ? 80 : 24, vertical: 40),
-      color: AppTheme.bgDeep,
+      color: const Color(0xFF080D18),
       child: Column(
         children: [
           if (isWide)
@@ -47,23 +46,23 @@ class FooterSection extends StatelessWidget {
           else
             Column(
               children: [
-                const Text('عدادي مَرِنْ', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white)),
+                const Text('عدادي مَرِنْ', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFFEDF2FC))),
                 const SizedBox(height: 4),
-                const Text('التوك توك الذكي', style: TextStyle(fontSize: 13, color: AppTheme.meterMuted)),
+                const Text('التوك توك الذكي', style: TextStyle(fontSize: 13, color: Color(0xFF526480))),
                 const SizedBox(height: 24),
-                const Text('روابط سريعة', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
+                const Text('روابط سريعة', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFFEDF2FC))),
                 const SizedBox(height: 8),
-                Wrap(spacing: 16, children: ['المميزات', 'طريقة العمل', 'تحميل التطبيق'].map((l) => Text(l, style: const TextStyle(fontSize: 13, color: AppTheme.meterMuted))).toList()),
+                Wrap(spacing: 16, children: ['المميزات', 'طريقة العمل', 'تحميل التطبيق'].map((l) => Text(l, style: const TextStyle(fontSize: 13, color: Color(0xFF526480)))).toList()),
                 const SizedBox(height: 24),
-                const Text('تواصل معنا', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
+                const Text('تواصل معنا', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFFEDF2FC))),
                 const SizedBox(height: 8),
-                Wrap(spacing: 12, children: ['فيسبوك', 'واتساب', 'بريد إلكتروني'].map((l) => Text(l, style: const TextStyle(fontSize: 13, color: AppTheme.meterMuted))).toList()),
+                Wrap(spacing: 12, children: ['فيسبوك', 'واتساب', 'بريد إلكتروني'].map((l) => Text(l, style: const TextStyle(fontSize: 13, color: Color(0xFF526480)))).toList()),
               ],
             ),
           const SizedBox(height: 32),
-          const Divider(color: AppTheme.meterCard),
+          const Divider(color: Color(0xFF1C2B45)),
           const SizedBox(height: 16),
-          const Text('© 2025 عدادِي مَرِنْ. جميع الحقوق محفوظة.', style: TextStyle(fontSize: 12, color: AppTheme.meterMuted)),
+          const Text('© 2025 عدادِي مَرِنْ. جميع الحقوق محفوظة.', style: TextStyle(fontSize: 12, color: Color(0xFF526480))),
         ],
       ),
     );
@@ -80,13 +79,13 @@ class _FooterColumn extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
+        Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFFEDF2FC))),
         const SizedBox(height: 12),
         ...items.map((item) => Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: GestureDetector(
                 onTap: item.onTap,
-                child: Text(item.label, style: const TextStyle(fontSize: 13, color: AppTheme.meterMuted)),
+                child: Text(item.label, style: const TextStyle(fontSize: 13, color: Color(0xFF526480))),
               ),
             )),
       ],

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../core/theme/app_theme.dart';
 import '../bloc/admin_bloc.dart';
 import '../bloc/admin_event.dart';
 import '../bloc/admin_state.dart';
@@ -31,25 +30,15 @@ class _DriversManagementScreenState extends State<DriversManagementScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.bgDeep,
-      appBar: AppBar(title: const Text('إدارة السائقين')),
+      backgroundColor: const Color(0xFF080D18),
+      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0, title: const Text('إدارة السائقين', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFFEDF2FC))), centerTitle: true, leading: IconButton(icon: const Icon(Icons.arrow_back, color: Color(0xFF00E5B8)), onPressed: () => Navigator.pop(context))),
       body: BlocBuilder<AdminBloc, AdminState>(
         builder: (context, state) {
-          if (state.isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppTheme.meterPrimary),
-            );
-          }
-          final filtered = state.drivers.where((d) =>
-              _searchQuery.isEmpty ||
-              d.fullName.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
-          if (filtered.isEmpty && !state.isLoading) {
-            return const Center(
-              child: Text('لا يوجد سائقين', style: TextStyle(color: AppTheme.meterMuted)),
-            );
-          }
+          if (state.isLoading) return const Center(child: CircularProgressIndicator(color: Color(0xFF00E5B8)));
+          final filtered = state.drivers.where((d) => _searchQuery.isEmpty || d.fullName.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+          if (filtered.isEmpty && !state.isLoading) return const Center(child: Text('لا يوجد سائقين', style: TextStyle(color: Color(0xFF526480))));
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             itemCount: filtered.length + 1,
             itemBuilder: (context, index) {
               if (index == 0) {
@@ -57,18 +46,13 @@ class _DriversManagementScreenState extends State<DriversManagementScreen> {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: TextField(
                     controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'بحث عن سائق...',
-                      prefixIcon: const Icon(Icons.search, color: AppTheme.meterMuted),
-                      filled: true,
-                      fillColor: AppTheme.bgDeep,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      hintStyle: const TextStyle(color: AppTheme.meterMuted),
+                    style: const TextStyle(color: Color(0xFFEDF2FC)),
+                    decoration: const InputDecoration(
+                      hintText: 'بحث عن سائق...', hintStyle: TextStyle(color: Color(0xFF526480)),
+                      prefixIcon: Icon(Icons.search, color: Color(0xFF526480)),
+                      filled: true, fillColor: Color(0xFF0F1628),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(14)), borderSide: BorderSide(color: Color(0xFF1C2B45))),
                     ),
-                    style: const TextStyle(color: Colors.white),
                     onChanged: (v) => setState(() => _searchQuery = v),
                   ),
                 );
@@ -77,54 +61,29 @@ class _DriversManagementScreenState extends State<DriversManagementScreen> {
               return Container(
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppTheme.meterCard,
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                decoration: BoxDecoration(color: const Color(0xFF0F1628), border: Border.all(color: const Color(0xFF1C2B45)), borderRadius: BorderRadius.circular(14)),
                 child: Row(
                   children: [
-                    Container(
-                      width: 10, height: 10,
-                      decoration: BoxDecoration(
-                        color: driver.isAvailable ? AppTheme.success : AppTheme.error,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
+                    Container(width: 10, height: 10, decoration: BoxDecoration(color: driver.isAvailable ? const Color(0xFF00E5B8) : const Color(0xFFFF3B5C), shape: BoxShape.circle)),
                     const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(driver.fullName,
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                          if (driver.carModel != null)
-                            Text('${driver.carModel} - ${driver.carPlate ?? ""}',
-                                style: const TextStyle(color: AppTheme.meterMuted, fontSize: 12)),
-                        ],
-                      ),
-                    ),
-                    Text(driver.driverType ?? '',
-                        style: const TextStyle(color: AppTheme.meterPrimary, fontSize: 12)),
+                    Expanded(child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(driver.fullName, style: const TextStyle(color: Color(0xFFEDF2FC), fontWeight: FontWeight.w600)),
+                        if (driver.carModel != null) Text('${driver.carModel} - ${driver.carPlate ?? ""}', style: const TextStyle(color: Color(0xFF526480), fontSize: 12)),
+                      ],
+                    )),
+                    Text(driver.driverType ?? '', style: const TextStyle(color: Color(0xFF00E5B8), fontSize: 12)),
                     const SizedBox(width: 8),
                     GestureDetector(
-                      onTap: () => context.read<AdminBloc>().add(ToggleDriverBan(
-                        userId: driver.id,
-                        banned: !driver.banned,
-                      )),
+                      onTap: () => context.read<AdminBloc>().add(ToggleDriverBan(userId: driver.id, banned: !driver.banned)),
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: driver.banned ? AppTheme.error.withAlpha(30) : AppTheme.success.withAlpha(30),
-                          borderRadius: BorderRadius.circular(8),
+                          color: driver.banned ? const Color.fromRGBO(255, 59, 92, 0.15) : const Color.fromRGBO(0, 229, 184, 0.15),
+                          borderRadius: BorderRadius.circular(6),
                         ),
-                        child: Text(
-                          driver.banned ? 'محظور' : 'نشط',
-                          style: TextStyle(
-                            color: driver.banned ? AppTheme.error : AppTheme.success,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
+                        child: Text(driver.banned ? 'محظور' : 'نشط', style: TextStyle(color: driver.banned ? const Color(0xFFFF3B5C) : const Color(0xFF00E5B8), fontSize: 11, fontWeight: FontWeight.w700)),
                       ),
                     ),
                   ],

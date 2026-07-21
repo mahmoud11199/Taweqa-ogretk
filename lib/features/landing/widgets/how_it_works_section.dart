@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_theme.dart';
 
 class _Step {
   final String number;
@@ -37,9 +36,9 @@ class _HowItWorksSectionState extends State<HowItWorksSection> {
       padding: EdgeInsets.symmetric(horizontal: isWide ? 80 : 24, vertical: 64),
       child: Column(
         children: [
-          const Text('طريقة العمل', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: Colors.white)),
+          const Text('طريقة العمل', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: Color(0xFFEDF2FC))),
           const SizedBox(height: 8),
-          const Text('اختر دورك لمعرفة كيف يعمل التطبيق', style: TextStyle(fontSize: 15, color: AppTheme.meterMuted)),
+          const Text('اختر دورك لمعرفة كيف يعمل التطبيق', style: TextStyle(fontSize: 15, color: Color(0xFF526480))),
           const SizedBox(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -51,8 +50,7 @@ class _HowItWorksSectionState extends State<HowItWorksSection> {
           ),
           const SizedBox(height: 40),
           Wrap(
-            spacing: 16,
-            runSpacing: 16,
+            spacing: 16, runSpacing: 16,
             alignment: WrapAlignment.center,
             children: (_showDriver ? _driverSteps : _passengerSteps).map((step) {
               return Container(
@@ -62,18 +60,17 @@ class _HowItWorksSectionState extends State<HowItWorksSection> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      width: 48,
-                      height: 48,
+                      width: 48, height: 48,
                       decoration: BoxDecoration(
-                        color: AppTheme.meterPrimary,
+                        gradient: const LinearGradient(colors: [Color(0xFF00E5B8), Color(0xFF0088CC)]),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: Center(child: Text(step.number, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white))),
+                      child: Center(child: Text(step.number, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF080D18)))),
                     ),
                     const SizedBox(height: 14),
-                    Text(step.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
+                    Text(step.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFFEDF2FC))),
                     const SizedBox(height: 6),
-                    Text(step.description, textAlign: TextAlign.center, style: const TextStyle(fontSize: 13, color: AppTheme.meterMuted, height: 1.5)),
+                    Text(step.description, textAlign: TextAlign.center, style: const TextStyle(fontSize: 13, color: Color(0xFF526480), height: 1.5)),
                   ],
                 ),
               );
@@ -98,11 +95,11 @@ class _RoleTab extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
         decoration: BoxDecoration(
-          color: selected ? AppTheme.meterPrimary : Colors.transparent,
+          color: selected ? const Color(0xFF00E5B8) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: selected ? AppTheme.meterPrimary : AppTheme.meterCard),
+          border: Border.all(color: selected ? const Color(0xFF00E5B8) : const Color(0xFF1C2B45)),
         ),
-        child: Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: selected ? Colors.white : AppTheme.meterMuted)),
+        child: Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: selected ? const Color(0xFF080D18) : const Color(0xFF526480))),
       ),
     );
   }

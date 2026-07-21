@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_theme.dart';
 
 class NavbarSection extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback onLogin;
@@ -23,8 +22,8 @@ class NavbarSection extends StatelessWidget implements PreferredSizeWidget {
     return Container(
       height: preferredSize.height,
       decoration: const BoxDecoration(
-        color: AppTheme.bgDeep,
-        border: Border(bottom: BorderSide(color: AppTheme.meterCard, width: 1)),
+        color: Color(0xFF080D18),
+        border: Border(bottom: BorderSide(color: Color(0xFF1C2B45), width: 1)),
       ),
       padding: EdgeInsets.symmetric(horizontal: isWide ? 80 : 24),
       child: Row(
@@ -32,23 +31,15 @@ class NavbarSection extends StatelessWidget implements PreferredSizeWidget {
           Row(
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 36, height: 36,
                 decoration: BoxDecoration(
-                  color: AppTheme.meterPrimary.withAlpha(30),
+                  color: const Color.fromRGBO(0, 229, 184, 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.local_taxi_rounded, size: 20, color: AppTheme.meterPrimary),
+                child: const Icon(Icons.local_taxi_rounded, size: 20, color: Color(0xFF00E5B8)),
               ),
               const SizedBox(width: 10),
-              const Text(
-                'عدادي مَرِنْ',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                ),
-              ),
+              const Text('عدادي مَرِنْ', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFFEDF2FC))),
             ],
           ),
           if (isWide) ...[
@@ -61,13 +52,13 @@ class NavbarSection extends StatelessWidget implements PreferredSizeWidget {
             const SizedBox(width: 32),
           ],
           const Spacer(),
-          TextButton(onPressed: onLogin, child: const Text('تسجيل الدخول', style: TextStyle(color: AppTheme.meterPrimary))),
+          TextButton(onPressed: onLogin, child: const Text('تسجيل الدخول', style: TextStyle(color: Color(0xFF00E5B8)))),
           const SizedBox(width: 8),
           ElevatedButton(
             onPressed: onRegister,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.meterPrimary,
-              foregroundColor: Colors.white,
+              backgroundColor: const Color(0xFF00E5B8),
+              foregroundColor: const Color(0xFF080D18),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             ),
@@ -90,7 +81,7 @@ class _NavLink extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Text(label, style: const TextStyle(color: AppTheme.meterMuted, fontSize: 14, fontWeight: FontWeight.w500)),
+      child: Text(label, style: const TextStyle(color: Color(0xFF526480), fontSize: 14, fontWeight: FontWeight.w500)),
     );
   }
 }

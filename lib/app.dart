@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'core/config/routes.dart';
+import 'core/screens/splash_screen.dart';
 import 'core/theme/app_theme.dart';
 import 'features/landing/screens/landing_screen.dart';
 import 'features/auth/screens/login_screen.dart';
@@ -24,6 +25,7 @@ import 'features/subscription/screens/subscription_plans_screen.dart';
 import 'features/profile/screens/edit_profile_screen.dart';
 import 'features/auth/screens/phone_login_screen.dart';
 import 'features/auth/screens/phone_otp_screen.dart';
+import 'features/auth/screens/role_screen.dart';
 import 'features/wallet/screens/paymob_mock_screen.dart';
 import 'features/admin/screens/app_settings_screen.dart';
 
@@ -36,10 +38,14 @@ class TaweqeApp extends StatelessWidget {
       title: 'توقع أجرتك',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      initialRoute: Routes.landing,
+      initialRoute: Routes.splash,
       onGenerateRoute: (settings) {
         Widget screen;
         switch (settings.name) {
+          case Routes.splash:
+            screen = const SplashScreen();
+          case Routes.role:
+            screen = const RoleScreen();
           case Routes.landing:
             screen = const LandingScreen();
           case Routes.login:

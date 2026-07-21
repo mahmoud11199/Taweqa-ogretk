@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_theme.dart';
 
 class HeroSection extends StatelessWidget {
   final VoidCallback onGetStarted;
@@ -53,33 +52,34 @@ class HeroSection extends StatelessWidget {
 
   Widget _buildHeroIcon() {
     return Container(
-      width: 80,
-      height: 80,
+      width: 80, height: 80,
       decoration: BoxDecoration(
-        color: AppTheme.meterPrimary.withAlpha(25),
+        gradient: const LinearGradient(colors: [Color(0xFF00E5B8), Color(0xFF0088CC)]),
         borderRadius: BorderRadius.circular(20),
       ),
-      child: const Icon(Icons.local_taxi_rounded, size: 44, color: AppTheme.meterPrimary),
+      child: const Icon(Icons.local_taxi_rounded, size: 44, color: Color(0xFF080D18)),
     );
   }
 
   Widget _buildHeroText() {
-    return const Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'عدادي مَرِنْ',
-          style: TextStyle(fontSize: 40, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1),
+        RichText(
+          text: const TextSpan(
+            text: 'عدادي ',
+            style: TextStyle(fontSize: 40, fontWeight: FontWeight.w900, color: Color(0xFFEDF2FC), letterSpacing: 1),
+            children: [
+              TextSpan(text: 'مَرِنْ', style: TextStyle(color: Color(0xFF00E5B8))),
+            ],
+          ),
         ),
-        SizedBox(height: 8),
-        Text(
-          'توقع أجرتك',
-          style: TextStyle(fontSize: 20, color: AppTheme.meterPrimary, fontWeight: FontWeight.w600),
-        ),
-        SizedBox(height: 16),
-        Text(
+        const SizedBox(height: 8),
+        const Text('توقع أجرتك', style: TextStyle(fontSize: 20, color: Color(0xFF00E5B8), fontWeight: FontWeight.w600)),
+        const SizedBox(height: 16),
+        const Text(
           'التطبيق الذكي لحساب الأجرة وتتبع الرحلات.\nلسائقي و ركاب التوك توك في مصر.',
-          style: TextStyle(fontSize: 16, color: AppTheme.meterMuted, height: 1.6),
+          style: TextStyle(fontSize: 16, color: Color(0xFF526480), height: 1.6),
         ),
       ],
     );
@@ -87,16 +87,15 @@ class HeroSection extends StatelessWidget {
 
   Widget _buildCTAButtons() {
     return Wrap(
-      spacing: 16,
-      runSpacing: 12,
+      spacing: 16, runSpacing: 12,
       children: [
         SizedBox(
           height: 52,
           child: ElevatedButton(
             onPressed: onGetStarted,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.meterPrimary,
-              foregroundColor: Colors.white,
+              backgroundColor: const Color(0xFF00E5B8),
+              foregroundColor: const Color(0xFF080D18),
               padding: const EdgeInsets.symmetric(horizontal: 32),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             ),
@@ -108,8 +107,8 @@ class HeroSection extends StatelessWidget {
           child: OutlinedButton(
             onPressed: onLearnMore,
             style: OutlinedButton.styleFrom(
-              foregroundColor: AppTheme.meterPrimary,
-              side: const BorderSide(color: AppTheme.meterPrimary),
+              foregroundColor: const Color(0xFF00E5B8),
+              side: const BorderSide(color: Color(0xFF00E5B8)),
               padding: const EdgeInsets.symmetric(horizontal: 32),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             ),
@@ -122,18 +121,18 @@ class HeroSection extends StatelessWidget {
 
   Widget _buildMockupImage() {
     return Container(
-      width: 300,
-      height: 400,
+      width: 300, height: 400,
       decoration: BoxDecoration(
-        color: AppTheme.meterCard.withAlpha(80),
+        color: const Color(0xFF0F1628),
+        border: Border.all(color: const Color(0xFF1C2B45)),
         borderRadius: BorderRadius.circular(24),
       ),
-      child: Column(
+      child: const Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.phone_android, size: 80, color: AppTheme.meterPrimary),
-          const SizedBox(height: 16),
-          Text('واجهة التطبيق', style: TextStyle(color: AppTheme.meterMuted.withAlpha(180))),
+          Icon(Icons.phone_android, size: 80, color: Color(0xFF00E5B8)),
+          SizedBox(height: 16),
+          Text('واجهة التطبيق', style: TextStyle(color: Color(0xFF3A5070))),
         ],
       ),
     );

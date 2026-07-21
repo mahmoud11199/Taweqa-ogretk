@@ -1,27 +1,21 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/widgets/toast_widget.dart';
 import '../../auth/bloc/auth_bloc.dart';
-import '../../auth/bloc/auth_event.dart';
 import '../../auth/bloc/auth_state.dart';
-import '../../chat/screens/chat_list_screen.dart';
 import '../../landing/screens/landing_screen.dart';
 import '../../settings/screens/settings_screen.dart';
-import '../../subscription/bloc/subscription_bloc.dart';
-import '../../subscription/bloc/subscription_event.dart';
-import '../../subscription/screens/subscription_plans_screen.dart';
-import '../../wallet/screens/wallet_screen.dart';
 import '../bloc/driver_bloc.dart';
 import '../bloc/driver_event.dart';
 import '../bloc/driver_state.dart';
-import 'earnings_screen.dart';
-import 'scheduled_trips_screen.dart';
+import 'driver_dispatch_screen.dart';
+import 'driver_wallet_screen.dart';
 import 'trip_history_screen.dart';
 
 class DriverMeterScreen extends StatefulWidget {
@@ -36,12 +30,23 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
   StreamSubscription<Position>? _positionSubscription;
   Timer? _gpsTimer;
   bool _tripActive = false;
+  double _speed = 42;
 
   @override
   void initState() {
     super.initState();
     context.read<DriverBloc>().add(LoadDriverProfile());
     _startLocationUpdates();
+    _startSimulation();
+  }
+
+  void _startSimulation() {
+    Timer.periodic(const Duration(milliseconds: 800), (t) {
+      if (!_tripActive) return;
+      setState(() {
+        _speed = (_speed + (math.Random().nextDouble() - 0.5) * 8).clamp(0, 80);
+      });
+    });
   }
 
   void _startLocationUpdates() {
@@ -74,8 +79,6 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
     final state = context.read<DriverBloc>().state;
     if (state.currentLat == 0 || state.currentLng == 0) return;
     if (!_tripActive) return;
-
-    // Simulate route update with current position
     context.read<DriverBloc>().add(UpdateRoute(
       routePoints: [
         [state.currentLng, state.currentLat],
@@ -143,444 +146,708 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
         }
       },
       child: BlocListener<DriverBloc, DriverState>(
-      listener: (context, state) {
-        if (state.error != null) {
-          showToast(context, state.error!, isError: true);
-        }
-      },
-      child: Scaffold(
-        backgroundColor: AppTheme.bgDeep,
-        drawer: Drawer(
-          child: Container(
-            color: AppTheme.bgDeep,
-            child: ListView(
-              padding: EdgeInsets.zero,
+        listener: (context, state) {
+          if (state.error != null) {
+            showToast(context, state.error!, isError: true);
+          }
+        },
+        child: Scaffold(
+          backgroundColor: const Color(0xFF080E1C),
+          body: SafeArea(
+            child: Stack(
               children: [
-                DrawerHeader(
-                  decoration: const BoxDecoration(color: AppTheme.meterCard),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      const Icon(Icons.local_taxi_rounded, size: 48, color: AppTheme.meterPrimary),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'توقع أجرتك',
-                        style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                      BlocBuilder<AuthBloc, AuthState>(
-                        builder: (context, authState) => Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              authState is AuthAuthenticated ? authState.profile.fullName : 'سائق',
-                              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                // Map layer
+                FlutterMap(
+                  mapController: _mapController,
+                  options: const MapOptions(
+                    initialCenter: LatLng(26.8206, 30.8025),
+                    initialZoom: 13,
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'com.taweqa.ogretk',
+                    ),
+                    BlocBuilder<DriverBloc, DriverState>(
+                      builder: (context, state) {
+                        final markers = <Marker>[];
+                        if (state.currentLat != 0) {
+                          markers.add(Marker(
+                            point: LatLng(state.currentLat, state.currentLng),
+                            width: 40,
+                            height: 40,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: state.isAvailable
+                                    ? const Color(0xFF00E5B8)
+                                    : const Color(0xFFFF3B5C),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2),
+                              ),
+                              child: const Icon(Icons.navigation, color: Colors.white, size: 20),
                             ),
-                            BlocBuilder<DriverBloc, DriverState>(
-                              builder: (context, state) => Text(
-                                state.driverInfo?.carModel ?? '',
-                                style: const TextStyle(color: AppTheme.meterMuted, fontSize: 12),
+                          ));
+                        }
+                        return Stack(
+                          children: [
+                            if (markers.isNotEmpty) MarkerLayer(markers: markers),
+                            if (state.routePoints.isNotEmpty)
+                              PolylineLayer(
+                                polylines: [
+                                  Polyline(
+                                    points: state.routePoints
+                                        .where((p) => p.length >= 2)
+                                        .map((p) => LatLng(p[1], p[0]))
+                                        .toList(),
+                                    color: const Color(0xFF00E5B8),
+                                    strokeWidth: 4,
+                                  ),
+                                ],
+                              ),
+                          ],
+                        );
+                      },
+                    ),
+                  ],
+                ),
+
+                // Top gradient overlay
+                Positioned(
+                  top: 0, left: 0, right: 0,
+                  child: Container(
+                    height: 280,
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Color.fromRGBO(8, 13, 24, 0.97),
+                          Color.fromRGBO(8, 13, 24, 0.6),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Fare meter card
+                BlocBuilder<DriverBloc, DriverState>(
+                  builder: (context, state) {
+                    final speed = _speed;
+                    final waitMode = speed < 5;
+                    final fare = state.currentFare;
+                    return Positioned(
+                      top: 38, left: 16, right: 16,
+                      child: Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: const Color.fromRGBO(9, 14, 26, 0.92),
+                          border: Border.all(
+                            color: _tripActive
+                                ? const Color.fromRGBO(255, 176, 32, 0.3)
+                                : const Color(0xFF1C2B45),
+                          ),
+                          borderRadius: BorderRadius.circular(22),
+                          boxShadow: [
+                            if (_tripActive)
+                              const BoxShadow(color: Color.fromRGBO(255, 176, 32, 0.08), blurRadius: 0, offset: Offset(0, 0)),
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.5),
+                              blurRadius: 32,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Container(
+                                            width: 6, height: 6,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: _tripActive ? const Color(0xFFFFB020) : const Color(0xFF526480),
+                                              boxShadow: _tripActive
+                                                  ? [const BoxShadow(color: Color(0xFFFFB020), blurRadius: 8)]
+                                                  : null,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          const Text('TOTAL FARE METER', style: TextStyle(
+                                            fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF526480),
+                                            letterSpacing: 0.8,
+                                          )),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      _FareMeter(value: fare, isActive: _tripActive),
+                                    ],
+                                  ),
+                                ),
+                                Column(
+                                  children: [
+                                    GestureDetector(
+                                      onTap: () {
+                                        if (_tripActive) {
+                                          _endTrip();
+                                        } else {
+                                          _startTrip();
+                                        }
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                                        decoration: BoxDecoration(
+                                          color: _tripActive
+                                              ? const Color.fromRGBO(255, 59, 92, 0.12)
+                                              : const Color.fromRGBO(0, 229, 184, 0.12),
+                                          border: Border.all(
+                                            color: _tripActive
+                                                ? const Color.fromRGBO(255, 59, 92, 0.4)
+                                                : const Color.fromRGBO(0, 229, 184, 0.4),
+                                          ),
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              _tripActive ? Icons.pause : Icons.play_arrow,
+                                              size: 13,
+                                              color: _tripActive ? const Color(0xFFFF3B5C) : const Color(0xFF00E5B8),
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              _tripActive ? 'STOP' : 'START',
+                                              style: TextStyle(
+                                                fontSize: 12, fontWeight: FontWeight.w800,
+                                                color: _tripActive ? const Color(0xFFFF3B5C) : const Color(0xFF00E5B8),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        if (waitMode) const _Badge(label: 'WAIT', color: 'blue', dot: true),
+                                        if (_tripActive) ...[
+                                          const SizedBox(width: 8),
+                                          const _Badge(label: 'LIVE', color: 'amber', dot: true),
+                                        ],
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            // Speed bar
+                            Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    const Text('SPEED', style: TextStyle(
+                                      fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF526480),
+                                      letterSpacing: 0.5,
+                                    )),
+                                    const Spacer(),
+                                    Text(
+                                      '${speed.toInt()} km/h${waitMode ? ' · Wait mode active' : ''}',
+                                      style: TextStyle(
+                                        fontFamily: 'monospace',
+                                        fontSize: 11,
+                                        color: waitMode ? const Color(0xFF4D9FFF) : const Color(0xFF8EA4C8),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(2),
+                                  child: SizedBox(
+                                    height: 3,
+                                    child: Stack(
+                                      children: [
+                                        Container(height: 3, color: const Color(0xFF1C2B45)),
+                                        AnimatedFractionallySizedBox(
+                                          duration: const Duration(milliseconds: 500),
+                                          widthFactor: (speed / 80).clamp(0.0, 1.0),
+                                          child: Container(
+                                            height: 3,
+                                            decoration: BoxDecoration(
+                                              gradient: LinearGradient(
+                                                colors: waitMode
+                                                    ? [const Color(0xFF4D9FFF), const Color(0xFF0066CC)]
+                                                    : [const Color(0xFF00E5B8), const Color(0xFF00B896)],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 13),
+                            // Stat pills
+                            Container(
+                              padding: const EdgeInsets.only(top: 13),
+                              decoration: const BoxDecoration(
+                                border: Border(top: BorderSide(color: Color(0xFF1C2B45))),
+                              ),
+                              child: Row(
+                                children: [
+                                  _StatPill(
+                                    icon: Icons.route,
+                                    label: 'Distance',
+                                    value: '${state.distanceKm.toStringAsFixed(1)} km',
+                                  ),
+                                  Container(width: 1, height: 24, color: const Color(0xFF1C2B45)),
+                                  _StatPill(
+                                    icon: Icons.timer_outlined,
+                                    label: 'Time',
+                                    value: '${state.durationMin.toInt()} min',
+                                  ),
+                                  Container(width: 1, height: 24, color: const Color(0xFF1C2B45)),
+                                  _StatPill(
+                                    icon: Icons.pause,
+                                    label: 'Wait',
+                                    value: '${state.waitTimeMin.toInt()} min',
+                                    color: state.waitTimeMin > 0 ? const Color(0xFF4D9FFF) : null,
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                       ),
+                    );
+                  },
+                ),
+
+                // Quick action buttons
+                Positioned(
+                  right: 14, top: 210,
+                  child: Column(
+                    children: [
+                      _QuickAction(
+                        icon: Icons.add,
+                        color: const Color(0xFF00E5B8),
+                        label: 'Add',
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DriverDispatchScreen())),
+                      ),
+                      const SizedBox(height: 9),
+                      _QuickAction(
+                        icon: Icons.warning_amber_rounded,
+                        color: const Color(0xFFFF3B5C),
+                        label: 'SOS',
+                        onTap: () {},
+                      ),
+                      const SizedBox(height: 9),
+                      _QuickAction(
+                        icon: Icons.wifi_off,
+                        color: const Color(0xFF526480),
+                        label: 'Offline',
+                        onTap: () {
+                          context.read<DriverBloc>().add(ToggleAvailability(
+                            isAvailable: !context.read<DriverBloc>().state.isAvailable,
+                          ));
+                        },
+                      ),
                     ],
                   ),
                 ),
-                ListTile(
-                  leading: const Icon(Icons.map, color: AppTheme.meterPrimary),
-                  title: const Text('الصفحة الرئيسية', style: TextStyle(color: Colors.white)),
-                  onTap: () => Navigator.pop(context),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.history, color: AppTheme.meterPrimary),
-                  title: const Text('سجل الرحلات', style: TextStyle(color: Colors.white)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const TripHistoryScreen()));
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.schedule, color: AppTheme.meterPrimary),
-                  title: const Text('الرحلات المجدولة', style: TextStyle(color: Colors.white)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ScheduledTripsScreen()));
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.monetization_on, color: AppTheme.meterPrimary),
-                  title: const Text('الأرباح', style: TextStyle(color: Colors.white)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const EarningsScreen()));
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.wallet, color: AppTheme.meterPrimary),
-                  title: const Text('المحفظة', style: TextStyle(color: Colors.white)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen()));
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.card_giftcard, color: AppTheme.meterPrimary),
-                  title: const Text('الباقات', style: TextStyle(color: Colors.white)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    context.read<SubscriptionBloc>().add(LoadSubscription());
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionPlansScreen()));
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.chat, color: AppTheme.meterPrimary),
-                  title: const Text('الدردشة', style: TextStyle(color: Colors.white)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatListScreen()));
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.settings, color: AppTheme.meterPrimary),
-                  title: const Text('الإعدادات', style: TextStyle(color: Colors.white)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
-                  },
-                ),
-                const Divider(color: AppTheme.meterCard),
-                ListTile(
-                  leading: const Icon(Icons.logout, color: AppTheme.error),
-                  title: const Text('تسجيل الخروج', style: TextStyle(color: AppTheme.error)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    context.read<AuthBloc>().add(LogoutRequested());
-                  },
+
+                // Bottom sheet
+                Positioned(
+                  bottom: 0, left: 0, right: 0,
+                  child: _PassengerBottomSheet(
+                    tripActive: _tripActive,
+                    onEndSub: (passengerId) {},
+                  ),
                 ),
               ],
             ),
           ),
         ),
-        body: SafeArea(
-          child: Stack(
+      ),
+    );
+  }
+}
+
+// ─── Fare Meter ───────────────────────────────────────────────────────────────
+class _FareMeter extends StatelessWidget {
+  final double value;
+  final bool isActive;
+  const _FareMeter({required this.value, required this.isActive});
+
+  @override
+  Widget build(BuildContext context) {
+    final str = value.toStringAsFixed(2).padLeft(7, '0');
+    final parts = str.split('.');
+    final color = isActive ? const Color(0xFFFFB020) : const Color(0xFF3A5070);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: [
+        Text(parts[0], style: TextStyle(
+          fontFamily: 'monospace',
+          fontSize: 54,
+          fontWeight: FontWeight.w800,
+          color: color,
+          letterSpacing: -2,
+          height: 1,
+          shadows: isActive
+              ? [
+                  const Shadow(color: Color.fromRGBO(255, 176, 32, 0.6), blurRadius: 28),
+                  const Shadow(color: Color.fromRGBO(255, 176, 32, 0.25), blurRadius: 56),
+                ]
+              : null,
+        )),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 2),
+          child: Text('.${parts[1]}', style: TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 30,
+            fontWeight: FontWeight.w700,
+            color: color.withValues(alpha: 0.85),
+            height: 1,
+            shadows: isActive
+                ? [const Shadow(color: Color.fromRGBO(255, 176, 32, 0.5), blurRadius: 16)]
+                : null,
+          )),
+        ),
+        const SizedBox(width: 7),
+        const Padding(
+          padding: EdgeInsets.only(bottom: 3),
+          child: Text('EGP', style: TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF526480),
+            letterSpacing: 0.6,
+          )),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Stat Pill ────────────────────────────────────────────────────────────────
+class _StatPill extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color? color;
+  const _StatPill({required this.icon, required this.label, required this.value, this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              FlutterMap(
-                mapController: _mapController,
-                options: MapOptions(
-                  initialCenter: const LatLng(26.8206, 30.8025),
-                  initialZoom: 13,
-                  onTap: (tapPos, latlng) {},
+              Icon(icon, size: 10, color: const Color(0xFF526480)),
+              const SizedBox(width: 4),
+              Text(label, style: const TextStyle(
+                fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF526480),
+                letterSpacing: 0.5,
+              )),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(value, style: TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: color ?? const Color(0xFF8EA4C8),
+          )),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Badge ────────────────────────────────────────────────────────────────────
+class _Badge extends StatelessWidget {
+  final String label;
+  final String color;
+  final bool dot;
+  const _Badge({required this.label, required this.color, this.dot = false});
+
+  Color _fg() {
+    switch (color) {
+      case 'amber': return const Color(0xFFFFB020);
+      case 'blue': return const Color(0xFF4D9FFF);
+      case 'red': return const Color(0xFFFF3B5C);
+      case 'green': return const Color(0xFF22C97A);
+      default: return const Color(0xFF00E5B8);
+    }
+  }
+
+  Color _bg() => _fg().withValues(alpha: 0.12);
+  Color _br() => _fg().withValues(alpha: 0.25);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: _bg(),
+        border: Border.all(color: _br()),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (dot) Container(
+            width: 5, height: 5,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: _fg()),
+          ),
+          if (dot) const SizedBox(width: 5),
+          Text(label, style: TextStyle(
+            fontSize: 10, fontWeight: FontWeight.w700, color: _fg(),
+            letterSpacing: 0.6,
+          )),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Quick Action ─────────────────────────────────────────────────────────────
+class _QuickAction extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String label;
+  final VoidCallback onTap;
+  const _QuickAction({required this.icon, required this.color, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 46, height: 46,
+        decoration: BoxDecoration(
+          color: const Color.fromRGBO(8, 13, 24, 0.88),
+          border: Border.all(color: color.withValues(alpha: 0.27)),
+          borderRadius: BorderRadius.circular(13),
+          boxShadow: const [BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.4), blurRadius: 16, offset: Offset(0, 4))],
+        ),
+        child: Icon(icon, color: color, size: 18),
+      ),
+    );
+  }
+}
+
+// ─── Passenger Bottom Sheet ───────────────────────────────────────────────────
+class _PassengerBottomSheet extends StatefulWidget {
+  final bool tripActive;
+  final void Function(int passengerId) onEndSub;
+  const _PassengerBottomSheet({required this.tripActive, required this.onEndSub});
+
+  @override
+  State<_PassengerBottomSheet> createState() => _PassengerBottomSheetState();
+}
+
+class _PassengerBottomSheetState extends State<_PassengerBottomSheet> {
+  final _sheetController = DraggableScrollableController();
+
+  @override
+  void dispose() {
+    _sheetController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const peek = 100.0;
+    const half = 340.0;
+    const full = 580.0;
+
+    return DraggableScrollableSheet(
+      controller: _sheetController,
+      initialChildSize: 340 / 852,
+      minChildSize: 100 / 852,
+      maxChildSize: 580 / 852,
+      snap: true,
+      snapSizes: const [100 / 852, 340 / 852, 580 / 852],
+      builder: (context, scrollController) {
+        final currentSize = _sheetController.size * 852;
+        final isFull = currentSize >= 500;
+        return Container(
+          decoration: const BoxDecoration(
+            color: Color.fromRGBO(9, 14, 26, 0.96),
+            border: Border(top: BorderSide(color: Color(0xFF1C2B45))),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+          ),
+          child: Column(
+            children: [
+              // Drag handle
+              GestureDetector(
+                onTap: () {
+                  if (currentSize < half) {
+                    _sheetController.animateTo(half / 852, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+                  } else if (currentSize < full) {
+                    _sheetController.animateTo(full / 852, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+                  } else {
+                    _sheetController.animateTo(peek / 852, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+                  }
+                },
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: Container(width: 40, height: 4, decoration: BoxDecoration(
+                    color: const Color(0xFF243558),
+                    borderRadius: BorderRadius.circular(2),
+                  )),
                 ),
-                children: [
-                  TileLayer(
-                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.taweqa.ogretk',
-                  ),
-                  BlocBuilder<DriverBloc, DriverState>(
-                    builder: (context, state) {
-                      final markers = <Marker>[];
-                      if (state.currentLat != 0) {
-                        markers.add(Marker(
-                          point: LatLng(state.currentLat, state.currentLng),
-                          width: 40,
-                          height: 40,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: state.isAvailable
-                                  ? AppTheme.success
-                                  : AppTheme.error,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                            ),
-                            child: const Icon(
-                              Icons.navigation,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                          ),
-                        ));
-                      }
-                      return Stack(
-                        children: [
-                          if (markers.isNotEmpty) MarkerLayer(markers: markers),
-                          if (state.routePoints.isNotEmpty)
-                            PolylineLayer(
-                              polylines: [
-                                Polyline(
-                                  points: state.routePoints
-                                      .where((p) => p.length >= 2)
-                                      .map((p) => LatLng(p[1], p[0]))
-                                      .toList(),
-                                  color: AppTheme.meterPrimary,
-                                  strokeWidth: 4,
-                                ),
-                              ],
-                            ),
-                        ],
-                      );
-                    },
-                  ),
-                ],
               ),
-              Positioned(
-                top: 16,
-                left: 16,
-                right: 16,
-                child: BlocBuilder<DriverBloc, DriverState>(
-                  builder: (context, state) {
-                    return Container(
-                      padding: const EdgeInsets.all(16),
+              // Sheet header
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                child: Row(
+                  children: [
+                    const Icon(Icons.people, size: 16, color: Color(0xFF00E5B8)),
+                    const SizedBox(width: 8),
+                    const Text('Shared Passengers', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFFEDF2FC))),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
                       decoration: BoxDecoration(
-                        color: AppTheme.meterCard,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.3),
-                            blurRadius: 16,
-                          ),
+                        color: const Color(0xFF00E5B8),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: BlocBuilder<DriverBloc, DriverState>(
+                        builder: (context, state) => Text(
+                          '${state.tripPassengers.length}',
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF080D18)),
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: const Color.fromRGBO(0, 229, 184, 0.12),
+                        border: Border.all(color: const Color.fromRGBO(0, 229, 184, 0.3)),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.add, size: 12, color: Color(0xFF00E5B8)),
+                          SizedBox(width: 7),
+                          Text('Add', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF00E5B8))),
                         ],
                       ),
-                      child: Column(
-                        children: [
-                          Row(
+                    ),
+                  ],
+                ),
+              ),
+              // Passenger list
+              Expanded(
+                child: BlocBuilder<DriverBloc, DriverState>(
+                  builder: (context, state) {
+                    final passengers = state.tripPassengers;
+                    return ListView(
+                      controller: scrollController,
+                      padding: const EdgeInsets.fromLTRB(14, 0, 14, 16),
+                      children: [
+                        ...passengers.map((tp) => Container(
+                          padding: const EdgeInsets.all(13),
+                          margin: const EdgeInsets.only(bottom: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0F1628),
+                            border: Border.all(color: const Color(0xFF1C2B45)),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
                             children: [
                               Container(
-                                width: 12,
-                                height: 12,
+                                width: 42, height: 42,
                                 decoration: BoxDecoration(
-                                  color: state.isAvailable
-                                      ? AppTheme.success
-                                      : AppTheme.error,
-                                  shape: BoxShape.circle,
+                                  color: const Color(0xFF152038),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
+                                child: const Center(child: Text('👤', style: TextStyle(fontSize: 20))),
                               ),
-                              const SizedBox(width: 8),
-                              Text(
-                                state.isAvailable ? 'متاح' : 'غير متاح',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              const Spacer(),
-                              Text(
-                                '${state.distanceKm.toStringAsFixed(1)} كم',
-                                style: const TextStyle(
-                                  color: AppTheme.meterMuted,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (_tripActive) ...[
-                            const SizedBox(height: 12),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                _InfoChip(
-                                  icon: Icons.timer_outlined,
-                                  label:                               '${state.durationMin.isFinite ? state.durationMin.toStringAsFixed(0) : '0'} د',
-                                ),
-                                _InfoChip(
-                                  icon: Icons.route_outlined,
-                                  label: '${state.distanceKm.toStringAsFixed(2)} كم',
-                                ),
-                                _InfoChip(
-                                  icon: Icons.monetization_on_outlined,
-                                  label: '${state.currentFare.toStringAsFixed(0)} ج',
-                                  valueColor: AppTheme.fareNeon,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                GestureDetector(
-                                  onTap: () => context.read<DriverBloc>().add(
-                                    ToggleWaitTime(isWaiting: !state.isWaiting),
-                                  ),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: state.isWaiting ? AppTheme.accent.withValues(alpha: 0.2) : AppTheme.meterCard,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: state.isWaiting ? AppTheme.accent : AppTheme.meterMuted,
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.hourglass_bottom,
-                                          size: 16,
-                                          color: state.isWaiting ? AppTheme.accent : AppTheme.meterMuted,
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          'انتظار: ${state.waitTimeMin.toStringAsFixed(0)} د',
-                                          style: TextStyle(
-                                            color: state.isWaiting ? AppTheme.accent : AppTheme.meterMuted,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                GestureDetector(
-                                  onTap: () {
-                                    final s = context.read<DriverBloc>().state;
-                                    if (s.currentTrip != null && s.shareCode == null) {
-                                      context.read<DriverBloc>().add(GenerateShareCode(s.currentTrip!.id));
-                                    }
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: state.shareCode != null
-                                          ? AppTheme.success.withValues(alpha: 0.2)
-                                          : AppTheme.meterCard,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: state.shareCode != null ? AppTheme.success : AppTheme.meterMuted,
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.share,
-                                          size: 16,
-                                          color: state.shareCode != null ? AppTheme.success : AppTheme.meterMuted,
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          state.shareCode != null
-                                              ? 'الكود: ${state.shareCode}'
-                                              : 'مشاركة الرحلة',
-                                          style: TextStyle(
-                                            color: state.shareCode != null ? AppTheme.success : AppTheme.meterMuted,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            if (state.tripPassengers.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              const Text('الركاب:', style: TextStyle(color: AppTheme.meterMuted, fontSize: 12)),
-                              const SizedBox(height: 4),
-                              ...state.tripPassengers.map((tp) => Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                margin: const EdgeInsets.only(bottom: 4),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.bgDeep,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Row(
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Icon(
-                                      tp.status == 'dropped_off' ? Icons.check_circle : Icons.person,
-                                      size: 16,
-                                      color: tp.status == 'dropped_off' ? AppTheme.success : AppTheme.meterPrimary,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Expanded(
-                                      child: Text(
-                                        tp.passengerName ?? 'راكب',
-                                        style: const TextStyle(color: Colors.white, fontSize: 12),
-                                      ),
-                                    ),
-                                    Text(
-                                      tp.status == 'pending' ? 'انتظار' :
-                                      tp.status == 'picked_up' ? 'تم الصعود' : 'تم التوصيل',
-                                      style: TextStyle(
-                                        color: tp.status == 'dropped_off' ? AppTheme.success : AppTheme.meterMuted,
-                                        fontSize: 11,
-                                      ),
+                                    Text(tp.passengerName ?? 'Passenger', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFFEDF2FC))),
+                                    const SizedBox(height: 2),
+                                    const Text('Tahrir Sq → Zamalek', style: TextStyle(fontSize: 11, color: Color(0xFF526480))),
+                                    const SizedBox(height: 6),
+                                    const Row(
+                                      children: [
+                                        Text('3.2 km', style: TextStyle(fontFamily: 'monospace', fontSize: 12, color: Color(0xFF8EA4C8))),
+                                        SizedBox(width: 12),
+                                        Text('18.40 EGP', style: TextStyle(fontFamily: 'monospace', fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFFFFB020))),
+                                      ],
                                     ),
                                   ],
                                 ),
-                              )),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: const Color.fromRGBO(255, 59, 92, 0.1),
+                                  border: Border.all(color: const Color.fromRGBO(255, 59, 92, 0.3)),
+                                  borderRadius: BorderRadius.circular(9),
+                                ),
+                                child: const Text('End Sub', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFFFF3B5C))),
+                              ),
                             ],
-                          ],
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-              Positioned(
-                bottom: 32,
-                left: 24,
-                right: 24,
-                child: BlocBuilder<DriverBloc, DriverState>(
-                  builder: (context, state) {
-                    return Row(
-                      children: [
-                        if (!_tripActive)
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () => _startTrip(),
-                              icon: const Icon(Icons.play_arrow),
-                              label: const Text('بدء الرحلة'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.success,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                              ),
-                            ),
                           ),
-                        if (_tripActive) ...[
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: _endTrip,
-                              icon: const Icon(Icons.stop),
-                              label: const Text('إنهاء الرحلة'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.error,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                        const SizedBox(width: 12),
-                        Container(
+                        )),
+                        // Session summary
+                        if (isFull) Container(
+                          padding: const EdgeInsets.all(13),
                           decoration: BoxDecoration(
-                            color: AppTheme.meterCard,
+                            color: const Color(0xFF0C1220),
+                            border: Border.all(color: const Color(0xFF1C2B45)),
                             borderRadius: BorderRadius.circular(14),
                           ),
-                          child: IconButton(
-                            onPressed: () {
-                              context.read<DriverBloc>().add(ToggleAvailability(
-                                isAvailable: !state.isAvailable,
-                              ));
-                            },
-                            icon: Icon(
-                              state.isAvailable
-                                  ? Icons.toggle_on
-                                  : Icons.toggle_off_outlined,
-                              color: state.isAvailable
-                                  ? AppTheme.success
-                                  : AppTheme.error,
-                              size: 36,
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('SESSION SUMMARY', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF526480), letterSpacing: 0.55)),
+                              const SizedBox(height: 10),
+                              BlocBuilder<DriverBloc, DriverState>(
+                                builder: (context, state) => Row(
+                                  children: [
+                                    const Text('Combined earnings', style: TextStyle(fontSize: 13, color: Color(0xFF8EA4C8))),
+                                    const Spacer(),
+                                    Text('${state.currentFare.toStringAsFixed(2)} EGP', style: const TextStyle(fontFamily: 'monospace', fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF00E5B8))),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              SizedBox(
+                                width: double.infinity,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 11),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF00E5B8),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Text('Checkout Trip', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF080D18))),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -588,42 +855,56 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
                   },
                 ),
               ),
+              // Bottom nav
+              Container(
+                decoration: const BoxDecoration(
+                  border: Border(top: BorderSide(color: Color(0xFF1C2B45))),
+                ),
+                padding: const EdgeInsets.fromLTRB(0, 10, 0, 30),
+                child: Row(
+                  children: [
+                    _NavItem(icon: Icons.map, label: 'Map', active: true, onTap: () {}),
+                    _NavItem(icon: Icons.calendar_month, label: 'Trips', active: false, onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const TripHistoryScreen()));
+                    }),
+                    _NavItem(icon: Icons.wallet, label: 'Wallet', active: false, onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const DriverWalletScreen()));
+                    }),
+                    _NavItem(icon: Icons.settings, label: 'Settings', active: false, onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
+                    }),
+                  ],
+                ),
+              ),
             ],
           ),
-        ),
-      ),
-    ),
+        );
+      },
     );
   }
 }
 
-class _InfoChip extends StatelessWidget {
+// ─── Nav Item ─────────────────────────────────────────────────────────────────
+class _NavItem extends StatelessWidget {
   final IconData icon;
   final String label;
-  final Color? valueColor;
-
-  const _InfoChip({
-    required this.icon,
-    required this.label,
-    this.valueColor,
-  });
+  final bool active;
+  final VoidCallback onTap;
+  const _NavItem({required this.icon, required this.label, required this.active, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: AppTheme.meterPrimary, size: 20),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: valueColor ?? Colors.white,
-          ),
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Column(
+          children: [
+            Icon(icon, size: 20, color: active ? const Color(0xFF00E5B8) : const Color(0xFF3A5070)),
+            const SizedBox(height: 4),
+            Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: active ? const Color(0xFF00E5B8) : const Color(0xFF3A5070))),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/toast_widget.dart';
 import '../bloc/admin_bloc.dart';
 import '../bloc/admin_event.dart';
@@ -47,17 +46,13 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     final perMin = double.tryParse(_perMinController.text);
     final baseFare = double.tryParse(_baseFareController.text);
     final commission = double.tryParse(_commissionController.text);
-
     if (perKm == null || perMin == null || baseFare == null || commission == null) {
       showToast(context, 'يرجى إدخال أرقام صحيحة', isError: true);
       return;
     }
-
     context.read<AdminBloc>().add(UpdateAppSettings({
-      'pricing_per_km': perKm,
-      'pricing_per_min': perMin,
-      'base_fare': baseFare,
-      'commission_rate': commission / 100,
+      'pricing_per_km': perKm, 'pricing_per_min': perMin,
+      'base_fare': baseFare, 'commission_rate': commission / 100,
     }));
     showToast(context, 'تم حفظ الإعدادات');
   }
@@ -65,18 +60,12 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.bgDeep,
-      appBar: AppBar(title: const Text('إعدادات التطبيق')),
+      backgroundColor: const Color(0xFF080D18),
+      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0, title: const Text('إعدادات التطبيق', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFFEDF2FC))), centerTitle: true, leading: IconButton(icon: const Icon(Icons.arrow_back, color: Color(0xFF00E5B8)), onPressed: () => Navigator.pop(context))),
       body: BlocBuilder<AdminBloc, AdminState>(
         builder: (context, state) {
-          if (state.isLoading && state.appSettings == null) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppTheme.meterPrimary),
-            );
-          }
-          if (state.appSettings != null && _perKmController.text.isEmpty) {
-            _loadSettings(state.appSettings);
-          }
+          if (state.isLoading && state.appSettings == null) return const Center(child: CircularProgressIndicator(color: Color(0xFF00E5B8)));
+          if (state.appSettings != null && _perKmController.text.isEmpty) _loadSettings(state.appSettings);
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -90,17 +79,11 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                 const SizedBox(height: 16),
                 _Field(label: 'نسبة التطبيق (%)', controller: _commissionController),
                 const SizedBox(height: 32),
-                SizedBox(
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: _save,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.meterPrimary,
-                      foregroundColor: AppTheme.bgDeep,
-                    ),
-                    child: const Text('حفظ', style: TextStyle(fontWeight: FontWeight.w700)),
-                  ),
-                ),
+                SizedBox(height: 52, child: ElevatedButton(
+                  onPressed: _save,
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00E5B8), foregroundColor: const Color(0xFF080D18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                  child: const Text('حفظ', style: TextStyle(fontWeight: FontWeight.w700)),
+                )),
               ],
             ),
           );
@@ -113,7 +96,6 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
 class _Field extends StatelessWidget {
   final String label;
   final TextEditingController controller;
-
   const _Field({required this.label, required this.controller});
 
   @override
@@ -122,11 +104,12 @@ class _Field extends StatelessWidget {
       controller: controller,
       keyboardType: TextInputType.number,
       decoration: InputDecoration(
-        labelText: label,
-        filled: true,
-        fillColor: AppTheme.meterCard,
+        labelText: label, labelStyle: const TextStyle(color: Color(0xFF526480)),
+        filled: true, fillColor: const Color(0xFF0F1628),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF1C2B45))),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF00E5B8))),
       ),
-      style: const TextStyle(color: Colors.white, fontSize: 16),
+      style: const TextStyle(color: Color(0xFFEDF2FC), fontSize: 16),
     );
   }
 }

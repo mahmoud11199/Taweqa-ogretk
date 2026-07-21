@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_state.dart';
 import '../../auth/screens/login_screen.dart';
@@ -62,7 +61,7 @@ class _LandingScreenState extends State<LandingScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppTheme.bgDeep,
+        backgroundColor: const Color(0xFF080D18),
         body: Column(
           children: [
             NavbarSection(
@@ -88,8 +87,8 @@ class _LandingScreenState extends State<LandingScreen> {
                         if (state.isLoading) {
                           return Container(
                             padding: const EdgeInsets.symmetric(vertical: 64),
-                            color: AppTheme.meterCard,
-                            child: const Center(child: CircularProgressIndicator(color: AppTheme.meterPrimary)),
+                            color: const Color(0xFF0C1220),
+                            child: const Center(child: CircularProgressIndicator(color: Color(0xFF00E5B8))),
                           );
                         }
                         return DownloadSection(key: _downloadKey, apkUrl: state.release?.apkUrl, iosUrl: state.release?.iosUrl);

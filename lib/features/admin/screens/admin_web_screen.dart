@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/helpers.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_event.dart';
@@ -46,7 +45,7 @@ class _AdminWebScreenState extends State<AdminWebScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppTheme.bgDeep,
+        backgroundColor: const Color(0xFF080D18),
         body: Row(
           children: [
             _Sidebar(page: _page, onChanged: (p) => setState(() => _page = p)),
@@ -59,25 +58,16 @@ class _AdminWebScreenState extends State<AdminWebScreen> {
 
   Widget _buildContent() {
     switch (_page) {
-      case _AdminPage.dashboard:
-        return const _DashboardContent();
-      case _AdminPage.drivers:
-        return const _DriversContent();
-      case _AdminPage.passengers:
-        return const _PassengersContent();
-      case _AdminPage.trips:
-        return const _TripsContent();
-      case _AdminPage.applications:
-        return const _ApplicationsContent();
-      case _AdminPage.settings:
-        return const _SettingsContent();
+      case _AdminPage.dashboard: return const _DashboardContent();
+      case _AdminPage.drivers: return const _DriversContent();
+      case _AdminPage.passengers: return const _PassengersContent();
+      case _AdminPage.trips: return const _TripsContent();
+      case _AdminPage.applications: return const _ApplicationsContent();
+      case _AdminPage.settings: return const _SettingsContent();
     }
   }
 }
 
-// ---------------------------------------------------------------------------
-// Sidebar
-// ---------------------------------------------------------------------------
 class _Sidebar extends StatelessWidget {
   final _AdminPage page;
   final ValueChanged<_AdminPage> onChanged;
@@ -88,8 +78,8 @@ class _Sidebar extends StatelessWidget {
     return Container(
       width: 240,
       decoration: const BoxDecoration(
-        color: AppTheme.meterBg,
-        border: Border(right: BorderSide(color: AppTheme.meterCard, width: 1)),
+        color: Color(0xFF080D18),
+        border: Border(right: BorderSide(color: Color(0xFF0F1628), width: 1)),
       ),
       child: Column(
         children: [
@@ -100,19 +90,18 @@ class _Sidebar extends StatelessWidget {
               children: [
                 Container(
                   width: 32, height: 32,
-                  decoration: BoxDecoration(color: AppTheme.meterPrimary.withAlpha(30), borderRadius: BorderRadius.circular(8)),
-                  child: const Icon(Icons.admin_panel_settings, size: 18, color: AppTheme.meterPrimary),
+                  decoration: BoxDecoration(color: const Color(0xFF00E5B8).withAlpha(30), borderRadius: BorderRadius.circular(8)),
+                  child: const Icon(Icons.admin_panel_settings, size: 18, color: Color(0xFF00E5B8)),
                 ),
                 const SizedBox(width: 10),
-                const Text('لوحة التحكم', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
+                const Text('لوحة التحكم', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFFEDF2FC))),
               ],
             ),
           ),
-          const Divider(color: AppTheme.meterCard, height: 1),
+          const Divider(color: Color(0xFF0F1628), height: 1),
           const SizedBox(height: 12),
           ..._navItems.map((item) => _NavItem(
-                icon: item.icon,
-                label: item.label,
+                icon: item.icon, label: item.label,
                 selected: page == item.page,
                 onTap: () => onChanged(item.page),
               )),
@@ -126,8 +115,8 @@ class _Sidebar extends StatelessWidget {
                 icon: const Icon(Icons.logout, size: 16),
                 label: const Text('تسجيل الخروج'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: AppTheme.error,
-                  side: const BorderSide(color: AppTheme.error),
+                  foregroundColor: const Color(0xFFFF3B5C),
+                  side: const BorderSide(color: Color(0xFFFF3B5C)),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
               ),
@@ -167,7 +156,7 @@ class _NavItem extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       child: Material(
-        color: selected ? AppTheme.meterPrimary.withAlpha(25) : Colors.transparent,
+        color: selected ? const Color(0xFF00E5B8).withAlpha(25) : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
         child: InkWell(
           borderRadius: BorderRadius.circular(10),
@@ -176,9 +165,9 @@ class _NavItem extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             child: Row(
               children: [
-                Icon(icon, size: 20, color: selected ? AppTheme.meterPrimary : AppTheme.meterMuted),
+                Icon(icon, size: 20, color: selected ? const Color(0xFF00E5B8) : const Color(0xFF526480)),
                 const SizedBox(width: 12),
-                Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: selected ? AppTheme.meterPrimary : AppTheme.meterMuted)),
+                Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: selected ? const Color(0xFF00E5B8) : const Color(0xFF526480))),
               ],
             ),
           ),
@@ -188,21 +177,16 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Dashboard Content
-// ---------------------------------------------------------------------------
 class _DashboardContent extends StatelessWidget {
   const _DashboardContent();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('الإحصائيات'), backgroundColor: AppTheme.meterBg),
+      appBar: AppBar(title: const Text('الإحصائيات'), backgroundColor: const Color(0xFF080D18)),
       body: BlocBuilder<AdminBloc, AdminState>(
         builder: (context, state) {
-          if (state.isLoading && state.stats == null) {
-            return const Center(child: CircularProgressIndicator(color: AppTheme.meterPrimary));
-          }
+          if (state.isLoading && state.stats == null) return const Center(child: CircularProgressIndicator(color: Color(0xFF00E5B8)));
           final stats = state.stats;
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
@@ -214,7 +198,7 @@ class _DashboardContent extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(32),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [AppTheme.meterPrimary, AppTheme.accent], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                      gradient: const LinearGradient(colors: [Color(0xFF00E5B8), Color(0xFF0088CC)], begin: Alignment.topLeft, end: Alignment.bottomRight),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Column(
@@ -228,8 +212,7 @@ class _DashboardContent extends StatelessWidget {
                   ),
                 const SizedBox(height: 24),
                 Wrap(
-                  spacing: 16,
-                  runSpacing: 16,
+                  spacing: 16, runSpacing: 16,
                   children: [
                     _StatCard(icon: Icons.directions_car, label: 'السائقين', value: '${stats?.totalDrivers ?? 0}', subtitle: '${stats?.availableDrivers ?? 0} متاح'),
                     _StatCard(icon: Icons.people, label: 'الركاب', value: '${stats?.totalPassengers ?? 0}'),
@@ -248,10 +231,7 @@ class _DashboardContent extends StatelessWidget {
 }
 
 class _StatCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  final String? subtitle;
+  final IconData icon; final String label; final String value; final String? subtitle;
   const _StatCard({required this.icon, required this.label, required this.value, this.subtitle});
 
   @override
@@ -259,44 +239,36 @@ class _StatCard extends StatelessWidget {
     return Container(
       width: 200,
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: AppTheme.meterCard, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppTheme.meterBorder)),
+      decoration: BoxDecoration(color: const Color(0xFF0F1628), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFF1C2B45))),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Icon(icon, color: AppTheme.meterPrimary, size: 28),
+        Icon(icon, color: const Color(0xFF00E5B8), size: 28),
         const SizedBox(height: 12),
-        Text(value, style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
-        Text(label, style: const TextStyle(color: AppTheme.meterMuted, fontSize: 13)),
-        if (subtitle != null) Text(subtitle!, style: const TextStyle(color: AppTheme.meterMuted, fontSize: 11)),
+        Text(value, style: const TextStyle(color: Color(0xFFEDF2FC), fontSize: 28, fontWeight: FontWeight.w900)),
+        Text(label, style: const TextStyle(color: Color(0xFF526480), fontSize: 13)),
+        if (subtitle != null) Text(subtitle!, style: const TextStyle(color: Color(0xFF526480), fontSize: 11)),
       ]),
     );
   }
 }
 
-// ---------------------------------------------------------------------------
-// Drivers Content
-// ---------------------------------------------------------------------------
 class _DriversContent extends StatelessWidget {
   const _DriversContent();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('إدارة السائقين'), backgroundColor: AppTheme.meterBg),
+      appBar: AppBar(title: const Text('إدارة السائقين'), backgroundColor: const Color(0xFF080D18)),
       body: BlocBuilder<AdminBloc, AdminState>(
         builder: (context, state) {
-          if (state.isLoading) {
-            return const Center(child: CircularProgressIndicator(color: AppTheme.meterPrimary));
-          }
+          if (state.isLoading) return const Center(child: CircularProgressIndicator(color: Color(0xFF00E5B8)));
           final drivers = state.drivers;
           return Column(
             children: [
               _DataTableWidget(
                 columns: const ['الاسم', 'الهاتف', 'النوع', 'السيارة', 'اللوحة', 'حالة', 'حظر'],
                 rows: drivers.map((d) => [
-                  d.fullName,
-                  d.phone ?? '-',
-                  d.driverType ?? '-',
-                  d.carModel ?? '-',
-                  d.carPlate ?? '-',
+                  d.fullName, d.phone ?? '-', d.driverType ?? '-',
+                  d.carModel ?? '-', d.carPlate ?? '-',
                   d.isAvailable ? 'متاح' : 'مشغول',
                   d.banned ? 'محظور' : 'نشط',
                 ]).toList(),
@@ -306,19 +278,12 @@ class _DriversContent extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
                 child: Row(
                   children: [
-                    Expanded(
-                      child: Text(d.fullName, style: const TextStyle(color: Colors.white, fontSize: 13)),
-                    ),
+                    Expanded(child: Text(d.fullName, style: const TextStyle(color: Color(0xFFEDF2FC), fontSize: 13))),
                     TextButton.icon(
-                      onPressed: () => context.read<AdminBloc>().add(ToggleDriverBan(
-                        userId: d.id,
-                        banned: !d.banned,
-                      )),
+                      onPressed: () => context.read<AdminBloc>().add(ToggleDriverBan(userId: d.id, banned: !d.banned)),
                       icon: Icon(d.banned ? Icons.lock_open : Icons.lock, size: 16),
                       label: Text(d.banned ? 'إلغاء الحظر' : 'حظر', style: const TextStyle(fontSize: 12)),
-                      style: TextButton.styleFrom(
-                        foregroundColor: d.banned ? AppTheme.success : AppTheme.error,
-                      ),
+                      style: TextButton.styleFrom(foregroundColor: d.banned ? const Color(0xFF00E5B8) : const Color(0xFFFF3B5C)),
                     ),
                   ],
                 ),
@@ -331,21 +296,16 @@ class _DriversContent extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Passengers Content
-// ---------------------------------------------------------------------------
 class _PassengersContent extends StatelessWidget {
   const _PassengersContent();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('إدارة الركاب'), backgroundColor: AppTheme.meterBg),
+      appBar: AppBar(title: const Text('إدارة الركاب'), backgroundColor: const Color(0xFF080D18)),
       body: BlocBuilder<AdminBloc, AdminState>(
         builder: (context, state) {
-          if (state.isLoading) {
-            return const Center(child: CircularProgressIndicator(color: AppTheme.meterPrimary));
-          }
+          if (state.isLoading) return const Center(child: CircularProgressIndicator(color: Color(0xFF00E5B8)));
           final passengers = state.passengers;
           return _DataTableWidget(
             columns: const ['الاسم', 'الهاتف', 'البريد', 'تاريخ التسجيل'],
@@ -365,21 +325,16 @@ class _PassengersContent extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Trips Content
-// ---------------------------------------------------------------------------
 class _TripsContent extends StatelessWidget {
   const _TripsContent();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('إدارة الرحلات'), backgroundColor: AppTheme.meterBg),
+      appBar: AppBar(title: const Text('إدارة الرحلات'), backgroundColor: const Color(0xFF080D18)),
       body: BlocBuilder<AdminBloc, AdminState>(
         builder: (context, state) {
-          if (state.isLoading) {
-            return const Center(child: CircularProgressIndicator(color: AppTheme.meterPrimary));
-          }
+          if (state.isLoading) return const Center(child: CircularProgressIndicator(color: Color(0xFF00E5B8)));
           final trips = state.trips;
           return _DataTableWidget(
             columns: const ['المعرف', 'الحالة', 'المسافة', 'الأجرة', 'التاريخ'],
@@ -400,21 +355,16 @@ class _TripsContent extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Driver Applications Content
-// ---------------------------------------------------------------------------
 class _ApplicationsContent extends StatelessWidget {
   const _ApplicationsContent();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('طلبات تسجيل السائقين'), backgroundColor: AppTheme.meterBg),
+      appBar: AppBar(title: const Text('طلبات تسجيل السائقين'), backgroundColor: const Color(0xFF080D18)),
       body: BlocBuilder<AdminBloc, AdminState>(
         builder: (context, state) {
-          if (state.isLoading) {
-            return const Center(child: CircularProgressIndicator(color: AppTheme.meterPrimary));
-          }
+          if (state.isLoading) return const Center(child: CircularProgressIndicator(color: Color(0xFF00E5B8)));
           final apps = state.driverApplications;
           return ListView.builder(
             padding: const EdgeInsets.all(24),
@@ -424,33 +374,25 @@ class _ApplicationsContent extends StatelessWidget {
               return Container(
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: AppTheme.meterCard, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppTheme.meterBorder)),
+                decoration: BoxDecoration(color: const Color(0xFF0F1628), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFF1C2B45))),
                 child: Row(
                   children: [
                     Container(
                       width: 40, height: 40,
-                      decoration: BoxDecoration(color: AppTheme.meterPrimary.withAlpha(20), borderRadius: BorderRadius.circular(10)),
-                      child: Center(child: Text('${i + 1}', style: const TextStyle(color: AppTheme.meterPrimary, fontWeight: FontWeight.w700))),
+                      decoration: BoxDecoration(color: const Color(0xFF00E5B8).withAlpha(20), borderRadius: BorderRadius.circular(10)),
+                      child: Center(child: Text('${i + 1}', style: const TextStyle(color: Color(0xFF00E5B8), fontWeight: FontWeight.w700))),
                     ),
                     const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(app.fullName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
-                        if (app.phone != null) Text(app.phone!, style: const TextStyle(color: AppTheme.meterMuted, fontSize: 12)),
-                        Text(app.createdAt.toString().substring(0, 16), style: const TextStyle(color: AppTheme.meterMuted, fontSize: 11)),
-                      ]),
-                    ),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(app.fullName, style: const TextStyle(color: Color(0xFFEDF2FC), fontWeight: FontWeight.w600, fontSize: 14)),
+                      if (app.phone != null) Text(app.phone!, style: const TextStyle(color: Color(0xFF526480), fontSize: 12)),
+                      Text(app.createdAt.toString().substring(0, 16), style: const TextStyle(color: Color(0xFF526480), fontSize: 11)),
+                    ])),
                     _AppStatusBadge(status: app.status),
                     const SizedBox(width: 12),
                     if (app.status == 'pending') ...[
-                      IconButton(
-                        icon: const Icon(Icons.check_circle, color: AppTheme.success),
-                        onPressed: () => context.read<AdminBloc>().add(ApproveDriver(app.userId)),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.cancel, color: AppTheme.error),
-                        onPressed: () => context.read<AdminBloc>().add(RejectDriver(app.userId)),
-                      ),
+                      IconButton(icon: const Icon(Icons.check_circle, color: Color(0xFF00E5B8)), onPressed: () => context.read<AdminBloc>().add(ApproveDriver(app.userId))),
+                      IconButton(icon: const Icon(Icons.cancel, color: Color(0xFFFF3B5C)), onPressed: () => context.read<AdminBloc>().add(RejectDriver(app.userId))),
                     ],
                   ],
                 ),
@@ -469,7 +411,7 @@ class _AppStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = status == 'approved' ? AppTheme.success : status == 'rejected' ? AppTheme.error : AppTheme.warning;
+    final color = status == 'approved' ? const Color(0xFF00E5B8) : status == 'rejected' ? const Color(0xFFFF3B5C) : const Color(0xFFFFB020);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(color: color.withAlpha(25), borderRadius: BorderRadius.circular(8), border: Border.all(color: color.withAlpha(80))),
@@ -478,9 +420,6 @@ class _AppStatusBadge extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Settings Content
-// ---------------------------------------------------------------------------
 class _SettingsContent extends StatefulWidget {
   const _SettingsContent();
   @override
@@ -495,17 +434,14 @@ class _SettingsContentState extends State<_SettingsContent> {
 
   @override
   void dispose() {
-    _kmCtrl.dispose();
-    _minCtrl.dispose();
-    _baseCtrl.dispose();
-    _commCtrl.dispose();
+    _kmCtrl.dispose(); _minCtrl.dispose(); _baseCtrl.dispose(); _commCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('إعدادات التطبيق'), backgroundColor: AppTheme.meterBg),
+      appBar: AppBar(title: const Text('إعدادات التطبيق'), backgroundColor: const Color(0xFF080D18)),
       body: BlocBuilder<AdminBloc, AdminState>(
         builder: (context, state) {
           final s = state.appSettings;
@@ -520,7 +456,7 @@ class _SettingsContentState extends State<_SettingsContent> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('إعدادات التسعير', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
+                const Text('إعدادات التسعير', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFFEDF2FC))),
                 const SizedBox(height: 20),
                 _SettingField(label: 'سعر الكيلومتر (ج.م)', controller: _kmCtrl),
                 _SettingField(label: 'سعر الدقيقة (ج.م)', controller: _minCtrl),
@@ -537,7 +473,11 @@ class _SettingsContentState extends State<_SettingsContent> {
                     }));
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ الإعدادات')));
                   },
-                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.meterPrimary, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00E5B8), foregroundColor: const Color(0xFF080D18),
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
                   child: const Text('حفظ الإعدادات', style: TextStyle(fontWeight: FontWeight.w700)),
                 ),
               ],
@@ -563,16 +503,19 @@ class _SettingField extends StatelessWidget {
         child: TextField(
           controller: controller,
           keyboardType: TextInputType.number,
-          decoration: InputDecoration(labelText: label),
+          style: const TextStyle(color: Color(0xFFEDF2FC)),
+          decoration: InputDecoration(
+            labelText: label, labelStyle: const TextStyle(color: Color(0xFF526480)),
+            filled: true, fillColor: const Color(0xFF0F1628),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF1C2B45))),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF00E5B8))),
+          ),
         ),
       ),
     );
   }
 }
 
-// ---------------------------------------------------------------------------
-// Reusable Data Table
-// ---------------------------------------------------------------------------
 class _DataTableWidget extends StatelessWidget {
   final List<String> columns;
   final List<List<String>> rows;
@@ -583,14 +526,14 @@ class _DataTableWidget extends StatelessWidget {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Container(
-        decoration: BoxDecoration(color: AppTheme.meterCard, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppTheme.meterBorder)),
+        decoration: BoxDecoration(color: const Color(0xFF0F1628), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFF1C2B45))),
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: DataTable(
-            headingRowColor: WidgetStateProperty.all(AppTheme.meterBg),
+            headingRowColor: WidgetStateProperty.all(const Color(0xFF080D18)),
             dataRowColor: WidgetStateProperty.all(Colors.transparent),
-            columns: columns.map((c) => DataColumn(label: Text(c, style: const TextStyle(color: AppTheme.meterPrimary, fontWeight: FontWeight.w700, fontSize: 13)))).toList(),
-            rows: rows.map((r) => DataRow(cells: r.map((c) => DataCell(Text(c, style: const TextStyle(color: Colors.white, fontSize: 13)))).toList())).toList(),
+            columns: columns.map((c) => DataColumn(label: Text(c, style: const TextStyle(color: Color(0xFF00E5B8), fontWeight: FontWeight.w700, fontSize: 13)))).toList(),
+            rows: rows.map((r) => DataRow(cells: r.map((c) => DataCell(Text(c, style: const TextStyle(color: Color(0xFFEDF2FC), fontSize: 13)))).toList())).toList(),
           ),
         ),
       ),
