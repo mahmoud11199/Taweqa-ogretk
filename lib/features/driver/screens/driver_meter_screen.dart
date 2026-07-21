@@ -50,7 +50,19 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
     });
   }
 
-  void _startLocationUpdates() {
+  Future<void> _startLocationUpdates() async {
+    try {
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+        if (mounted) showToast(context, 'يرجى منح صلاحية الموصع من الإعدادات', isError: true);
+        return;
+      }
+    } catch (_) {
+      return;
+    }
     _positionSubscription = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.high,
@@ -71,7 +83,7 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
         _mapController.camera.zoom,
       );
     }, onError: (_) {
-      if (mounted) showToast(context, 'تعذر الحصول على الموقع', isError: true);
+      if (mounted) showToast(context, 'تعذر الحصول على الموقع، تأكد من تشغيل GPS', isError: true);
     });
   }
 

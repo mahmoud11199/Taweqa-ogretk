@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -40,17 +41,23 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
     _getCurrentLocation();
   }
 
-  void _getCurrentLocation() async {
+  Future<void> _getCurrentLocation() async {
     try {
       var permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
-      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
-        if (mounted) showToast(context, 'يرجى منح صلاحية الموقع', isError: true);
+      if (permission == LocationPermission.denied) {
+        if (mounted) showToast(context, 'يرجى منح صلاحية الموقع من الإعدادات', isError: true);
         return;
       }
-      final pos = await Geolocator.getCurrentPosition();
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) showToast(context, 'صلاحية الموقع ملغاة نهائياً. يرجى تفعيلها من الإعدادات', isError: true);
+        return;
+      }
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      ).timeout(const Duration(seconds: 12));
       if (!mounted) return;
       _currentLat = pos.latitude;
       _currentLng = pos.longitude;
@@ -59,8 +66,10 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
       ));
       context.read<PassengerBloc>().add(LoadNearbyDrivers(lat: _currentLat, lng: _currentLng));
       _mapController.move(LatLng(_currentLat, _currentLng), 14);
+    } on TimeoutException {
+      if (mounted) showToast(context, 'تعذر الحصول على الموقع، تأكد من تشغيل GPS', isError: true);
     } catch (_) {
-      if (mounted) showToast(context, 'تعذر الحصول على الموقع', isError: true);
+      if (mounted) showToast(context, 'تعذر الحصول على الموقع، يرجى المحاولة مرة أخرى', isError: true);
     }
   }
 
