@@ -11,6 +11,7 @@ import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_state.dart';
 import '../../landing/screens/landing_screen.dart';
 import '../../settings/screens/settings_screen.dart';
+import '../../chat/screens/chat_list_screen.dart';
 import '../bloc/driver_bloc.dart';
 import '../bloc/driver_event.dart';
 import '../bloc/driver_state.dart';
@@ -869,6 +870,9 @@ class _PassengerBottomSheetState extends State<_PassengerBottomSheet> {
                     }),
                     _NavItem(icon: Icons.wallet, label: 'Wallet', active: false, onTap: () {
                       Navigator.push(context, MaterialPageRoute(builder: (_) => const DriverWalletScreen()));
+                    }),
+                    _NavItem(icon: Icons.chat, label: 'Chat', active: false, onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatListScreen()));
                     }),
                     _NavItem(icon: Icons.settings, label: 'Settings', active: false, onTap: () {
                       Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));

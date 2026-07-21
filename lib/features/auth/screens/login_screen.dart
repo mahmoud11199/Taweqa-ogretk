@@ -38,7 +38,9 @@ class _LoginScreenState extends State<LoginScreen> {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
-          Navigator.of(context).popUntil((route) => route.isFirst);
+          final p = state.profile;
+          final route = p.isAdmin ? '/admin' : p.isDriver ? '/driver' : '/passenger';
+          Navigator.of(context).pushNamedAndRemoveUntil(route, (route) => false);
         } else if (state is AuthFailure) {
           showToast(context, state.message, isError: true);
         }

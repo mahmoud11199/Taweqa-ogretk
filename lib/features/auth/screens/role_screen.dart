@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'phone_login_screen.dart';
+import '../bloc/auth_bloc.dart';
+import '../bloc/auth_state.dart';
 
 class Role {
   final String id;
@@ -51,8 +54,31 @@ const _roles = [
   ),
 ];
 
-class RoleScreen extends StatelessWidget {
+class RoleScreen extends StatefulWidget {
   const RoleScreen({super.key});
+
+  @override
+  State<RoleScreen> createState() => _RoleScreenState();
+}
+
+class _RoleScreenState extends State<RoleScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _checkAuth();
+  }
+
+  void _checkAuth() {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final p = authState.profile;
+        final route = p.isAdmin ? '/admin' : p.isDriver ? '/driver' : '/passenger';
+        Navigator.of(context).pushReplacementNamed(route);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +91,6 @@ class RoleScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 24),
-              // Brand bar
               Row(
                 children: [
                   Container(
@@ -92,12 +117,10 @@ class RoleScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 36),
-              // Heading
               const Text('Who are you\ntoday?', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w700, color: Color(0xFFEDF2FC), height: 1.1)),
               const SizedBox(height: 8),
               const Text('Select your role to get started', style: TextStyle(fontSize: 13, color: Color(0xFF526480))),
               const SizedBox(height: 32),
-              // Role cards
               Expanded(
                 child: ListView.separated(
                   itemCount: _roles.length,
@@ -114,7 +137,6 @@ class RoleScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              // Landing link
               Center(
                 child: TextButton(
                   onPressed: () => Navigator.pushReplacementNamed(context, '/landing'),

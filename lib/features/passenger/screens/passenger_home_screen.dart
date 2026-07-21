@@ -12,6 +12,7 @@ import '../../landing/screens/landing_screen.dart';
 import '../../settings/screens/settings_screen.dart';
 import '../../rating/screens/rating_screen.dart';
 import '../../wallet/screens/wallet_screen.dart';
+import '../../subscription/screens/subscription_plans_screen.dart';
 import '../bloc/passenger_bloc.dart';
 import '../bloc/passenger_event.dart';
 import '../bloc/passenger_state.dart';
@@ -239,6 +240,10 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
             _DrawerItem(icon: Icons.wallet, label: 'المحفظة', onTap: () {
               setState(() => _drawerOpen = false);
               Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen()));
+            }),
+            _DrawerItem(icon: Icons.subscriptions, label: 'الباقات', onTap: () {
+              setState(() => _drawerOpen = false);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionPlansScreen()));
             }),
             _DrawerItem(icon: Icons.chat, label: 'الدردشة', onTap: () {
               setState(() => _drawerOpen = false);

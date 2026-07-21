@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:taweqa_ogretk/core/config/routes.dart';
+import 'package:taweqa_ogretk/features/auth/bloc/auth_bloc.dart';
+import 'package:taweqa_ogretk/features/auth/bloc/auth_state.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -23,14 +26,17 @@ class _SplashScreenState extends State<SplashScreen> {
     Timer.periodic(const Duration(milliseconds: 50), (timer) {
       if (_progress >= 100) {
         timer.cancel();
-        Future.delayed(
-          const Duration(milliseconds: 200),
-          () {
-            if (mounted) {
-              Navigator.of(context).pushReplacementNamed(Routes.role);
-            }
-          },
-        );
+        Future.delayed(const Duration(milliseconds: 200), () {
+          if (!mounted) return;
+          final authState = context.read<AuthBloc>().state;
+          if (authState is AuthAuthenticated) {
+            final p = authState.profile;
+            final route = p.isAdmin ? '/admin' : p.isDriver ? '/driver' : '/passenger';
+            Navigator.of(context).pushReplacementNamed(route);
+          } else {
+            Navigator.of(context).pushReplacementNamed(Routes.landing);
+          }
+        });
         return;
       }
       setState(() => _progress += 2);

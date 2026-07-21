@@ -76,7 +76,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthFailure) showToast(context, state.message, isError: true);
-        if (state is AuthAuthenticated) Navigator.of(context).popUntil((route) => route.isFirst);
+        if (state is AuthAuthenticated) {
+          final p = state.profile;
+          final route = p.isAdmin ? '/admin' : p.isDriver ? '/driver' : '/passenger';
+          Navigator.of(context).pushNamedAndRemoveUntil(route, (route) => false);
+        }
       },
       child: Scaffold(
         backgroundColor: const Color(0xFF080D18),

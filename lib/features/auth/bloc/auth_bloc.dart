@@ -93,6 +93,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     await InAppNotificationService.startListening(user.id);
     final full = await _tryFetchProfile();
     if (full != null && !isClosed) {
+      if (full.banned) {
+        await SupabaseConfig.client.auth.signOut();
+        emit(AuthFailure('تم حظر حسابك. يرجى التواصل مع الدعم.'));
+        return;
+      }
       emit(AuthAuthenticated(profile: full));
     }
   }
@@ -113,6 +118,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       await InAppNotificationService.startListening(response.user!.id);
       final full = await _tryFetchProfile();
       if (full != null && !isClosed) {
+        if (full.banned) {
+          await SupabaseConfig.client.auth.signOut();
+          emit(AuthFailure('تم حظر حسابك. يرجى التواصل مع الدعم.'));
+          return;
+        }
         emit(AuthAuthenticated(profile: full));
       }
     } catch (e) {

@@ -67,7 +67,9 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
           if (state is PhoneOtpSent) {
             Navigator.push(context, MaterialPageRoute(builder: (_) => PhoneOtpScreen(phone: state.phone)));
           } else if (state is AuthAuthenticated) {
-            Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+            final p = state.profile;
+            final route = p.isAdmin ? '/admin' : p.isDriver ? '/driver' : '/passenger';
+            Navigator.of(context).pushNamedAndRemoveUntil(route, (route) => false);
           } else if (state is AuthFailure) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(state.message), backgroundColor: const Color(0xFFFF3B5C)),

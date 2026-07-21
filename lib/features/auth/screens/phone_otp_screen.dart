@@ -87,7 +87,9 @@ class _PhoneOtpScreenState extends State<PhoneOtpScreen> {
               MaterialPageRoute(builder: (_) => RegisterScreen(phone: widget.phone)),
             );
           } else if (state is AuthAuthenticated) {
-            Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+            final p = state.profile;
+            final route = p.isAdmin ? '/admin' : p.isDriver ? '/driver' : '/passenger';
+            Navigator.of(context).pushNamedAndRemoveUntil(route, (route) => false);
           } else if (state is AuthFailure) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(state.message), backgroundColor: const Color(0xFFFF3B5C)),
