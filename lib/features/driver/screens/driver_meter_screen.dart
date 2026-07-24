@@ -10,13 +10,16 @@ import '../../../core/widgets/toast_widget.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_state.dart';
 import '../../landing/screens/landing_screen.dart';
+import '../../passenger/screens/join_shared_ride_screen.dart';
 import '../../settings/screens/settings_screen.dart';
 import '../../chat/screens/chat_list_screen.dart';
 import '../bloc/driver_bloc.dart';
 import '../bloc/driver_event.dart';
 import '../bloc/driver_state.dart';
 import 'driver_dispatch_screen.dart';
+import 'driver_payment_screen.dart';
 import 'driver_wallet_screen.dart';
+import 'earnings_screen.dart';
 import 'trip_history_screen.dart';
 
 class DriverMeterScreen extends StatefulWidget {
@@ -463,7 +466,26 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
                         icon: Icons.warning_amber_rounded,
                         color: const Color(0xFFFF3B5C),
                         label: 'SOS',
-                        onTap: () {},
+                        onTap: () => showDialog(context: context, builder: (ctx) => AlertDialog(
+                          backgroundColor: const Color(0xFF0F1628),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                          title: const Row(
+                            children: [
+                              Icon(Icons.warning_amber_rounded, color: Color(0xFFFF3B5C), size: 24),
+                              SizedBox(width: 10),
+                              Text('SOS', style: TextStyle(color: Color(0xFFFF3B5C), fontWeight: FontWeight.w800)),
+                            ],
+                          ),
+                          content: const Text('هل تواجه حالة طارئة؟ يمكنك الاتصال بالطوارئ أو إرسال تنبيه للمتابعين.', style: TextStyle(color: Color(0xFF8EA4C8), height: 1.5)),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء', style: TextStyle(color: Color(0xFF526480)))),
+                            TextButton.icon(
+                              onPressed: () { Navigator.pop(ctx); },
+                              icon: const Icon(Icons.phone, size: 16, color: Color(0xFFFF3B5C)),
+                              label: const Text('اتصال بالطوارئ', style: TextStyle(color: Color(0xFFFF3B5C))),
+                            ),
+                          ],
+                        )),
                       ),
                       const SizedBox(height: 9),
                       _QuickAction(
@@ -485,7 +507,15 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
                   bottom: 0, left: 0, right: 0,
                   child: _PassengerBottomSheet(
                     tripActive: _tripActive,
-                    onEndSub: (passengerId) {},
+                    onEndSub: (passengerId) {
+                      final trip = context.read<DriverBloc>().state.currentTrip;
+                      if (trip != null) {
+                        context.read<DriverBloc>().add(UpdatePassengerStatus(
+                          tripPassengerId: passengerId.toString(),
+                          status: 'ended',
+                        ));
+                      }
+                    },
                   ),
                 ),
               ],
@@ -668,7 +698,7 @@ class _QuickAction extends StatelessWidget {
 // ─── Passenger Bottom Sheet ───────────────────────────────────────────────────
 class _PassengerBottomSheet extends StatefulWidget {
   final bool tripActive;
-  final void Function(int passengerId) onEndSub;
+  final void Function(String passengerId) onEndSub;
   const _PassengerBottomSheet({required this.tripActive, required this.onEndSub});
 
   @override
@@ -750,19 +780,31 @@ class _PassengerBottomSheetState extends State<_PassengerBottomSheet> {
                       ),
                     ),
                     const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: const Color.fromRGBO(0, 229, 184, 0.12),
-                        border: Border.all(color: const Color.fromRGBO(0, 229, 184, 0.3)),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.add, size: 12, color: Color(0xFF00E5B8)),
-                          SizedBox(width: 7),
-                          Text('Add', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF00E5B8))),
+                    GestureDetector(
+                      onTap: () => showDialog(context: context, builder: (ctx) => AlertDialog(
+                        backgroundColor: const Color(0xFF0F1628),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                        title: const Text('إضافة راكب', style: TextStyle(color: Color(0xFFEDF2FC), fontWeight: FontWeight.w700)),
+                        content: const Text('شارك كود الرحلة مع الراكب ليتمكن من الانضمام', style: TextStyle(color: Color(0xFF8EA4C8))),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء', style: TextStyle(color: Color(0xFF526480)))),
+                          TextButton(onPressed: () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const JoinSharedRideScreen())); }, child: const Text('دعوة راكب', style: TextStyle(color: Color(0xFF00E5B8)))),
                         ],
+                      )),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: const Color.fromRGBO(0, 229, 184, 0.12),
+                          border: Border.all(color: const Color.fromRGBO(0, 229, 184, 0.3)),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.add, size: 12, color: Color(0xFF00E5B8)),
+                            SizedBox(width: 7),
+                            Text('Add', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF00E5B8))),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -814,7 +856,20 @@ class _PassengerBottomSheetState extends State<_PassengerBottomSheet> {
                                   ],
                                 ),
                               ),
-                              Container(
+                              GestureDetector(
+                              onTap: () {
+                                showDialog(context: context, builder: (ctx) => AlertDialog(
+                                  backgroundColor: const Color(0xFF0F1628),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                                  title: const Text('إنهاء الاشتراك', style: TextStyle(color: Color(0xFFEDF2FC), fontWeight: FontWeight.w700)),
+                                  content: const Text('هل تريد إنهاء اشتراك هذا الراكب؟', style: TextStyle(color: Color(0xFF8EA4C8))),
+                                  actions: [
+                                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء', style: TextStyle(color: Color(0xFF526480)))),
+                                    TextButton(onPressed: () { Navigator.pop(ctx); widget.onEndSub(tp.passengerId); }, child: const Text('تأكيد', style: TextStyle(color: Color(0xFFFF3B5C)))),
+                                  ],
+                                ));
+                              },
+                              child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
                                 decoration: BoxDecoration(
                                   color: const Color.fromRGBO(255, 59, 92, 0.1),
@@ -823,6 +878,7 @@ class _PassengerBottomSheetState extends State<_PassengerBottomSheet> {
                                 ),
                                 child: const Text('End Sub', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFFFF3B5C))),
                               ),
+                            ),
                             ],
                           ),
                         )),
@@ -851,13 +907,16 @@ class _PassengerBottomSheetState extends State<_PassengerBottomSheet> {
                               const SizedBox(height: 10),
                               SizedBox(
                                 width: double.infinity,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 11),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF00E5B8),
-                                    borderRadius: BorderRadius.circular(10),
+                                child: GestureDetector(
+                                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DriverPaymentScreen())),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 11),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF00E5B8),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Text('Checkout Trip', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF080D18))),
                                   ),
-                                  child: const Text('Checkout Trip', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF080D18))),
                                 ),
                               ),
                             ],
@@ -876,7 +935,9 @@ class _PassengerBottomSheetState extends State<_PassengerBottomSheet> {
                 padding: const EdgeInsets.fromLTRB(0, 10, 0, 30),
                 child: Row(
                   children: [
-                    _NavItem(icon: Icons.map, label: 'Map', active: true, onTap: () {}),
+                    _NavItem(icon: Icons.trending_up, label: 'Earnings', active: false, onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const EarningsScreen()));
+                    }),
                     _NavItem(icon: Icons.calendar_month, label: 'Trips', active: false, onTap: () {
                       Navigator.push(context, MaterialPageRoute(builder: (_) => const TripHistoryScreen()));
                     }),

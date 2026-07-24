@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'scheduled_trips_screen.dart';
 
 class DriverDispatchScreen extends StatefulWidget {
   const DriverDispatchScreen({super.key});
@@ -257,13 +258,16 @@ class _DriverDispatchScreenState extends State<DriverDispatchScreen> {
                 if (taken)
                   const _BadgeWidget(label: 'Already Claimed', color: 'gray')
                 else
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF00E5B8),
-                      borderRadius: BorderRadius.circular(10),
+                  GestureDetector(
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ScheduledTripsScreen())),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00E5B8),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Text('Claim →', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF080D18))),
                     ),
-                    child: const Text('Claim →', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF080D18))),
                   ),
               ],
             ),

@@ -6,6 +6,7 @@ import '../bloc/driver_event.dart';
 import '../bloc/driver_state.dart';
 import '../models/trip_model.dart';
 import '../../trip/screens/trip_details_screen.dart';
+import 'scheduled_trips_screen.dart';
 
 class TripHistoryScreen extends StatefulWidget {
   const TripHistoryScreen({super.key});
@@ -30,10 +31,17 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
         title: const Text('سجل الرحلات', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFFEDF2FC))),
         centerTitle: true,
         leading: IconButton(icon: const Icon(Icons.arrow_back, color: Color(0xFF00E5B8)), onPressed: () => Navigator.pop(context)),
+        actions: [
+          TextButton.icon(
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ScheduledTripsScreen())),
+            icon: const Icon(Icons.calendar_month, size: 16, color: Color(0xFF00E5B8)),
+            label: const Text('المجدولة', style: TextStyle(color: Color(0xFF00E5B8), fontSize: 13)),
+          ),
+        ],
       ),
       body: BlocBuilder<DriverBloc, DriverState>(
         builder: (context, state) {
-          if (state.isLoading) return const Center(child: CircularProgressIndicator(color: Color(0xFF00E5B8)));
+          if (state.isLoading && state.tripHistory.isEmpty) return const Center(child: CircularProgressIndicator(color: Color(0xFF00E5B8)));
           if (state.tripHistory.isEmpty) return const Center(child: Text('لا توجد رحلات بعد', style: TextStyle(color: Color(0xFF526480), fontSize: 16)));
           return ListView.builder(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),

@@ -212,16 +212,19 @@ class _DriverPaymentScreenState extends State<DriverPaymentScreen> {
               // Confirm button
               SizedBox(
                 width: double.infinity,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 17),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF00E5B8),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    'Confirm Payment — ${_total.toStringAsFixed(2)} EGP',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF080D18)),
+                child: GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 17),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00E5B8),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      'Confirm Payment — ${_total.toStringAsFixed(2)} EGP',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF080D18)),
+                    ),
                   ),
                 ),
               ),
@@ -229,16 +232,29 @@ class _DriverPaymentScreenState extends State<DriverPaymentScreen> {
               // Cancel button
               SizedBox(
                 width: double.infinity,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 13),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: const Color(0xFF1C2B45)),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Text(
-                    'Cancel Trip',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF8EA4C8)),
+                child: GestureDetector(
+                  onTap: () {
+                    showDialog(context: context, builder: (ctx) => AlertDialog(
+                      backgroundColor: const Color(0xFF0F1628),
+                      title: const Text('إلغاء الرحلة', style: TextStyle(color: Color(0xFFEDF2FC))),
+                      content: const Text('هل أنت متأكد من إلغاء الرحلة؟', style: TextStyle(color: Color(0xFF526480))),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('رجوع', style: TextStyle(color: Color(0xFF526480)))),
+                        TextButton(onPressed: () { Navigator.pop(ctx); Navigator.pop(context); }, child: const Text('تأكيد الإلغاء', style: TextStyle(color: Color(0xFFFF3B5C)))),
+                      ],
+                    ));
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: const Color(0xFF1C2B45)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Text(
+                      'Cancel Trip',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF8EA4C8)),
+                    ),
                   ),
                 ),
               ),
