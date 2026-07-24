@@ -177,58 +177,8 @@ jobs:
           name: ios-ipa
           path: build/ios/iphoneos/Runner/app.ipa
 
-  build-web:
-    name: Build Web
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          flutter-version: 3.41.x
-
-      - name: Cache pub
-        uses: actions/cache@v4
-        with:
-          path: ~/.pub-cache
-          key: flutter-pub-${{ hashFiles('pubspec.lock') }}
-          restore-keys: |
-            flutter-pub-
-
-      - name: Generate secrets.dart
-        run: |
-          cat > lib/core/config/secrets.dart << EOF
-          class Secrets {
-            static const String paymobApiKey = '${{ secrets.PAYMOB_API_KEY }}';
-            static const String paymobIntegrationId = '${{ secrets.PAYMOB_INTEGRATION_ID }}';
-            static const String paymobIframeId = '${{ secrets.PAYMOB_IFRAME_ID }}';
-            static const String supabaseUrl = '';
-            static const String supabaseAnonKey = '';
-          }
-          EOF
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Build Web
-        run: >
-          flutter build web --release
-          --base-href=/Taweqa-ogretk/
-          --dart-define=PAYMOB_API_KEY=${{ secrets.PAYMOB_API_KEY }}
-          --dart-define=PAYMOB_INTEGRATION_ID=${{ secrets.PAYMOB_INTEGRATION_ID }}
-          --dart-define=PAYMOB_IFRAME_ID=${{ secrets.PAYMOB_IFRAME_ID }}
-
-      - name: Upload Web build
-        uses: actions/upload-artifact@v4
-        with:
-          name: web-build
-          path: build/web
-
   deploy-github-pages:
-    name: Deploy to GitHub Pages
-    needs: build-web
+    name: Deploy PWA landing page to GitHub Pages
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -238,11 +188,14 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Download web build
-        uses: actions/download-artifact@v4
-        with:
-          name: web-build
-          path: build/web
+      - uses: actions/checkout@v4
+
+      - name: Copy PWA files
+        run: |
+          mkdir -p _site/Taweqa-ogretk
+          cp index.html _site/
+          cp privacy.html terms.html refund.html _site/ 2>/dev/null || true
+          cp -r Taweqa-ogretk/css Taweqa-ogretk/js Taweqa-ogretk/icons Taweqa-ogretk/manifest.json Taweqa-ogretk/favicon.png _site/Taweqa-ogretk/
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -250,7 +203,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: build/web
+          path: _site
 
       - name: Deploy to GitHub Pages
         id: deployment
