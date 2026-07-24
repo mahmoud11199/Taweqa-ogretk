@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../core/widgets/toast_widget.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -36,13 +35,21 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
+      listenWhen: (previous, current) => current is AuthAuthenticated || current is AuthFailure,
       listener: (context, state) {
         if (state is AuthAuthenticated) {
           final p = state.profile;
           final route = p.isAdmin ? '/admin' : p.isDriver ? '/driver' : '/passenger';
           Navigator.of(context).pushNamedAndRemoveUntil(route, (route) => false);
         } else if (state is AuthFailure) {
-          showToast(context, state.message, isError: true);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: const Color(0xFFFF3B5C),
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 4),
+            ),
+          );
         }
       },
       child: Scaffold(

@@ -50,6 +50,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   String _translateError(Object e) {
+    if (e is TimeoutException) {
+      return 'انتهت مهلة الاتصال، يرجى التحقق من اتصال الإنترنت';
+    }
     if (e is AuthException) {
       final msg = e.message;
       if (msg.contains('Invalid login credentials') || msg.contains('invalid_credentials') || msg.contains('invalid grant')) {
@@ -105,17 +108,24 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Future<void> _onLoginRequested(LoginRequested event, Emitter<AuthState> emit) async {
     emit(AuthLoading(message: 'جاري تسجيل الدخول...'));
     try {
-      final response = await SupabaseConfig.client.auth.signInWithPassword(
-        email: event.email,
-        password: event.password,
-      );
-      if (response.user == null) {
-        emit(AuthFailure('البريد الإلكتروني أو كلمة المرور غير صحيحة'));
+      if (SupabaseConfig.client.auth.currentSession == null) {
+        final response = await SupabaseConfig.client.auth.signInWithPassword(
+          email: event.email,
+          password: event.password,
+        ).timeout(const Duration(seconds: 15));
+        if (response.user == null) {
+          emit(AuthFailure('البريد الإلكتروني أو كلمة المرور غير صحيحة'));
+          return;
+        }
+      }
+      final user = SupabaseConfig.client.auth.currentUser;
+      if (user == null) {
+        emit(AuthFailure('فشل تسجيل الدخول، يرجى المحاولة مرة أخرى'));
         return;
       }
-      final cached = UserProfile.fromSupabaseUser(response.user!);
+      final cached = UserProfile.fromSupabaseUser(user);
       emit(AuthAuthenticated(profile: cached));
-      await InAppNotificationService.startListening(response.user!.id);
+      await InAppNotificationService.startListening(user.id);
       final full = await _tryFetchProfile();
       if (full != null && !isClosed) {
         if (full.banned) {
