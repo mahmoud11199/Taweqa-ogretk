@@ -33,13 +33,16 @@ class BackgroundLocationService {
       await service.setAsForegroundService();
     }
 
+    var running = true;
+
     service.on('stopService').listen((_) {
+      running = false;
       if (service is AndroidServiceInstance) {
         service.stopSelf();
       }
     });
 
-    while (true) {
+    while (running) {
       try {
         final position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high,
@@ -56,7 +59,9 @@ class BackgroundLocationService {
         } catch (_) {}
       } catch (_) {}
 
-      await Future.delayed(const Duration(seconds: 20));
+      if (running) {
+        await Future.delayed(const Duration(seconds: 20));
+      }
     }
   }
 

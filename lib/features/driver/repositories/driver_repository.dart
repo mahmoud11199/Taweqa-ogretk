@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -178,7 +179,8 @@ class DriverRepository {
   }
 
   Future<String> generateShareCode(String tripId) async {
-    final code = List.generate(6, (_) => '0123456789'[DateTime.now().microsecondsSinceEpoch % 10]).join();
+    final rng = Random.secure();
+    final code = List.generate(6, (_) => rng.nextInt(10).toString()).join();
     if (CacheHelper.isOnline) {
       try {
         await _client.from('trips').update({'share_code': code}).eq('id', tripId);
@@ -267,13 +269,16 @@ class DriverRepository {
   }
 
   double calculateFare(double distanceKm, double durationMin, {double waitTimeMin = 0, VehicleCategory? category, bool passengerDiscount = false}) {
+    final d = distanceKm.clamp(0.0, AppConstants.maxDistanceKm);
+    final dur = durationMin.clamp(0.0, AppConstants.maxDurationMin.toDouble());
+    final wt = max(0.0, waitTimeMin);
     final baseFare = category?.baseFare ?? AppConstants.pricingBaseFare;
     final perKm = category?.perKmPrice ?? AppConstants.pricingPerKm;
     final perMin = category?.perMinutePrice ?? AppConstants.pricingPerMin;
     final waitFarePerMin = category?.perWaitMinute ?? AppConstants.waitingFarePerMin;
-    final fare = baseFare + (distanceKm * perKm) + (durationMin * perMin) + (waitTimeMin * waitFarePerMin);
-    if (passengerDiscount) return fare * 0.85;
-    return fare;
+    final fare = baseFare + (d * perKm) + (dur * perMin) + (wt * waitFarePerMin);
+    final result = passengerDiscount ? fare * 0.85 : fare;
+    return result.clamp(0.0, AppConstants.maxFare);
   }
 
   double calculateDriverCut(double fare, {bool premiumDriver = false}) {

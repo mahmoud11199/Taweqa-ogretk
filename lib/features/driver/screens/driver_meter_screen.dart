@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/widgets/toast_widget.dart';
 import '../../auth/bloc/auth_bloc.dart';
@@ -34,6 +35,7 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
   final MapController _mapController = MapController();
   StreamSubscription<Position>? _positionSubscription;
   Timer? _gpsTimer;
+  Timer? _simulationTimer;
   bool _tripActive = false;
   double _speed = 42;
 
@@ -46,7 +48,8 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
   }
 
   void _startSimulation() {
-    Timer.periodic(const Duration(milliseconds: 800), (t) {
+    _simulationTimer?.cancel();
+    _simulationTimer = Timer.periodic(const Duration(milliseconds: 800), (t) {
       if (!_tripActive) return;
       setState(() {
         _speed = (_speed + (math.Random().nextDouble() - 0.5) * 8).clamp(0, 80);
@@ -120,11 +123,14 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
     _gpsTimer = Timer.periodic(const Duration(seconds: 10), (_) => _updateRoute());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final bloc = context.read<DriverBloc>();
-      bloc.stream.firstWhere((st) => st.currentTrip != null).then((st) {
+      bloc.stream.firstWhere((st) => st.currentTrip != null).timeout(const Duration(seconds: 15)).then((st) {
         if (st.currentTrip != null) {
           bloc.add(GenerateShareCode(st.currentTrip!.id));
           bloc.add(LoadTripPassengers(st.currentTrip!.id));
         }
+      }).catchError((_) {
+        if (!mounted) return;
+        showToast(context, 'فشل في بدء الرحلة — تأكد من الاتصال', isError: true);
       });
     });
   }
@@ -148,6 +154,7 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
   void dispose() {
     _positionSubscription?.cancel();
     _gpsTimer?.cancel();
+    _simulationTimer?.cancel();
     super.dispose();
   }
 
@@ -463,7 +470,7 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
                   actions: [
                     TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء', style: TextStyle(color: Color(0xFF526480)))),
                     TextButton.icon(
-                      onPressed: () { Navigator.pop(ctx); },
+                      onPressed: () { Navigator.pop(ctx); launchUrl(Uri.parse('tel:122'), mode: LaunchMode.externalApplication); },
                       icon: const Icon(Icons.phone, size: 16, color: Color(0xFFFF3B5C)),
                       label: const Text('اتصال بالطوارئ', style: TextStyle(color: Color(0xFFFF3B5C))),
                     ),
