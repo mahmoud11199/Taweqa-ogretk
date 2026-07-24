@@ -23,7 +23,8 @@ import 'earnings_screen.dart';
 import 'trip_history_screen.dart';
 
 class DriverMeterScreen extends StatefulWidget {
-  const DriverMeterScreen({super.key});
+  final bool inTab;
+  const DriverMeterScreen({super.key, this.inTab = false});
 
   @override
   State<DriverMeterScreen> createState() => _DriverMeterScreenState();
@@ -152,6 +153,362 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final content = Stack(
+      children: [
+        // Map layer
+        FlutterMap(
+          mapController: _mapController,
+          options: const MapOptions(
+            initialCenter: LatLng(26.8206, 30.8025),
+            initialZoom: 13,
+          ),
+          children: [
+            TileLayer(
+              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              userAgentPackageName: 'com.taweqa.ogretk',
+            ),
+            BlocBuilder<DriverBloc, DriverState>(
+              builder: (context, state) {
+                final markers = <Marker>[];
+                if (state.currentLat != 0) {
+                  markers.add(Marker(
+                    point: LatLng(state.currentLat, state.currentLng),
+                    width: 40,
+                    height: 40,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: state.isAvailable
+                            ? const Color(0xFF00E5B8)
+                            : const Color(0xFFFF3B5C),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: const Icon(Icons.navigation, color: Colors.white, size: 20),
+                    ),
+                  ));
+                }
+                return Stack(
+                  children: [
+                    if (markers.isNotEmpty) MarkerLayer(markers: markers),
+                    if (state.routePoints.isNotEmpty)
+                      PolylineLayer(
+                        polylines: [
+                          Polyline(
+                            points: state.routePoints
+                                .where((p) => p.length >= 2)
+                                .map((p) => LatLng(p[1], p[0]))
+                                .toList(),
+                            color: const Color(0xFF00E5B8),
+                            strokeWidth: 4,
+                          ),
+                        ],
+                      ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+
+        // Top gradient overlay
+        Positioned(
+          top: 0, left: 0, right: 0,
+          child: Container(
+            height: 280,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color.fromRGBO(8, 13, 24, 0.97),
+                  Color.fromRGBO(8, 13, 24, 0.6),
+                  Colors.transparent,
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        // Fare meter card
+        BlocBuilder<DriverBloc, DriverState>(
+          builder: (context, state) {
+            final speed = _speed;
+            final waitMode = speed < 5;
+            final fare = state.currentFare;
+            return Positioned(
+              top: 38, left: 16, right: 16,
+              child: Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: const Color.fromRGBO(9, 14, 26, 0.92),
+                  border: Border.all(
+                    color: _tripActive
+                        ? const Color.fromRGBO(255, 176, 32, 0.3)
+                        : const Color(0xFF1C2B45),
+                  ),
+                  borderRadius: BorderRadius.circular(22),
+                  boxShadow: [
+                    if (_tripActive)
+                      const BoxShadow(color: Color.fromRGBO(255, 176, 32, 0.08), blurRadius: 0, offset: Offset(0, 0)),
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.5),
+                      blurRadius: 32,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 6, height: 6,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: _tripActive ? const Color(0xFFFFB020) : const Color(0xFF526480),
+                                      boxShadow: _tripActive
+                                          ? [const BoxShadow(color: Color(0xFFFFB020), blurRadius: 8)]
+                                          : null,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  const Text('TOTAL FARE METER', style: TextStyle(
+                                    fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF526480),
+                                    letterSpacing: 0.8,
+                                  )),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              _FareMeter(value: fare, isActive: _tripActive),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                if (_tripActive) {
+                                  _endTrip();
+                                } else {
+                                  _startTrip();
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                                decoration: BoxDecoration(
+                                  color: _tripActive
+                                      ? const Color.fromRGBO(255, 59, 92, 0.12)
+                                      : const Color.fromRGBO(0, 229, 184, 0.12),
+                                  border: Border.all(
+                                    color: _tripActive
+                                        ? const Color.fromRGBO(255, 59, 92, 0.4)
+                                        : const Color.fromRGBO(0, 229, 184, 0.4),
+                                  ),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      _tripActive ? Icons.pause : Icons.play_arrow,
+                                      size: 13,
+                                      color: _tripActive ? const Color(0xFFFF3B5C) : const Color(0xFF00E5B8),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      _tripActive ? 'STOP' : 'START',
+                                      style: TextStyle(
+                                        fontSize: 12, fontWeight: FontWeight.w800,
+                                        color: _tripActive ? const Color(0xFFFF3B5C) : const Color(0xFF00E5B8),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                if (waitMode) const _Badge(label: 'WAIT', color: 'blue', dot: true),
+                                if (_tripActive) ...[
+                                  const SizedBox(width: 8),
+                                  const _Badge(label: 'LIVE', color: 'amber', dot: true),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    // Speed bar
+                    Column(
+                      children: [
+                        Row(
+                          children: [
+                            const Text('SPEED', style: TextStyle(
+                              fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF526480),
+                              letterSpacing: 0.5,
+                            )),
+                            const Spacer(),
+                            Text(
+                              '${speed.toInt()} km/h${waitMode ? ' · Wait mode active' : ''}',
+                              style: TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 11,
+                                color: waitMode ? const Color(0xFF4D9FFF) : const Color(0xFF8EA4C8),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(2),
+                          child: SizedBox(
+                            height: 3,
+                            child: Stack(
+                              children: [
+                                Container(height: 3, color: const Color(0xFF1C2B45)),
+                                AnimatedFractionallySizedBox(
+                                  duration: const Duration(milliseconds: 500),
+                                  widthFactor: (speed / 80).clamp(0.0, 1.0),
+                                  child: Container(
+                                    height: 3,
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: waitMode
+                                            ? [const Color(0xFF4D9FFF), const Color(0xFF0066CC)]
+                                            : [const Color(0xFF00E5B8), const Color(0xFF00B896)],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 13),
+                    // Stat pills
+                    Container(
+                      padding: const EdgeInsets.only(top: 13),
+                      decoration: const BoxDecoration(
+                        border: Border(top: BorderSide(color: Color(0xFF1C2B45))),
+                      ),
+                      child: Row(
+                        children: [
+                          _StatPill(
+                            icon: Icons.route,
+                            label: 'Distance',
+                            value: '${state.distanceKm.toStringAsFixed(1)} km',
+                          ),
+                          Container(width: 1, height: 24, color: const Color(0xFF1C2B45)),
+                          _StatPill(
+                            icon: Icons.timer_outlined,
+                            label: 'Time',
+                            value: '${state.durationMin.toInt()} min',
+                          ),
+                          Container(width: 1, height: 24, color: const Color(0xFF1C2B45)),
+                          _StatPill(
+                            icon: Icons.pause,
+                            label: 'Wait',
+                            value: '${state.waitTimeMin.toInt()} min',
+                            color: state.waitTimeMin > 0 ? const Color(0xFF4D9FFF) : null,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+
+        // Quick action buttons
+        Positioned(
+          right: 14, top: 210,
+          child: Column(
+            children: [
+              _QuickAction(
+                icon: Icons.add,
+                color: const Color(0xFF00E5B8),
+                label: 'Add',
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DriverDispatchScreen())),
+              ),
+              const SizedBox(height: 9),
+              _QuickAction(
+                icon: Icons.warning_amber_rounded,
+                color: const Color(0xFFFF3B5C),
+                label: 'SOS',
+                onTap: () => showDialog(context: context, builder: (ctx) => AlertDialog(
+                  backgroundColor: const Color(0xFF0F1628),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                  title: const Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, color: Color(0xFFFF3B5C), size: 24),
+                      SizedBox(width: 10),
+                      Text('SOS', style: TextStyle(color: Color(0xFFFF3B5C), fontWeight: FontWeight.w800)),
+                    ],
+                  ),
+                  content: const Text('هل تواجه حالة طارئة؟ يمكنك الاتصال بالطوارئ أو إرسال تنبيه للمتابعين.', style: TextStyle(color: Color(0xFF8EA4C8), height: 1.5)),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء', style: TextStyle(color: Color(0xFF526480)))),
+                    TextButton.icon(
+                      onPressed: () { Navigator.pop(ctx); },
+                      icon: const Icon(Icons.phone, size: 16, color: Color(0xFFFF3B5C)),
+                      label: const Text('اتصال بالطوارئ', style: TextStyle(color: Color(0xFFFF3B5C))),
+                    ),
+                  ],
+                )),
+              ),
+              const SizedBox(height: 9),
+              _QuickAction(
+                icon: Icons.wifi_off,
+                color: const Color(0xFF526480),
+                label: 'Offline',
+                onTap: () {
+                  context.read<DriverBloc>().add(ToggleAvailability(
+                    isAvailable: !context.read<DriverBloc>().state.isAvailable,
+                  ));
+                },
+              ),
+            ],
+          ),
+        ),
+
+        // Bottom sheet
+        Positioned(
+          bottom: 0, left: 0, right: 0,
+          child: _PassengerBottomSheet(
+            inTab: widget.inTab,
+            tripActive: _tripActive,
+            onEndSub: (passengerId) {
+              final trip = context.read<DriverBloc>().state.currentTrip;
+              if (trip != null) {
+                context.read<DriverBloc>().add(UpdatePassengerStatus(
+                  tripPassengerId: passengerId.toString(),
+                  status: 'ended',
+                ));
+              }
+            },
+          ),
+        ),
+      ],
+    );
+
+    if (widget.inTab) {
+      return content;
+    }
+
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthUnauthenticated) {
@@ -170,356 +527,7 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
         child: Scaffold(
           backgroundColor: const Color(0xFF080E1C),
           body: SafeArea(
-            child: Stack(
-              children: [
-                // Map layer
-                FlutterMap(
-                  mapController: _mapController,
-                  options: const MapOptions(
-                    initialCenter: LatLng(26.8206, 30.8025),
-                    initialZoom: 13,
-                  ),
-                  children: [
-                    TileLayer(
-                      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.taweqa.ogretk',
-                    ),
-                    BlocBuilder<DriverBloc, DriverState>(
-                      builder: (context, state) {
-                        final markers = <Marker>[];
-                        if (state.currentLat != 0) {
-                          markers.add(Marker(
-                            point: LatLng(state.currentLat, state.currentLng),
-                            width: 40,
-                            height: 40,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: state.isAvailable
-                                    ? const Color(0xFF00E5B8)
-                                    : const Color(0xFFFF3B5C),
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 2),
-                              ),
-                              child: const Icon(Icons.navigation, color: Colors.white, size: 20),
-                            ),
-                          ));
-                        }
-                        return Stack(
-                          children: [
-                            if (markers.isNotEmpty) MarkerLayer(markers: markers),
-                            if (state.routePoints.isNotEmpty)
-                              PolylineLayer(
-                                polylines: [
-                                  Polyline(
-                                    points: state.routePoints
-                                        .where((p) => p.length >= 2)
-                                        .map((p) => LatLng(p[1], p[0]))
-                                        .toList(),
-                                    color: const Color(0xFF00E5B8),
-                                    strokeWidth: 4,
-                                  ),
-                                ],
-                              ),
-                          ],
-                        );
-                      },
-                    ),
-                  ],
-                ),
-
-                // Top gradient overlay
-                Positioned(
-                  top: 0, left: 0, right: 0,
-                  child: Container(
-                    height: 280,
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Color.fromRGBO(8, 13, 24, 0.97),
-                          Color.fromRGBO(8, 13, 24, 0.6),
-                          Colors.transparent,
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Fare meter card
-                BlocBuilder<DriverBloc, DriverState>(
-                  builder: (context, state) {
-                    final speed = _speed;
-                    final waitMode = speed < 5;
-                    final fare = state.currentFare;
-                    return Positioned(
-                      top: 38, left: 16, right: 16,
-                      child: Container(
-                        padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          color: const Color.fromRGBO(9, 14, 26, 0.92),
-                          border: Border.all(
-                            color: _tripActive
-                                ? const Color.fromRGBO(255, 176, 32, 0.3)
-                                : const Color(0xFF1C2B45),
-                          ),
-                          borderRadius: BorderRadius.circular(22),
-                          boxShadow: [
-                            if (_tripActive)
-                              const BoxShadow(color: Color.fromRGBO(255, 176, 32, 0.08), blurRadius: 0, offset: Offset(0, 0)),
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.5),
-                              blurRadius: 32,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Container(
-                                            width: 6, height: 6,
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              color: _tripActive ? const Color(0xFFFFB020) : const Color(0xFF526480),
-                                              boxShadow: _tripActive
-                                                  ? [const BoxShadow(color: Color(0xFFFFB020), blurRadius: 8)]
-                                                  : null,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 6),
-                                          const Text('TOTAL FARE METER', style: TextStyle(
-                                            fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF526480),
-                                            letterSpacing: 0.8,
-                                          )),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 6),
-                                      _FareMeter(value: fare, isActive: _tripActive),
-                                    ],
-                                  ),
-                                ),
-                                Column(
-                                  children: [
-                                    GestureDetector(
-                                      onTap: () {
-                                        if (_tripActive) {
-                                          _endTrip();
-                                        } else {
-                                          _startTrip();
-                                        }
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                                        decoration: BoxDecoration(
-                                          color: _tripActive
-                                              ? const Color.fromRGBO(255, 59, 92, 0.12)
-                                              : const Color.fromRGBO(0, 229, 184, 0.12),
-                                          border: Border.all(
-                                            color: _tripActive
-                                                ? const Color.fromRGBO(255, 59, 92, 0.4)
-                                                : const Color.fromRGBO(0, 229, 184, 0.4),
-                                          ),
-                                          borderRadius: BorderRadius.circular(10),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              _tripActive ? Icons.pause : Icons.play_arrow,
-                                              size: 13,
-                                              color: _tripActive ? const Color(0xFFFF3B5C) : const Color(0xFF00E5B8),
-                                            ),
-                                            const SizedBox(width: 6),
-                                            Text(
-                                              _tripActive ? 'STOP' : 'START',
-                                              style: TextStyle(
-                                                fontSize: 12, fontWeight: FontWeight.w800,
-                                                color: _tripActive ? const Color(0xFFFF3B5C) : const Color(0xFF00E5B8),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      children: [
-                                        if (waitMode) const _Badge(label: 'WAIT', color: 'blue', dot: true),
-                                        if (_tripActive) ...[
-                                          const SizedBox(width: 8),
-                                          const _Badge(label: 'LIVE', color: 'amber', dot: true),
-                                        ],
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 14),
-                            // Speed bar
-                            Column(
-                              children: [
-                                Row(
-                                  children: [
-                                    const Text('SPEED', style: TextStyle(
-                                      fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF526480),
-                                      letterSpacing: 0.5,
-                                    )),
-                                    const Spacer(),
-                                    Text(
-                                      '${speed.toInt()} km/h${waitMode ? ' · Wait mode active' : ''}',
-                                      style: TextStyle(
-                                        fontFamily: 'monospace',
-                                        fontSize: 11,
-                                        color: waitMode ? const Color(0xFF4D9FFF) : const Color(0xFF8EA4C8),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(2),
-                                  child: SizedBox(
-                                    height: 3,
-                                    child: Stack(
-                                      children: [
-                                        Container(height: 3, color: const Color(0xFF1C2B45)),
-                                        AnimatedFractionallySizedBox(
-                                          duration: const Duration(milliseconds: 500),
-                                          widthFactor: (speed / 80).clamp(0.0, 1.0),
-                                          child: Container(
-                                            height: 3,
-                                            decoration: BoxDecoration(
-                                              gradient: LinearGradient(
-                                                colors: waitMode
-                                                    ? [const Color(0xFF4D9FFF), const Color(0xFF0066CC)]
-                                                    : [const Color(0xFF00E5B8), const Color(0xFF00B896)],
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 13),
-                            // Stat pills
-                            Container(
-                              padding: const EdgeInsets.only(top: 13),
-                              decoration: const BoxDecoration(
-                                border: Border(top: BorderSide(color: Color(0xFF1C2B45))),
-                              ),
-                              child: Row(
-                                children: [
-                                  _StatPill(
-                                    icon: Icons.route,
-                                    label: 'Distance',
-                                    value: '${state.distanceKm.toStringAsFixed(1)} km',
-                                  ),
-                                  Container(width: 1, height: 24, color: const Color(0xFF1C2B45)),
-                                  _StatPill(
-                                    icon: Icons.timer_outlined,
-                                    label: 'Time',
-                                    value: '${state.durationMin.toInt()} min',
-                                  ),
-                                  Container(width: 1, height: 24, color: const Color(0xFF1C2B45)),
-                                  _StatPill(
-                                    icon: Icons.pause,
-                                    label: 'Wait',
-                                    value: '${state.waitTimeMin.toInt()} min',
-                                    color: state.waitTimeMin > 0 ? const Color(0xFF4D9FFF) : null,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-
-                // Quick action buttons
-                Positioned(
-                  right: 14, top: 210,
-                  child: Column(
-                    children: [
-                      _QuickAction(
-                        icon: Icons.add,
-                        color: const Color(0xFF00E5B8),
-                        label: 'Add',
-                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DriverDispatchScreen())),
-                      ),
-                      const SizedBox(height: 9),
-                      _QuickAction(
-                        icon: Icons.warning_amber_rounded,
-                        color: const Color(0xFFFF3B5C),
-                        label: 'SOS',
-                        onTap: () => showDialog(context: context, builder: (ctx) => AlertDialog(
-                          backgroundColor: const Color(0xFF0F1628),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                          title: const Row(
-                            children: [
-                              Icon(Icons.warning_amber_rounded, color: Color(0xFFFF3B5C), size: 24),
-                              SizedBox(width: 10),
-                              Text('SOS', style: TextStyle(color: Color(0xFFFF3B5C), fontWeight: FontWeight.w800)),
-                            ],
-                          ),
-                          content: const Text('هل تواجه حالة طارئة؟ يمكنك الاتصال بالطوارئ أو إرسال تنبيه للمتابعين.', style: TextStyle(color: Color(0xFF8EA4C8), height: 1.5)),
-                          actions: [
-                            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء', style: TextStyle(color: Color(0xFF526480)))),
-                            TextButton.icon(
-                              onPressed: () { Navigator.pop(ctx); },
-                              icon: const Icon(Icons.phone, size: 16, color: Color(0xFFFF3B5C)),
-                              label: const Text('اتصال بالطوارئ', style: TextStyle(color: Color(0xFFFF3B5C))),
-                            ),
-                          ],
-                        )),
-                      ),
-                      const SizedBox(height: 9),
-                      _QuickAction(
-                        icon: Icons.wifi_off,
-                        color: const Color(0xFF526480),
-                        label: 'Offline',
-                        onTap: () {
-                          context.read<DriverBloc>().add(ToggleAvailability(
-                            isAvailable: !context.read<DriverBloc>().state.isAvailable,
-                          ));
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Bottom sheet
-                Positioned(
-                  bottom: 0, left: 0, right: 0,
-                  child: _PassengerBottomSheet(
-                    tripActive: _tripActive,
-                    onEndSub: (passengerId) {
-                      final trip = context.read<DriverBloc>().state.currentTrip;
-                      if (trip != null) {
-                        context.read<DriverBloc>().add(UpdatePassengerStatus(
-                          tripPassengerId: passengerId.toString(),
-                          status: 'ended',
-                        ));
-                      }
-                    },
-                  ),
-                ),
-              ],
-            ),
+            child: content,
           ),
         ),
       ),
@@ -697,9 +705,10 @@ class _QuickAction extends StatelessWidget {
 
 // ─── Passenger Bottom Sheet ───────────────────────────────────────────────────
 class _PassengerBottomSheet extends StatefulWidget {
+  final bool inTab;
   final bool tripActive;
   final void Function(String passengerId) onEndSub;
-  const _PassengerBottomSheet({required this.tripActive, required this.onEndSub});
+  const _PassengerBottomSheet({required this.inTab, required this.tripActive, required this.onEndSub});
 
   @override
   State<_PassengerBottomSheet> createState() => _PassengerBottomSheetState();
@@ -927,8 +936,8 @@ class _PassengerBottomSheetState extends State<_PassengerBottomSheet> {
                   },
                 ),
               ),
-              // Bottom nav
-              Container(
+              // Bottom nav (only when standalone)
+              if (!widget.inTab) Container(
                 decoration: const BoxDecoration(
                   border: Border(top: BorderSide(color: Color(0xFF1C2B45))),
                 ),

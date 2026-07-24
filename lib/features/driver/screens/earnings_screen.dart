@@ -6,7 +6,8 @@ import '../bloc/driver_event.dart';
 import '../bloc/driver_state.dart';
 
 class EarningsScreen extends StatefulWidget {
-  const EarningsScreen({super.key});
+  final bool inTab;
+  const EarningsScreen({super.key, this.inTab = false});
 
   @override
   State<EarningsScreen> createState() => _EarningsScreenState();
@@ -27,7 +28,7 @@ class _EarningsScreenState extends State<EarningsScreen> {
         backgroundColor: Colors.transparent, elevation: 0,
         title: const Text('الأرباح', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFFEDF2FC))),
         centerTitle: true,
-        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Color(0xFF00E5B8)), onPressed: () => Navigator.pop(context)),
+        leading: widget.inTab ? const SizedBox.shrink() : IconButton(icon: const Icon(Icons.arrow_back, color: Color(0xFF00E5B8)), onPressed: () => Navigator.pop(context)),
       ),
       body: BlocBuilder<DriverBloc, DriverState>(
         builder: (context, state) {

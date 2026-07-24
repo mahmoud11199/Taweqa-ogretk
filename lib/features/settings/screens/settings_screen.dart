@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../../profile/screens/edit_profile_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  final bool inTab;
+  const SettingsScreen({super.key, this.inTab = false});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -36,7 +37,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         elevation: 0,
         title: const Text('الإعدادات', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFFEDF2FC))),
         centerTitle: true,
-        leading: IconButton(
+        leading: widget.inTab ? const SizedBox.shrink() : IconButton(
           icon: const Icon(Icons.arrow_back, color: Color(0xFF00E5B8)),
           onPressed: () => Navigator.pop(context),
         ),

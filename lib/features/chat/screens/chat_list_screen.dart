@@ -7,7 +7,8 @@ import '../bloc/chat_state.dart';
 import 'chat_screen.dart';
 
 class ChatListScreen extends StatefulWidget {
-  const ChatListScreen({super.key});
+  final bool inTab;
+  const ChatListScreen({super.key, this.inTab = false});
 
   @override
   State<ChatListScreen> createState() => _ChatListScreenState();
@@ -29,7 +30,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         elevation: 0,
         title: const Text('الرسائل', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFFEDF2FC))),
         centerTitle: true,
-        leading: IconButton(
+        leading: widget.inTab ? const SizedBox.shrink() : IconButton(
           icon: const Icon(Icons.arrow_back, color: Color(0xFF00E5B8)),
           onPressed: () => Navigator.pop(context),
         ),

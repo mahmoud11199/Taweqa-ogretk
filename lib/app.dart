@@ -7,7 +7,7 @@ import 'features/landing/screens/landing_screen.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/register_screen.dart';
 import 'features/auth/screens/forgot_password_screen.dart';
-import 'features/driver/screens/driver_meter_screen.dart';
+import 'features/driver/screens/driver_home_screen.dart';
 import 'features/driver/models/trip_model.dart';
 import 'features/passenger/screens/passenger_home_screen.dart';
 import 'features/admin/screens/admin_dashboard_screen.dart';
@@ -55,7 +55,7 @@ class TaweqeApp extends StatelessWidget {
           case Routes.forgotPassword:
             screen = const ForgotPasswordScreen();
           case Routes.driver:
-            screen = const DriverMeterScreen();
+            screen = const DriverHomeScreen();
           case Routes.passenger:
             screen = const PassengerHomeScreen();
           case Routes.admin:

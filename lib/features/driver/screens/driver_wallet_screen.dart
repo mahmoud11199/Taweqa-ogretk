@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 class DriverWalletScreen extends StatefulWidget {
-  const DriverWalletScreen({super.key});
+  final bool inTab;
+  const DriverWalletScreen({super.key, this.inTab = false});
 
   @override
   State<DriverWalletScreen> createState() => _DriverWalletScreenState();
@@ -28,7 +29,7 @@ class _DriverWalletScreenState extends State<DriverWalletScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
+        leading: widget.inTab ? const SizedBox.shrink() : IconButton(
           icon: const Icon(Icons.arrow_back, color: Color(0xFF00E5B8)),
           onPressed: () => Navigator.pop(context),
         ),

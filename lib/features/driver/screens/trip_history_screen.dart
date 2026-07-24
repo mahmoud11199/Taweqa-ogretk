@@ -9,7 +9,8 @@ import '../../trip/screens/trip_details_screen.dart';
 import 'scheduled_trips_screen.dart';
 
 class TripHistoryScreen extends StatefulWidget {
-  const TripHistoryScreen({super.key});
+  final bool inTab;
+  const TripHistoryScreen({super.key, this.inTab = false});
 
   @override
   State<TripHistoryScreen> createState() => _TripHistoryScreenState();
@@ -30,7 +31,7 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
         backgroundColor: Colors.transparent, elevation: 0,
         title: const Text('سجل الرحلات', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFFEDF2FC))),
         centerTitle: true,
-        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Color(0xFF00E5B8)), onPressed: () => Navigator.pop(context)),
+        leading: widget.inTab ? const SizedBox.shrink() : IconButton(icon: const Icon(Icons.arrow_back, color: Color(0xFF00E5B8)), onPressed: () => Navigator.pop(context)),
         actions: [
           TextButton.icon(
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ScheduledTripsScreen())),
