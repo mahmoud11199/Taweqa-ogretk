@@ -25,11 +25,11 @@ class DriverDispatchScreen extends StatelessWidget {
           ),
           title: const Text('طلبات الركاب', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFFEDF2FC))),
           centerTitle: true,
-          bottom: TabBar(
-            indicatorColor: const Color(0xFF00E5B8),
-            labelColor: const Color(0xFF00E5B8),
-            unselectedLabelColor: const Color(0xFF526480),
-            tabs: const [
+          bottom: const TabBar(
+            indicatorColor: Color(0xFF00E5B8),
+            labelColor: Color(0xFF00E5B8),
+            unselectedLabelColor: Color(0xFF526480),
+            tabs: [
               Tab(icon: Icon(Icons.flash_on, size: 18), text: 'مباشر'),
               Tab(icon: Icon(Icons.calendar_month, size: 18), text: 'مجدول'),
             ],

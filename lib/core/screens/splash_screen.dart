@@ -15,6 +15,7 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   int _progress = 0;
+  Timer? _timer;
 
   @override
   void initState() {
@@ -23,7 +24,7 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void _startAnimation() {
-    Timer.periodic(const Duration(milliseconds: 50), (timer) {
+    _timer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
       if (_progress >= 100) {
         timer.cancel();
         Future.delayed(const Duration(milliseconds: 200), () {
@@ -41,6 +42,12 @@ class _SplashScreenState extends State<SplashScreen> {
       }
       setState(() => _progress += 2);
     });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   @override

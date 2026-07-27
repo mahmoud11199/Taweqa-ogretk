@@ -74,6 +74,9 @@ class AdminRepository {
         'pricing_per_min': (map['pricing_per_min'] as num?)?.toDouble() ?? 0.5,
         'base_fare': (map['base_fare'] as num?)?.toDouble() ?? 5.0,
         'commission_rate': (map['commission_rate'] as num?)?.toDouble() ?? 0.15,
+        'wait_price': (map['wait_price'] as num?)?.toDouble() ?? 1.0,
+        'night_multiplier': (map['night_multiplier'] as num?)?.toDouble() ?? 1.5,
+        'min_fare': (map['min_fare'] as num?)?.toDouble() ?? 5.0,
       };
     }
     return {};

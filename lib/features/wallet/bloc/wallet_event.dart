@@ -27,3 +27,25 @@ class DeductPayment extends WalletEvent {
   final String tripId;
   DeductPayment({required this.amount, required this.tripId});
 }
+
+class LoadCards extends WalletEvent {}
+
+class SaveCard extends WalletEvent {
+  final String cardHolder;
+  final String last4;
+  final String brand;
+  final int expMonth;
+  final int expYear;
+  SaveCard({
+    required this.cardHolder,
+    required this.last4,
+    required this.brand,
+    required this.expMonth,
+    required this.expYear,
+  });
+}
+
+class DeleteCard extends WalletEvent {
+  final String cardId;
+  DeleteCard(this.cardId);
+}

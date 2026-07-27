@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../wallet/bloc/wallet_bloc.dart';
 import '../../wallet/bloc/wallet_event.dart';
 import '../../wallet/bloc/wallet_state.dart';
+import '../../wallet/models/wallet_model.dart';
 import '../../wallet/screens/add_funds_screen.dart';
 
 class DriverWalletScreen extends StatefulWidget {

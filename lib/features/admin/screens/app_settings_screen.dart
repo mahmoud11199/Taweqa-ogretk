@@ -17,6 +17,9 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
   final _perMinController = TextEditingController();
   final _baseFareController = TextEditingController();
   final _commissionController = TextEditingController();
+  final _waitPriceController = TextEditingController();
+  final _nightMultiplierController = TextEditingController();
+  final _minFareController = TextEditingController();
 
   @override
   void initState() {
@@ -30,6 +33,9 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     _perMinController.dispose();
     _baseFareController.dispose();
     _commissionController.dispose();
+    _waitPriceController.dispose();
+    _nightMultiplierController.dispose();
+    _minFareController.dispose();
     super.dispose();
   }
 
@@ -39,6 +45,9 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     _perMinController.text = (settings['pricing_per_min'] ?? 0.5).toString();
     _baseFareController.text = (settings['base_fare'] ?? 5.0).toString();
     _commissionController.text = ((settings['commission_rate'] ?? 0.15) * 100).toStringAsFixed(1);
+    _waitPriceController.text = (settings['wait_price'] ?? 1.0).toString();
+    _nightMultiplierController.text = (settings['night_multiplier'] ?? 1.5).toString();
+    _minFareController.text = (settings['min_fare'] ?? 5.0).toString();
   }
 
   void _save() {
@@ -46,13 +55,19 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     final perMin = double.tryParse(_perMinController.text);
     final baseFare = double.tryParse(_baseFareController.text);
     final commission = double.tryParse(_commissionController.text);
-    if (perKm == null || perMin == null || baseFare == null || commission == null) {
+    final waitPrice = double.tryParse(_waitPriceController.text);
+    final nightMultiplier = double.tryParse(_nightMultiplierController.text);
+    final minFare = double.tryParse(_minFareController.text);
+    if (perKm == null || perMin == null || baseFare == null || commission == null ||
+        waitPrice == null || nightMultiplier == null || minFare == null) {
       showToast(context, 'يرجى إدخال أرقام صحيحة', isError: true);
       return;
     }
     context.read<AdminBloc>().add(UpdateAppSettings({
       'pricing_per_km': perKm, 'pricing_per_min': perMin,
       'base_fare': baseFare, 'commission_rate': commission / 100,
+      'wait_price': waitPrice, 'night_multiplier': nightMultiplier,
+      'min_fare': minFare,
     }));
     showToast(context, 'تم حفظ الإعدادات');
   }
@@ -75,7 +90,13 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                 const SizedBox(height: 16),
                 _Field(label: 'سعر الدقيقة (جنيه)', controller: _perMinController),
                 const SizedBox(height: 16),
+                _Field(label: 'سعر الانتظار (جنيه/دقيقة)', controller: _waitPriceController),
+                const SizedBox(height: 16),
                 _Field(label: 'الأساسي (جنيه)', controller: _baseFareController),
+                const SizedBox(height: 16),
+                _Field(label: 'الحد الأدنى (جنيه)', controller: _minFareController),
+                const SizedBox(height: 16),
+                _Field(label: 'مضاعف الليل (x)', controller: _nightMultiplierController),
                 const SizedBox(height: 16),
                 _Field(label: 'نسبة التطبيق (%)', controller: _commissionController),
                 const SizedBox(height: 32),

@@ -77,4 +77,24 @@ class WalletRepository {
       'p_trip_id': tripId,
     });
   }
+
+  Future<List<BankCard>> fetchCards(String userId) async {
+    final response = await _client
+        .from('saved_cards')
+        .select()
+        .eq('user_id', userId)
+        .order('created_at', ascending: false);
+    final list = response as List<dynamic>;
+    return list.map((e) => BankCard.fromMap(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<void> saveCard(String userId, BankCard card) async {
+    final data = card.toMap();
+    data['user_id'] = userId;
+    await _client.from('saved_cards').insert(data);
+  }
+
+  Future<void> deleteCard(String cardId) async {
+    await _client.from('saved_cards').delete().eq('id', cardId);
+  }
 }

@@ -4,7 +4,7 @@ import '../../../core/widgets/toast_widget.dart';
 import '../bloc/wallet_bloc.dart';
 import '../bloc/wallet_event.dart';
 import '../bloc/wallet_state.dart';
-import 'paymob_mock_screen.dart';
+import 'paymob_mock_screen.dart' as paymob;
 
 class AddFundsScreen extends StatefulWidget {
   const AddFundsScreen({super.key});
@@ -48,7 +48,7 @@ class _AddFundsScreenState extends State<AddFundsScreen> {
           _paymentInProgress = true;
           final walletBloc = context.read<WalletBloc>();
           final pk = state.paymobPaymentKey!;
-          Navigator.push(context, MaterialPageRoute(builder: (_) => PaymobMockScreen(paymentKey: pk))).then((success) {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => paymob.PaymobCheckoutScreen(paymentKey: pk))).then((success) {
             _paymentInProgress = false;
             if (success == true && mounted) walletBloc.add(VerifyDeposit(pk));
           });

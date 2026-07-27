@@ -122,3 +122,9 @@ class UpdateDestination extends PassengerEvent {
     required this.address,
   });
 }
+
+class UpdateDriverTracking extends PassengerEvent {
+  final double lat;
+  final double lng;
+  UpdateDriverTracking({required this.lat, required this.lng});
+}

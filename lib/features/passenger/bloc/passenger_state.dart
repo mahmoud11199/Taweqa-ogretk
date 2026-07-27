@@ -18,6 +18,8 @@ class PassengerState {
   final String? joinedTripId;
   final String? joinedDriverId;
   final List<RideRequest> scheduledTrips;
+  final double? driverLat;
+  final double? driverLng;
 
   const PassengerState({
     this.isLoading = false,
@@ -37,6 +39,8 @@ class PassengerState {
     this.estimatedDuration,
     this.joinedTripId,
     this.joinedDriverId,
+    this.driverLat,
+    this.driverLng,
   });
 
   PassengerState copyWith({
@@ -57,6 +61,8 @@ class PassengerState {
     double? estimatedDuration,
     String? joinedTripId,
     String? joinedDriverId,
+    double? driverLat,
+    double? driverLng,
     bool clearError = false,
   }) {
     return PassengerState(
@@ -77,6 +83,8 @@ class PassengerState {
       estimatedDuration: estimatedDuration ?? this.estimatedDuration,
       joinedTripId: joinedTripId ?? this.joinedTripId,
       joinedDriverId: joinedDriverId ?? this.joinedDriverId,
+      driverLat: driverLat ?? this.driverLat,
+      driverLng: driverLng ?? this.driverLng,
     );
   }
 }

@@ -4,7 +4,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../core/config/supabase_config.dart';
+import '../../../core/services/sos_service.dart';
 import '../../../core/widgets/toast_widget.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_event.dart';
 import '../../auth/bloc/auth_state.dart';
@@ -34,11 +38,44 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
   double _currentLng = 30.8025;
   bool _isSelectingDestination = false;
   bool _drawerOpen = false;
+  sb.RealtimeChannel? _driverTrackingChannel;
 
   @override
   void initState() {
     super.initState();
     _getCurrentLocation();
+  }
+
+  @override
+  void dispose() {
+    _driverTrackingChannel?.unsubscribe();
+    super.dispose();
+  }
+
+  void _startDriverTracking(String driverId) {
+    _driverTrackingChannel?.unsubscribe();
+    _driverTrackingChannel = SupabaseConfig.client.channel('driver-location-$driverId')
+      ..onPostgresChanges(
+        event: sb.PostgresChangeEvent.update,
+        schema: 'public',
+        table: 'driver_locations',
+        filter: sb.PostgresChangeFilter(
+          type: sb.PostgresChangeFilterType.eq,
+          column: 'driver_id',
+          value: driverId,
+        ),
+        callback: (payload) {
+          if (!mounted) return;
+          final newData = payload.newRecord;
+          if (newData['lat'] != null && newData['lng'] != null) {
+            context.read<PassengerBloc>().add(UpdateDriverTracking(
+              lat: (newData['lat'] as num).toDouble(),
+              lng: (newData['lng'] as num).toDouble(),
+            ));
+          }
+        },
+      )
+      ..subscribe();
   }
 
   Future<void> _getCurrentLocation() async {
@@ -190,6 +227,12 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
                           width: 30, height: 30,
                           child: const Icon(Icons.local_taxi, color: Color(0xFF0088CC), size: 24),
                         )),
+                        if (state.driverLat != null && state.driverLng != null)
+                          Marker(
+                            point: LatLng(state.driverLat!, state.driverLng!),
+                            width: 36, height: 36,
+                            child: const Icon(Icons.directions_car, color: Color(0xFF00E5B8), size: 32),
+                          ),
                       ],
                     );
                   },
@@ -458,6 +501,23 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
   // ── Active Ride Card ──────────────────────────────────────────────────────
   Widget _buildActiveRideCard(PassengerState state) {
     final req = state.activeRequest!;
+    final bool isAccepted = req.status == 'accepted';
+    final bool isStarted = req.status == 'started';
+    final bool isCompleted = req.status == 'completed';
+    final bool isTracking = isAccepted || isStarted;
+
+    if (isTracking && state.driverLat == null) {
+      _startDriverTracking(req.driverId ?? req.id);
+    }
+
+    final int progressIndex = req.status == 'accepted' ? 1 : req.status == 'started' ? 2 : req.status == 'completed' ? 3 : 0;
+    final String statusText = req.status == 'searching' ? 'جاري البحث عن سائق...' :
+                              req.status == 'accepted' ? 'السائق في الطريق إليك' :
+                              req.status == 'started' ? 'الرحلة جارية' : 'الرحلة منتهية';
+    final String statusDesc = req.status == 'searching' ? 'جارٍ العثور على سائق قريب' :
+                              req.status == 'accepted' ? 'وصول السائق خلال 3-5 دقائق' :
+                              req.status == 'started' ? 'متجه إلى الوجهة' : 'شكرًا لاستخدامك توقع أجرتك';
+
     return Positioned(
       left: 16, right: 16,
       bottom: MediaQuery.of(context).padding.bottom + 16,
@@ -482,8 +542,8 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
                   ),
                   child: Icon(
                     req.status == 'searching' ? Icons.hourglass_top :
-                    req.status == 'accepted' ? Icons.check_circle :
-                    req.status == 'started' ? Icons.directions_car : Icons.star,
+                    isAccepted ? Icons.person_pin :
+                    isStarted ? Icons.directions_car : Icons.star,
                     color: const Color(0xFF00E5B8), size: 24,
                   ),
                 ),
@@ -491,23 +551,44 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
                 Expanded(child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      req.status == 'searching' ? 'جاري البحث عن سائق...' :
-                      req.status == 'accepted' ? 'تم قبول الرحلة' :
-                      req.status == 'started' ? 'السائق في الطريق' : 'الرحلة منتهية',
-                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFFEDF2FC)),
-                    ),
+                    Text(statusText, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFFEDF2FC))),
                     const SizedBox(height: 2),
-                    Text(
-                      req.status == 'searching' ? 'جارٍ العثور على سائق قريب' :
-                      req.status == 'accepted' ? 'سيتصل بك السائق قريبًا' :
-                      req.status == 'started' ? 'وصول خلال 5 دقائق' : 'شكرًا لاستخدامك توقع أجرتك',
-                      style: const TextStyle(fontSize: 12, color: Color(0xFF526480)),
-                    ),
+                    Text(statusDesc, style: const TextStyle(fontSize: 12, color: Color(0xFF526480))),
                   ],
                 )),
               ],
             ),
+            // Progress steps (only when accepted or started)
+            if (isTracking) ...[
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  _buildStep('تم القبول', progressIndex >= 1, Icons.check_circle),
+                  _buildStepLine(progressIndex >= 1),
+                  _buildStep('وصل السائق', progressIndex >= 2, isAccepted ? Icons.schedule : Icons.check_circle),
+                  _buildStepLine(progressIndex >= 2),
+                  _buildStep('جاري التوصيل', progressIndex >= 3, isStarted && !isCompleted ? Icons.directions_car : Icons.check_circle),
+                  _buildStepLine(progressIndex >= 3),
+                  _buildStep('تم', progressIndex >= 4, Icons.flag),
+                ],
+              ),
+              // ETA row
+              if (state.driverLat != null && state.pickupLat != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.timer_outlined, color: Color(0xFF00E5B8), size: 16),
+                      const SizedBox(width: 6),
+                      Text(
+                        'المسافة المتبقية: ${_calculateDistance(state).toStringAsFixed(1)} كم',
+                        style: const TextStyle(fontSize: 13, color: Color(0xFF8BA4C0)),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
             if (req.status == 'searching')
               Padding(
                 padding: const EdgeInsets.only(top: 16),
@@ -527,7 +608,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
                   ),
                 ),
               ),
-            if (req.status == 'accepted' || req.status == 'started')
+            if (isTracking)
               Padding(
                 padding: const EdgeInsets.only(top: 16),
                 child: Row(
@@ -554,15 +635,26 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
                       child: SizedBox(
                         height: 44,
                         child: ElevatedButton.icon(
-                          onPressed: () {},
-                          icon: const Icon(Icons.info_outline, size: 16),
-                          label: const Text('التفاصيل', style: TextStyle(fontWeight: FontWeight.w700)),
+                          onPressed: () async {
+                            final user = SupabaseConfig.client.auth.currentUser;
+                            if (user != null) {
+                              SosService.sendAlert(
+                                userId: user.id,
+                                lat: state.pickupLat ?? 0,
+                                lng: state.pickupLng ?? 0,
+                                message: 'طلب نجدة من الراكب',
+                              );
+                            }
+                            await launchUrl(Uri.parse('tel:122'));
+                          },
+                          icon: const Icon(Icons.warning_amber_rounded, size: 16),
+                          label: const Text('SOS', style: TextStyle(fontWeight: FontWeight.w700)),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color.fromRGBO(0, 136, 204, 0.1),
-                            foregroundColor: const Color(0xFF0088CC),
+                            backgroundColor: const Color.fromRGBO(255, 59, 92, 0.1),
+                            foregroundColor: const Color(0xFFFF3B5C),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                             elevation: 0,
-                            side: const BorderSide(color: Color.fromRGBO(0, 136, 204, 0.25)),
+                            side: const BorderSide(color: Color.fromRGBO(255, 59, 92, 0.25)),
                           ),
                         ),
                       ),
@@ -570,7 +662,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
                   ],
                 ),
               ),
-            if (req.status == 'completed')
+            if (isCompleted)
               Padding(
                 padding: const EdgeInsets.only(top: 16),
                 child: SizedBox(
@@ -597,6 +689,39 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildStep(String label, bool active, IconData icon) {
+    return Expanded(
+      child: Column(
+        children: [
+          Icon(icon, size: 18, color: active ? const Color(0xFF00E5B8) : const Color(0xFF1C2B45)),
+          const SizedBox(height: 4),
+          Text(label, style: TextStyle(fontSize: 9, color: active ? const Color(0xFF00E5B8) : const Color(0xFF526480))),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStepLine(bool active) {
+    return Container(
+      height: 2,
+      width: 12,
+      margin: const EdgeInsets.only(bottom: 18),
+      decoration: BoxDecoration(
+        color: active ? const Color(0xFF00E5B8) : const Color(0xFF1C2B45),
+        borderRadius: BorderRadius.circular(1),
+      ),
+    );
+  }
+
+  double _calculateDistance(PassengerState state) {
+    if (state.driverLat == null || state.driverLng == null || state.pickupLat == null || state.pickupLng == null) return 0;
+    const distance = Distance();
+    return distance(
+      LatLng(state.driverLat!, state.driverLng!),
+      LatLng(state.pickupLat!, state.pickupLng!),
+    ) / 1000;
   }
 }
 

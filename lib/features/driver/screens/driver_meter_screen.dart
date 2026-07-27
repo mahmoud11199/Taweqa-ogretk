@@ -39,7 +39,6 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
   final MapController _mapController = MapController();
   StreamSubscription<Position>? _positionSubscription;
   Timer? _gpsTimer;
-  Timer? _simulationTimer;
   Timer? _meterTickTimer;
   sb.RealtimeChannel? _requestChannel;
   final List<MeterData> _meters = [MeterData(id: 1), MeterData(id: 2)];
@@ -154,6 +153,44 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
       m.totalDistance += 0.1;
       m.pathCoords = [...m.pathCoords, [state.currentLng, state.currentLat]];
     });
+  }
+
+  void _showAddPassengerDialog() {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF0F1628),
+        title: const Text('إضافة راكب', style: TextStyle(color: Color(0xFFEDF2FC))),
+        content: TextField(
+          controller: controller,
+          style: const TextStyle(color: Color(0xFFEDF2FC)),
+          decoration: const InputDecoration(
+            hintText: 'اسم الراكب (اختياري)',
+            hintStyle: TextStyle(color: Color(0xFF526480)),
+            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF1C2B45))),
+            focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF00E5B8))),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('إلغاء', style: TextStyle(color: Color(0xFF526480))),
+          ),
+          TextButton(
+            onPressed: () {
+              setState(() => _meter.addPassenger(controller.text.trim()));
+              Navigator.pop(ctx);
+            },
+            child: const Text('إضافة', style: TextStyle(color: Color(0xFF00E5B8))),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _exitPassenger(int index) {
+    setState(() => _meter.exitPassenger(index));
   }
 
   void _startMeter() {
@@ -454,6 +491,77 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
                   ],
                 ),
                 const SizedBox(height: 6),
+                // Afrad passenger management
+                if (_meter.tripType == 'afrad') ...[
+                  if (_meter.isActive) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () => _showAddPassengerDialog(),
+                          icon: const Icon(Icons.person_add, size: 14),
+                          label: const Text('إضافة راكب', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color.fromRGBO(0, 229, 184, 0.1),
+                            foregroundColor: const Color(0xFF00E5B8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            side: const BorderSide(color: Color.fromRGBO(0, 229, 184, 0.25)),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (_meter.passengers.isNotEmpty)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color.fromRGBO(0, 229, 184, 0.05),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color.fromRGBO(0, 229, 184, 0.15)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('الركاب:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF526480))),
+                            const SizedBox(height: 4),
+                            ..._meter.passengers.asMap().entries.map((e) {
+                              final p = e.value;
+                              final idx = e.key;
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Row(
+                                  children: [
+                                    Icon(p.exited ? Icons.check_circle : Icons.person,
+                                      size: 14, color: p.exited ? const Color(0xFF00E5B8) : const Color(0xFF8BA4C0)),
+                                    const SizedBox(width: 6),
+                                    Expanded(child: Text(
+                                      '${p.name.isEmpty ? 'راكب ${idx + 1}' : p.name}${p.exited ? ' (خرج)' : ''}',
+                                      style: TextStyle(fontSize: 12, color: p.exited ? const Color(0xFF526480) : const Color(0xFFEDF2FC)),
+                                    )),
+                                    if (!p.exited)
+                                      GestureDetector(
+                                        onTap: () => _exitPassenger(idx),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: const Color.fromRGBO(255, 59, 92, 0.1),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: const Text('خروج', style: TextStyle(fontSize: 10, color: Color(0xFFFF3B5C), fontWeight: FontWeight.w700)),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              );
+                            }),
+                          ],
+                        ),
+                      ),
+                  ],
+                ],
                 // Fare display
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -830,53 +938,6 @@ class _StatPill extends StatelessWidget {
   }
 }
 
-// ─── Badge ────────────────────────────────────────────────────────────────────
-class _Badge extends StatelessWidget {
-  final String label;
-  final String color;
-  final bool dot;
-  const _Badge({required this.label, required this.color, this.dot = false});
-
-  Color _fg() {
-    switch (color) {
-      case 'amber': return const Color(0xFFFFB020);
-      case 'blue': return const Color(0xFF4D9FFF);
-      case 'red': return const Color(0xFFFF3B5C);
-      case 'green': return const Color(0xFF22C97A);
-      default: return const Color(0xFF00E5B8);
-    }
-  }
-
-  Color _bg() => _fg().withValues(alpha: 0.12);
-  Color _br() => _fg().withValues(alpha: 0.25);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: _bg(),
-        border: Border.all(color: _br()),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (dot) Container(
-            width: 5, height: 5,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: _fg()),
-          ),
-          if (dot) const SizedBox(width: 5),
-          Text(label, style: TextStyle(
-            fontSize: 10, fontWeight: FontWeight.w700, color: _fg(),
-            letterSpacing: 0.6,
-          )),
-        ],
-      ),
-    );
-  }
-}
-
 // ─── Quick Action ─────────────────────────────────────────────────────────────
 class _QuickAction extends StatelessWidget {
   final IconData icon;
@@ -1166,6 +1227,33 @@ class _PassengerBottomSheetState extends State<_PassengerBottomSheet> {
           ),
         );
       },
+    );
+  }
+}
+
+// ─── Bottom Nav Item ─────────────────────────────────────────────────────
+class _NavItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+  const _NavItem({required this.icon, required this.label, required this.active, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 22, color: active ? const Color(0xFF00E5B8) : const Color(0xFF526480)),
+            const SizedBox(height: 4),
+            Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600,
+              color: active ? const Color(0xFF00E5B8) : const Color(0xFF526480))),
+          ],
+        ),
+      ),
     );
   }
 }

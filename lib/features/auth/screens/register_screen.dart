@@ -110,7 +110,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   _buildField(label: 'رقم الهاتف', icon: Icons.phone_outlined, controller: _phoneController, keyboardType: TextInputType.phone, validator: Validators.phone),
                   const SizedBox(height: 14),
                   _buildPasswordField(label: 'كلمة السر', controller: _passwordController, obscure: _obscurePassword, toggle: () => setState(() => _obscurePassword = !_obscurePassword), validator: Validators.password),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 6),
+                  _PasswordStrengthBar(password: _passwordController.text, controller: _passwordController),
+                  const SizedBox(height: 8),
                   _buildPasswordField(label: 'تأكيد كلمة السر', controller: _confirmPasswordController, obscure: _obscureConfirm, toggle: () => setState(() => _obscureConfirm = !_obscureConfirm), validator: (v) => Validators.confirmPassword(v, _passwordController.text)),
                   const SizedBox(height: 14),
                   _buildField(label: 'كود الإحالة (اختياري)', icon: Icons.discount_outlined, controller: _refCodeController),
@@ -197,6 +199,91 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
       obscureText: obscure,
       validator: validator,
+    );
+  }
+}
+
+// ─── Password Strength Bar ──────────────────────────────────────────────────
+class _PasswordStrengthBar extends StatefulWidget {
+  final String password;
+  final TextEditingController controller;
+  const _PasswordStrengthBar({required this.password, required this.controller});
+
+  @override
+  State<_PasswordStrengthBar> createState() => _PasswordStrengthBarState();
+}
+
+class _PasswordStrengthBarState extends State<_PasswordStrengthBar> {
+  String _pwd = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _pwd = widget.password;
+    widget.controller.addListener(_onChange);
+  }
+
+  @override
+  void didUpdateWidget(_PasswordStrengthBar old) {
+    super.didUpdateWidget(old);
+    if (old.controller != widget.controller) {
+      old.controller.removeListener(_onChange);
+      widget.controller.addListener(_onChange);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onChange);
+    super.dispose();
+  }
+
+  void _onChange() => setState(() => _pwd = widget.controller.text);
+
+  @override
+  Widget build(BuildContext context) {
+    if (_pwd.isEmpty) return const SizedBox.shrink();
+    return _StrengthBar(password: _pwd);
+  }
+}
+
+class _StrengthBar extends StatelessWidget {
+  final String password;
+  const _StrengthBar({required this.password});
+
+  (double, Color, String) _strength() {
+    if (password.length < 4) return (0.2, const Color(0xFFFF3B5C), 'ضعيفة');
+    if (password.length < 6) return (0.35, const Color(0xFFFF6B35), 'ضعيفة');
+    bool hasUpper = password.contains(RegExp(r'[A-Z]'));
+    bool hasDigit = password.contains(RegExp(r'[0-9]'));
+    bool hasSpecial = password.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>]'));
+    int score = 0;
+    if (password.length >= 8) score++;
+    if (hasUpper) score++;
+    if (hasDigit) score++;
+    if (hasSpecial) score++;
+    if (score <= 1) return (0.5, const Color(0xFFFFB020), 'متوسطة');
+    if (score == 2) return (0.7, const Color(0xFF8BC34A), 'جيدة');
+    return (1.0, const Color(0xFF00E5B8), 'قوية');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final (fraction, color, label) = _strength();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: fraction, backgroundColor: const Color(0xFF1C2B45),
+            valueColor: AlwaysStoppedAnimation(color),
+            minHeight: 4,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(label, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600)),
+      ],
     );
   }
 }

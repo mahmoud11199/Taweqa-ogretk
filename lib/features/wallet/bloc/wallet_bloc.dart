@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/config/supabase_config.dart';
+import '../models/wallet_model.dart';
 import '../repositories/wallet_repository.dart';
 import 'wallet_event.dart';
 import 'wallet_state.dart';
@@ -15,6 +16,9 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     on<InitDeposit>(_onInitDeposit);
     on<VerifyDeposit>(_onVerifyDeposit);
     on<DeductPayment>(_onDeductPayment);
+    on<LoadCards>(_onLoadCards);
+    on<SaveCard>(_onSaveCard);
+    on<DeleteCard>(_onDeleteCard);
   }
 
   Future<void> _onLoadWallet(
@@ -104,6 +108,50 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       emit(state.copyWith(isLoading: false, wallet: wallet));
     } catch (e) {
       emit(state.copyWith(isLoading: false, error: e.toString()));
+    }
+  }
+
+  Future<void> _onLoadCards(
+      LoadCards event, Emitter<WalletState> emit) async {
+    try {
+      final user = SupabaseConfig.client.auth.currentUser;
+      if (user == null) return;
+      final cards = await _repository.fetchCards(user.id);
+      emit(state.copyWith(cards: cards));
+    } catch (e) {
+      emit(state.copyWith(error: e.toString()));
+    }
+  }
+
+  Future<void> _onSaveCard(
+      SaveCard event, Emitter<WalletState> emit) async {
+    try {
+      final user = SupabaseConfig.client.auth.currentUser;
+      if (user == null) return;
+      final card = BankCard(
+        id: '', userId: user.id,
+        cardHolder: event.cardHolder, last4: event.last4,
+        brand: event.brand, expMonth: event.expMonth, expYear: event.expYear,
+      );
+      await _repository.saveCard(user.id, card);
+      final cards = await _repository.fetchCards(user.id);
+      emit(state.copyWith(cards: cards));
+    } catch (e) {
+      emit(state.copyWith(error: e.toString()));
+    }
+  }
+
+  Future<void> _onDeleteCard(
+      DeleteCard event, Emitter<WalletState> emit) async {
+    try {
+      await _repository.deleteCard(event.cardId);
+      final user = SupabaseConfig.client.auth.currentUser;
+      if (user != null) {
+        final cards = await _repository.fetchCards(user.id);
+        emit(state.copyWith(cards: cards));
+      }
+    } catch (e) {
+      emit(state.copyWith(error: e.toString()));
     }
   }
 }

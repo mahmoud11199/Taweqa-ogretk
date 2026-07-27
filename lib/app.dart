@@ -26,7 +26,7 @@ import 'features/profile/screens/edit_profile_screen.dart';
 import 'features/auth/screens/phone_login_screen.dart';
 import 'features/auth/screens/phone_otp_screen.dart';
 import 'features/auth/screens/role_screen.dart';
-import 'features/wallet/screens/paymob_mock_screen.dart';
+import 'features/wallet/screens/paymob_mock_screen.dart' as paymob;
 import 'features/admin/screens/app_settings_screen.dart';
 
 class TaweqeApp extends StatelessWidget {
@@ -87,7 +87,7 @@ class TaweqeApp extends StatelessWidget {
             screen = PhoneOtpScreen(phone: phone);
           case Routes.paymob:
             final paymentKey = settings.arguments as String? ?? '';
-            screen = PaymobMockScreen(paymentKey: paymentKey);
+            screen = paymob.PaymobCheckoutScreen(paymentKey: paymentKey);
           case Routes.tripDetails:
             final trip = settings.arguments as Trip;
             screen = TripDetailsScreen(trip: trip);

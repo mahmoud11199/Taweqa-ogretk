@@ -24,6 +24,12 @@ class PassengerBloc extends Bloc<PassengerEvent, PassengerState> {
     on<ScheduleRide>(_onScheduleRide);
     on<FetchMyScheduledTrips>(_onFetchMyScheduledTrips);
     on<CancelScheduledTrip>(_onCancelScheduledTrip);
+    on<UpdateDriverTracking>(_onUpdateDriverTracking);
+  }
+
+  Future<void> _onUpdateDriverTracking(
+      UpdateDriverTracking event, Emitter<PassengerState> emit) async {
+    emit(state.copyWith(driverLat: event.lat, driverLng: event.lng));
   }
 
   Future<void> _onLoadNearbyDrivers(
