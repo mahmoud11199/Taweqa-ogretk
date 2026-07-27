@@ -56,7 +56,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         phone: event.phone,
         method: event.method,
       );
-      emit(state.copyWith(isLoading: false, paymobPaymentKey: paymentKey));
+      emit(state.copyWith(isLoading: false, paymobPaymentKey: paymentKey, lastDepositAmount: event.amount));
     } catch (e) {
       emit(state.copyWith(isLoading: false, error: e.toString()));
     }
@@ -70,6 +70,11 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       if (success) {
         final user = SupabaseConfig.client.auth.currentUser;
         if (user != null) {
+          await _repository.recordDeposit(
+            userId: user.id,
+            amount: state.lastDepositAmount,
+            paymobRef: event.transactionRef,
+          );
           final wallet = await _repository.fetchWallet(user.id);
           emit(state.copyWith(
             isLoading: false,

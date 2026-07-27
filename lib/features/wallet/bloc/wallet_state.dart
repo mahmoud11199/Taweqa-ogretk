@@ -7,6 +7,7 @@ class WalletState {
   final List<Transaction> transactions;
   final String? paymobPaymentKey;
   final bool depositSuccess;
+  final double lastDepositAmount;
 
   const WalletState({
     this.isLoading = false,
@@ -15,6 +16,7 @@ class WalletState {
     this.transactions = const [],
     this.paymobPaymentKey,
     this.depositSuccess = false,
+    this.lastDepositAmount = 0,
   });
 
   WalletState copyWith({
@@ -24,6 +26,7 @@ class WalletState {
     List<Transaction>? transactions,
     String? paymobPaymentKey,
     bool? depositSuccess,
+    double? lastDepositAmount,
     bool clearError = false,
   }) {
     return WalletState(
@@ -33,6 +36,7 @@ class WalletState {
       transactions: transactions ?? this.transactions,
       paymobPaymentKey: paymobPaymentKey ?? this.paymobPaymentKey,
       depositSuccess: depositSuccess ?? this.depositSuccess,
+      lastDepositAmount: lastDepositAmount ?? this.lastDepositAmount,
     );
   }
 }
