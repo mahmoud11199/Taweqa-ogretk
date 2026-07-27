@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -17,6 +18,7 @@ import '../../chat/screens/chat_list_screen.dart';
 import '../bloc/driver_bloc.dart';
 import '../bloc/driver_event.dart';
 import '../bloc/driver_state.dart';
+import '../models/meter_data.dart';
 import 'driver_dispatch_screen.dart';
 import 'driver_payment_screen.dart';
 import 'driver_wallet_screen.dart';
@@ -36,24 +38,29 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
   StreamSubscription<Position>? _positionSubscription;
   Timer? _gpsTimer;
   Timer? _simulationTimer;
-  bool _tripActive = false;
-  double _speed = 42;
+  Timer? _meterTickTimer;
+  final List<MeterData> _meters = [MeterData(id: 1), MeterData(id: 2)];
+  int _activeMeterIndex = 0;
+
+  MeterData get _meter => _meters[_activeMeterIndex];
 
   @override
   void initState() {
     super.initState();
     context.read<DriverBloc>().add(LoadDriverProfile());
     _startLocationUpdates();
-    _startSimulation();
+    _startMeterTick();
   }
 
-  void _startSimulation() {
-    _simulationTimer?.cancel();
-    _simulationTimer = Timer.periodic(const Duration(milliseconds: 800), (t) {
-      if (!_tripActive) return;
-      setState(() {
-        _speed = (_speed + (math.Random().nextDouble() - 0.5) * 8).clamp(0, 80);
-      });
+  void _startMeterTick() {
+    _meterTickTimer?.cancel();
+    _meterTickTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      for (final m in _meters) {
+        if (m.isActive && !m.isPaused) {
+          setState(() {});
+        }
+      }
     });
   }
 
@@ -98,63 +105,137 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
     if (!mounted) return;
     final state = context.read<DriverBloc>().state;
     if (state.currentLat == 0 || state.currentLng == 0) return;
-    if (!_tripActive) return;
-    context.read<DriverBloc>().add(UpdateRoute(
-      routePoints: [
-        [state.currentLng, state.currentLat],
-      ],
-      distanceKm: state.distanceKm + 0.1,
-      durationMin: state.durationMin + 0.1,
-    ));
+    final m = _meter;
+    if (!m.isActive) return;
+    setState(() {
+      m.totalDistance += 0.1;
+      m.pathCoords = [...m.pathCoords, [state.currentLng, state.currentLat]];
+    });
   }
 
-  void _startTrip() {
+  void _startMeter() {
     final s = context.read<DriverBloc>().state;
     if (s.currentLat == 0 || s.currentLng == 0) {
       showToast(context, 'لم يتم تحديد الموقع بعد', isError: true);
       return;
     }
-    setState(() => _tripActive = true);
-    context.read<DriverBloc>().add(StartTrip(
-      startLat: s.currentLat,
-      startLng: s.currentLng,
-    ));
+    final m = _meter;
+    if (m.isActive) return;
+    setState(() {
+      m.isActive = true;
+      m.startTime = DateTime.now();
+      m.shareCode = _generateShareCode();
+    });
     _gpsTimer?.cancel();
     _gpsTimer = Timer.periodic(const Duration(seconds: 10), (_) => _updateRoute());
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final bloc = context.read<DriverBloc>();
-      bloc.stream.firstWhere((st) => st.currentTrip != null).timeout(const Duration(seconds: 15)).then((st) {
-        if (st.currentTrip != null) {
-          bloc.add(GenerateShareCode(st.currentTrip!.id));
-          bloc.add(LoadTripPassengers(st.currentTrip!.id));
+  }
+
+  void _stopMeter() {
+    final m = _meter;
+    if (!m.isActive) return;
+    setState(() {
+      m.isActive = false;
+      m.isPaused = false;
+      m.finalFare = m.tripType == 'afrad' ? m.calculateAfradFare() : m.calculateFare();
+    });
+    _gpsTimer?.cancel();
+    _showSettlementDialog(m);
+  }
+
+  void _togglePauseMeter() {
+    final m = _meter;
+    if (!m.isActive) return;
+    setState(() {
+      if (m.isPaused) {
+        if (m.pauseStartedAt != null) {
+          m.pausedDurationTotal += DateTime.now().difference(m.pauseStartedAt!);
         }
-      }).catchError((_) {
-        if (!mounted) return;
-        showToast(context, 'فشل في بدء الرحلة — تأكد من الاتصال', isError: true);
-      });
+        m.isPaused = false;
+        m.pauseStartedAt = null;
+      } else {
+        m.isPaused = true;
+        m.pauseStartedAt = DateTime.now();
+      }
     });
   }
 
-  void _endTrip() {
-    _gpsTimer?.cancel();
-    final s = context.read<DriverBloc>().state;
-    if (s.currentTrip == null) return;
-    context.read<DriverBloc>().add(EndTrip(
-      tripId: s.currentTrip!.id,
-      endLat: s.currentLat,
-      endLng: s.currentLng,
-      distanceKm: s.distanceKm,
-      durationMin: s.durationMin,
-      waitTimeMin: s.waitTimeMin,
-    ));
-    setState(() => _tripActive = false);
+  void _resetMeter() {
+    final m = _meter;
+    if (m.isActive) {
+      showToast(context, 'أوقف العداد أولاً قبل التصفير', isError: true);
+      return;
+    }
+    setState(() {
+      _meters[_activeMeterIndex] = MeterData(id: m.id);
+    });
+  }
+
+  String _generateShareCode() {
+    final rng = math.Random.secure();
+    return List.generate(6, (_) => rng.nextInt(10).toString()).join();
+  }
+
+  void _showSettlementDialog(MeterData m) {
+    showDialog(
+      context: context,
+      builder: (ctx) => _SettlementDialog(
+        meter: m,
+        onConfirm: (adjustedMeter) {
+          _showReceipt(adjustedMeter);
+        },
+        onCancel: () {
+          setState(() {
+            m.isActive = true;
+            m.isPaused = false;
+          });
+        },
+      ),
+    );
+  }
+
+  void _showReceipt(MeterData m) {
+    showDialog(
+      context: context,
+      builder: (ctx) => _ReceiptDialog(meter: m),
+    );
+  }
+
+  void _switchMeter(int index) {
+    if (index < 0 || index >= _meters.length) return;
+    setState(() => _activeMeterIndex = index);
+  }
+
+  Widget _buildChip(String label, String type) {
+    final active = _meter.tripType == type;
+    return GestureDetector(
+      onTap: () {
+        if (_meter.isActive) return;
+        setState(() => _meter.tripType = type);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: active
+              ? const Color.fromRGBO(0, 229, 184, 0.12)
+              : const Color.fromRGBO(255, 255, 255, 0.04),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: active ? const Color(0xFF00E5B8) : const Color(0xFF1C2B45),
+          ),
+        ),
+        child: Text(label, style: TextStyle(
+          fontSize: 11, fontWeight: FontWeight.w600,
+          color: active ? const Color(0xFF00E5B8) : const Color(0xFF526480),
+        )),
+      ),
+    );
   }
 
   @override
   void dispose() {
     _positionSubscription?.cancel();
     _gpsTimer?.cancel();
-    _simulationTimer?.cancel();
+    _meterTickTimer?.cancel();
     super.dispose();
   }
 
@@ -237,207 +318,275 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
         ),
 
         // Fare meter card
-        BlocBuilder<DriverBloc, DriverState>(
-          builder: (context, state) {
-            final speed = _speed;
-            final waitMode = speed < 5;
-            final fare = state.currentFare;
-            return Positioned(
-              top: 38, left: 16, right: 16,
-              child: Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: const Color.fromRGBO(9, 14, 26, 0.92),
-                  border: Border.all(
-                    color: _tripActive
-                        ? const Color.fromRGBO(255, 176, 32, 0.3)
-                        : const Color(0xFF1C2B45),
-                  ),
-                  borderRadius: BorderRadius.circular(22),
-                  boxShadow: [
-                    if (_tripActive)
-                      const BoxShadow(color: Color.fromRGBO(255, 176, 32, 0.08), blurRadius: 0, offset: Offset(0, 0)),
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.5),
-                      blurRadius: 32,
-                      offset: const Offset(0, 8),
-                    ),
+        Positioned(
+          top: 38, left: 16, right: 16,
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color.fromRGBO(9, 14, 26, 0.92),
+              border: Border.all(
+                color: _meter.isActive
+                    ? const Color.fromRGBO(255, 176, 32, 0.3)
+                    : const Color(0xFF1C2B45),
+              ),
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: [
+                if (_meter.isActive)
+                  const BoxShadow(color: Color.fromRGBO(255, 176, 32, 0.08), blurRadius: 0, offset: Offset(0, 0)),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.5),
+                  blurRadius: 32,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                // Meter switcher tabs
+                Row(
+                  children: [
+                    for (var i = 0; i < _meters.length; i++)
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => _switchMeter(i),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            margin: const EdgeInsets.symmetric(horizontal: 2),
+                            decoration: BoxDecoration(
+                              color: _activeMeterIndex == i
+                                  ? const Color.fromRGBO(255, 176, 32, 0.12)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(8),
+                              border: _activeMeterIndex == i
+                                  ? Border.all(color: const Color.fromRGBO(255, 176, 32, 0.3))
+                                  : null,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  width: 6, height: 6,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: _meters[i].isActive
+                                        ? const Color(0xFFFFB020)
+                                        : const Color(0xFF526480),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text('عداد ${i + 1}${_meters[i].isActive ? ' · LIVE' : ''}',
+                                  style: TextStyle(
+                                    fontSize: 11, fontWeight: FontWeight.w600,
+                                    color: _activeMeterIndex == i
+                                        ? const Color(0xFFFFB020)
+                                        : const Color(0xFF526480),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
-                child: Column(
+                const SizedBox(height: 6),
+                // Trip type toggle
+                Row(
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                    _buildChip('مخصوص', 'makhsoos'),
+                    const SizedBox(width: 6),
+                    _buildChip('أفراد', 'afrad'),
+                    const Spacer(),
+                    if (_meter.isActive)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color.fromRGBO(255, 176, 32, 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text('كود: ${_meter.shareCode ?? '-'}',
+                          style: const TextStyle(fontSize: 10, color: Color(0xFFFFB020))),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                // Fare display
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 6, height: 6,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: _tripActive ? const Color(0xFFFFB020) : const Color(0xFF526480),
-                                      boxShadow: _tripActive
-                                          ? [const BoxShadow(color: Color(0xFFFFB020), blurRadius: 8)]
-                                          : null,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  const Text('TOTAL FARE METER', style: TextStyle(
-                                    fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF526480),
-                                    letterSpacing: 0.8,
-                                  )),
-                                ],
+                              Container(
+                                width: 6, height: 6,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: _meter.isActive ? const Color(0xFFFFB020) : const Color(0xFF526480),
+                                  boxShadow: _meter.isActive
+                                      ? [const BoxShadow(color: Color(0xFFFFB020), blurRadius: 8)]
+                                      : null,
+                                ),
                               ),
-                              const SizedBox(height: 6),
-                              _FareMeter(value: fare, isActive: _tripActive),
+                              const SizedBox(width: 6),
+                              Text('عداد ${_activeMeterIndex + 1} · ${_meter.tripType == 'makhsoos' ? 'مخصوص' : 'أفراد'}', style: const TextStyle(
+                                fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF526480),
+                                letterSpacing: 0.8,
+                              )),
                             ],
                           ),
-                        ),
-                        Column(
-                          children: [
-                            GestureDetector(
-                              onTap: () {
-                                if (_tripActive) {
-                                  _endTrip();
-                                } else {
-                                  _startTrip();
-                                }
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                                decoration: BoxDecoration(
-                                  color: _tripActive
-                                      ? const Color.fromRGBO(255, 59, 92, 0.12)
-                                      : const Color.fromRGBO(0, 229, 184, 0.12),
-                                  border: Border.all(
-                                    color: _tripActive
-                                        ? const Color.fromRGBO(255, 59, 92, 0.4)
-                                        : const Color.fromRGBO(0, 229, 184, 0.4),
-                                  ),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      _tripActive ? Icons.pause : Icons.play_arrow,
-                                      size: 13,
-                                      color: _tripActive ? const Color(0xFFFF3B5C) : const Color(0xFF00E5B8),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      _tripActive ? 'STOP' : 'START',
-                                      style: TextStyle(
-                                        fontSize: 12, fontWeight: FontWeight.w800,
-                                        color: _tripActive ? const Color(0xFFFF3B5C) : const Color(0xFF00E5B8),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                if (waitMode) const _Badge(label: 'WAIT', color: 'blue', dot: true),
-                                if (_tripActive) ...[
-                                  const SizedBox(width: 8),
-                                  const _Badge(label: 'LIVE', color: 'amber', dot: true),
-                                ],
-                              ],
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    // Speed bar
-                    Column(
-                      children: [
-                        Row(
-                          children: [
-                            const Text('SPEED', style: TextStyle(
-                              fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF526480),
-                              letterSpacing: 0.5,
-                            )),
-                            const Spacer(),
-                            Text(
-                              '${speed.toInt()} km/h${waitMode ? ' · Wait mode active' : ''}',
-                              style: TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 11,
-                                color: waitMode ? const Color(0xFF4D9FFF) : const Color(0xFF8EA4C8),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(2),
-                          child: SizedBox(
-                            height: 3,
-                            child: Stack(
-                              children: [
-                                Container(height: 3, color: const Color(0xFF1C2B45)),
-                                AnimatedFractionallySizedBox(
-                                  duration: const Duration(milliseconds: 500),
-                                  widthFactor: (speed / 80).clamp(0.0, 1.0),
-                                  child: Container(
-                                    height: 3,
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: waitMode
-                                            ? [const Color(0xFF4D9FFF), const Color(0xFF0066CC)]
-                                            : [const Color(0xFF00E5B8), const Color(0xFF00B896)],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 13),
-                    // Stat pills
-                    Container(
-                      padding: const EdgeInsets.only(top: 13),
-                      decoration: const BoxDecoration(
-                        border: Border(top: BorderSide(color: Color(0xFF1C2B45))),
-                      ),
-                      child: Row(
-                        children: [
-                          _StatPill(
-                            icon: Icons.route,
-                            label: 'Distance',
-                            value: '${state.distanceKm.toStringAsFixed(1)} km',
-                          ),
-                          Container(width: 1, height: 24, color: const Color(0xFF1C2B45)),
-                          _StatPill(
-                            icon: Icons.timer_outlined,
-                            label: 'Time',
-                            value: '${state.durationMin.toInt()} min',
-                          ),
-                          Container(width: 1, height: 24, color: const Color(0xFF1C2B45)),
-                          _StatPill(
-                            icon: Icons.pause,
-                            label: 'Wait',
-                            value: '${state.waitTimeMin.toInt()} min',
-                            color: state.waitTimeMin > 0 ? const Color(0xFF4D9FFF) : null,
+                          const SizedBox(height: 4),
+                          _FareMeter(
+                            value: _meter.isActive
+                                ? (_meter.tripType == 'afrad' ? _meter.calculateAfradFare() : _meter.calculateFare())
+                                : _meter.finalFare,
+                            isActive: _meter.isActive,
                           ),
                         ],
                       ),
                     ),
+                    Column(
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            if (_meter.isActive) {
+                              if (_meter.isPaused) {
+                                _togglePauseMeter();
+                              } else {
+                                _stopMeter();
+                              }
+                            } else {
+                              _startMeter();
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                            decoration: BoxDecoration(
+                              color: _meter.isActive
+                                  ? (_meter.isPaused
+                                      ? const Color.fromRGBO(0, 229, 184, 0.12)
+                                      : const Color.fromRGBO(255, 59, 92, 0.12))
+                                  : const Color.fromRGBO(0, 229, 184, 0.12),
+                              border: Border.all(
+                                color: _meter.isActive
+                                    ? (_meter.isPaused
+                                        ? const Color.fromRGBO(0, 229, 184, 0.4)
+                                        : const Color.fromRGBO(255, 59, 92, 0.4))
+                                    : const Color.fromRGBO(0, 229, 184, 0.4),
+                              ),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _meter.isActive
+                                      ? (_meter.isPaused ? Icons.play_arrow : Icons.stop)
+                                      : Icons.play_arrow,
+                                  size: 13,
+                                  color: _meter.isActive
+                                      ? (_meter.isPaused ? const Color(0xFF00E5B8) : const Color(0xFFFF3B5C))
+                                      : const Color(0xFF00E5B8),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  _meter.isActive ? (_meter.isPaused ? 'START' : 'STOP') : 'START',
+                                  style: TextStyle(
+                                    fontSize: 12, fontWeight: FontWeight.w800,
+                                    color: _meter.isActive
+                                        ? (_meter.isPaused ? const Color(0xFF00E5B8) : const Color(0xFFFF3B5C))
+                                        : const Color(0xFF00E5B8),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        // Pause / Reset buttons
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (_meter.isActive && !_meter.isPaused)
+                              GestureDetector(
+                                onTap: _togglePauseMeter,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color.fromRGBO(77, 159, 255, 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Text('⏸', style: TextStyle(fontSize: 14)),
+                                ),
+                              ),
+                            if (!_meter.isActive && _meter.finalFare > 0)
+                              GestureDetector(
+                                onTap: () => _showSettlementDialog(_meter),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color.fromRGBO(0, 229, 184, 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Text('تسوية', style: TextStyle(fontSize: 11, color: Color(0xFF00E5B8))),
+                                ),
+                              ),
+                            if (!_meter.isActive)
+                              GestureDetector(
+                                onTap: _resetMeter,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color.fromRGBO(255, 59, 92, 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Text('تصفير', style: TextStyle(fontSize: 11, color: Color(0xFFFF3B5C))),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ],
                 ),
-              ),
-            );
-          },
+                const SizedBox(height: 4),
+                // Settings row (collapsible)
+                if (!_meter.isActive)
+                  _MeterSettings(meter: _meter, onChanged: () => setState(() {})),
+                // Stats row
+                Container(
+                  padding: const EdgeInsets.only(top: 6),
+                  decoration: const BoxDecoration(
+                    border: Border(top: BorderSide(color: Color(0xFF1C2B45))),
+                  ),
+                  child: Row(
+                    children: [
+                      _StatPill(
+                        icon: Icons.route,
+                        label: 'Distance',
+                        value: '${_meter.totalDistance.toStringAsFixed(1)} km',
+                      ),
+                      Container(width: 1, height: 24, color: const Color(0xFF1C2B45)),
+                      _StatPill(
+                        icon: Icons.timer_outlined,
+                        label: 'Time',
+                        value: '${_meter.effectiveDurationMinutes.toInt()} min',
+                      ),
+                      Container(width: 1, height: 24, color: const Color(0xFF1C2B45)),
+                      _StatPill(
+                        icon: Icons.pause,
+                        label: 'Wait',
+                        value: '${_meter.effectiveWaitMinutes.toInt()} min',
+                        color: _meter.effectiveWaitMinutes > 0 ? const Color(0xFF4D9FFF) : null,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
 
         // Quick action buttons
@@ -497,7 +646,7 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
           bottom: 0, left: 0, right: 0,
           child: _PassengerBottomSheet(
             inTab: widget.inTab,
-            tripActive: _tripActive,
+            tripActive: _meter.isActive,
             onEndSub: (passengerId) {
               final trip = context.read<DriverBloc>().state.currentTrip;
               if (trip != null) {
@@ -977,26 +1126,422 @@ class _PassengerBottomSheetState extends State<_PassengerBottomSheet> {
   }
 }
 
-// ─── Nav Item ─────────────────────────────────────────────────────────────────
-class _NavItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-  const _NavItem({required this.icon, required this.label, required this.active, required this.onTap});
+// ─── Meter Settings ──────────────────────────────────────────────────────────
+class _MeterSettings extends StatefulWidget {
+  final MeterData meter;
+  final VoidCallback onChanged;
+  const _MeterSettings({required this.meter, required this.onChanged});
+
+  @override
+  State<_MeterSettings> createState() => _MeterSettingsState();
+}
+
+class _MeterSettingsState extends State<_MeterSettings> {
+  bool _expanded = false;
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: () => setState(() => _expanded = !_expanded),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(
+              children: [
+                const Icon(Icons.settings, size: 12, color: Color(0xFF526480)),
+                const SizedBox(width: 6),
+                const Text('الإعدادات', style: TextStyle(fontSize: 11, color: Color(0xFF526480))),
+                const Spacer(),
+                Icon(_expanded ? Icons.expand_less : Icons.expand_more, size: 14, color: const Color(0xFF526480)),
+              ],
+            ),
+          ),
+        ),
+        if (_expanded)
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0C1220),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                _SettingRow(label: 'سعر الكيلو', value: widget.meter.kmPrice.toString(), onChanged: (v) {
+                  final val = double.tryParse(v) ?? 5;
+                  widget.meter.kmPrice = val.clamp(1, 50);
+                  widget.onChanged();
+                }),
+                const SizedBox(height: 6),
+                _SettingRow(label: 'دقيقة الانتظار', value: widget.meter.waitPrice.toString(), onChanged: (v) {
+                  final val = double.tryParse(v) ?? 1;
+                  widget.meter.waitPrice = val.clamp(0, 20);
+                  widget.onChanged();
+                }),
+                const SizedBox(height: 6),
+                _SettingRow(label: 'دقيقة الوقت', value: widget.meter.durationPrice.toString(), onChanged: (v) {
+                  final val = double.tryParse(v) ?? 0.5;
+                  widget.meter.durationPrice = val.clamp(0, 10);
+                  widget.onChanged();
+                }),
+                const SizedBox(height: 6),
+                _SettingRow(label: 'البديارة', value: widget.meter.bandira.toString(), onChanged: (v) {
+                  final val = double.tryParse(v) ?? 5;
+                  widget.meter.bandira = val.clamp(0, 100);
+                  widget.onChanged();
+                }),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _SettingRow extends StatefulWidget {
+  final String label;
+  final String value;
+  final ValueChanged<String> onChanged;
+  const _SettingRow({required this.label, required this.value, required this.onChanged});
+
+  @override
+  State<_SettingRow> createState() => _SettingRowState();
+}
+
+class _SettingRowState extends State<_SettingRow> {
+  late TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.value);
+  }
+
+  @override
+  void didUpdateWidget(_SettingRow old) {
+    super.didUpdateWidget(old);
+    if (old.value != widget.value && _controller.text != widget.value) {
+      _controller.text = widget.value;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(widget.label, style: const TextStyle(fontSize: 12, color: Color(0xFF8EA4C8))),
+        const Spacer(),
+        SizedBox(
+          width: 60,
+          child: TextField(
+            controller: _controller,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            style: const TextStyle(fontSize: 12, color: Color(0xFFEDF2FC), fontFamily: 'monospace'),
+            decoration: const InputDecoration(
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              border: OutlineInputBorder(borderSide: BorderSide(color: Color(0xFF1C2B45))),
+              enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Color(0xFF1C2B45))),
+            ),
+            onChanged: widget.onChanged,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Settlement Dialog ───────────────────────────────────────────────────────
+class _SettlementDialog extends StatefulWidget {
+  final MeterData meter;
+  final ValueChanged<MeterData> onConfirm;
+  final VoidCallback onCancel;
+  const _SettlementDialog({required this.meter, required this.onConfirm, required this.onCancel});
+
+  @override
+  State<_SettlementDialog> createState() => _SettlementDialogState();
+}
+
+class _SettlementDialogState extends State<_SettlementDialog> {
+  late TextEditingController _kmCtrl;
+  late TextEditingController _bandiraCtrl;
+  late TextEditingController _durCtrl;
+  late TextEditingController _waitCtrl;
+  double _total = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _kmCtrl = TextEditingController(text: widget.meter.kmPrice.toString());
+    _bandiraCtrl = TextEditingController(text: widget.meter.bandira.toString());
+    _durCtrl = TextEditingController(text: widget.meter.durationPrice.toString());
+    _waitCtrl = TextEditingController(text: widget.meter.waitPrice.toString());
+    _recalc();
+  }
+
+  void _recalc() {
+    final km = double.tryParse(_kmCtrl.text) ?? widget.meter.kmPrice;
+    final bandira = double.tryParse(_bandiraCtrl.text) ?? widget.meter.bandira;
+    final dur = double.tryParse(_durCtrl.text) ?? widget.meter.durationPrice;
+    final wait = double.tryParse(_waitCtrl.text) ?? widget.meter.waitPrice;
+    setState(() {
+      _total = bandira +
+          (widget.meter.totalDistance * km) +
+          (widget.meter.effectiveDurationMinutes * dur) +
+          (widget.meter.effectiveWaitMinutes * wait);
+      if (_total < widget.meter.minFare) _total = widget.meter.minFare;
+    });
+  }
+
+  @override
+  void dispose() {
+    _kmCtrl.dispose();
+    _bandiraCtrl.dispose();
+    _durCtrl.dispose();
+    _waitCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: const Color(0xFF0F1628),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      title: const Row(
+        children: [
+          Icon(Icons.calculate, color: Color(0xFFFFB020), size: 20),
+          SizedBox(width: 10),
+          Text('تسوية العداد', style: TextStyle(color: Color(0xFFEDF2FC), fontWeight: FontWeight.w700)),
+        ],
+      ),
+      content: SizedBox(
+        width: 300,
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 20, color: active ? const Color(0xFF00E5B8) : const Color(0xFF3A5070)),
-            const SizedBox(height: 4),
-            Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: active ? const Color(0xFF00E5B8) : const Color(0xFF3A5070))),
+            _SettleField(label: 'البديارة (ج)', ctrl: _bandiraCtrl, onChanged: (_) => _recalc()),
+            const SizedBox(height: 8),
+            _SettleField(label: 'سعر الكيلو (ج)', ctrl: _kmCtrl, onChanged: (_) => _recalc()),
+            const SizedBox(height: 8),
+            _SettleField(label: 'دقيقة الوقت (ج)', ctrl: _durCtrl, onChanged: (_) => _recalc()),
+            const SizedBox(height: 8),
+            _SettleField(label: 'دقيقة الانتظار (ج)', ctrl: _waitCtrl, onChanged: (_) => _recalc()),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0C1220),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Text('المسافة:', style: TextStyle(fontSize: 12, color: Color(0xFF8EA4C8))),
+                  const SizedBox(width: 4),
+                  Text('${widget.meter.totalDistance.toStringAsFixed(1)} كم', style: const TextStyle(fontSize: 12, color: Color(0xFFEDF2FC))),
+                  const Spacer(),
+                  const Text('الوقت:', style: TextStyle(fontSize: 12, color: Color(0xFF8EA4C8))),
+                  const SizedBox(width: 4),
+                  Text('${widget.meter.effectiveDurationMinutes.toInt()} د', style: const TextStyle(fontSize: 12, color: Color(0xFFEDF2FC))),
+                  const Spacer(),
+                  const Text('انتظار:', style: TextStyle(fontSize: 12, color: Color(0xFF8EA4C8))),
+                  const SizedBox(width: 4),
+                  Text('${widget.meter.effectiveWaitMinutes.toInt()} د', style: const TextStyle(fontSize: 12, color: Color(0xFFEDF2FC))),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color.fromRGBO(255, 176, 32, 0.1),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color.fromRGBO(255, 176, 32, 0.3)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('الإجمالي:', style: TextStyle(fontSize: 14, color: Color(0xFF8EA4C8))),
+                  const SizedBox(width: 8),
+                  Text('${_total.toStringAsFixed(2)} ج.م', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFFFFB020), fontFamily: 'monospace')),
+                ],
+              ),
+            ),
           ],
         ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () { Navigator.pop(context); widget.onCancel(); },
+          child: const Text('عودة', style: TextStyle(color: Color(0xFF526480))),
+        ),
+        TextButton.icon(
+          onPressed: () {
+            widget.meter.kmPrice = double.tryParse(_kmCtrl.text) ?? widget.meter.kmPrice;
+            widget.meter.bandira = double.tryParse(_bandiraCtrl.text) ?? widget.meter.bandira;
+            widget.meter.durationPrice = double.tryParse(_durCtrl.text) ?? widget.meter.durationPrice;
+            widget.meter.waitPrice = double.tryParse(_waitCtrl.text) ?? widget.meter.waitPrice;
+            widget.meter.finalFare = _total;
+            Navigator.pop(context);
+            widget.onConfirm(widget.meter);
+          },
+          icon: const Icon(Icons.check, size: 16, color: Color(0xFF00E5B8)),
+          label: const Text('تسوية', style: TextStyle(color: Color(0xFF00E5B8))),
+        ),
+      ],
+    );
+  }
+}
+
+class _SettleField extends StatelessWidget {
+  final String label;
+  final TextEditingController ctrl;
+  final ValueChanged<String> onChanged;
+  const _SettleField({required this.label, required this.ctrl, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF8EA4C8))),
+        const Spacer(),
+        SizedBox(
+          width: 80,
+          child: TextField(
+            controller: ctrl,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            style: const TextStyle(fontSize: 13, color: Color(0xFFEDF2FC), fontFamily: 'monospace'),
+            decoration: const InputDecoration(
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              border: OutlineInputBorder(borderSide: BorderSide(color: Color(0xFF1C2B45))),
+              enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Color(0xFF1C2B45))),
+            ),
+            onChanged: onChanged,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Receipt Dialog ──────────────────────────────────────────────────────────
+class _ReceiptDialog extends StatelessWidget {
+  final MeterData meter;
+  const _ReceiptDialog({required this.meter});
+
+  @override
+  Widget build(BuildContext context) {
+    final fare = meter.finalFare > 0 ? meter.finalFare : meter.calculateFare();
+    return AlertDialog(
+      backgroundColor: const Color(0xFF0F1628),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      title: const Row(
+        children: [
+          Icon(Icons.receipt, color: Color(0xFF00E5B8), size: 20),
+          SizedBox(width: 10),
+          Text('الوصلة', style: TextStyle(color: Color(0xFFEDF2FC), fontWeight: FontWeight.w700)),
+        ],
+      ),
+      content: SizedBox(
+        width: 300,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color.fromRGBO(0, 229, 184, 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text('عداد ${meter.id} · ${meter.tripType == 'makhsoos' ? 'مخصوص' : 'أفراد'}',
+                  style: const TextStyle(fontSize: 11, color: Color(0xFF00E5B8))),
+              ),
+            ),
+            if (meter.shareCode != null) ...[
+              const SizedBox(height: 8),
+              Center(
+                child: Text('كود الرحلة: ${meter.shareCode}',
+                  style: const TextStyle(fontSize: 12, color: Color(0xFFFFB020))),
+              ),
+            ],
+            const SizedBox(height: 14),
+            _receiptRow('المسافة', '${meter.totalDistance.toStringAsFixed(1)} كم'),
+            _receiptRow('الوقت', '${meter.effectiveDurationMinutes.toInt()} دقيقة'),
+            _receiptRow('انتظار', '${meter.effectiveWaitMinutes.toInt()} دقيقة'),
+            _receiptRow('السعر/كم', '${meter.kmPrice.toStringAsFixed(2)} ج'),
+            _receiptRow('البديارة', '${meter.bandira.toStringAsFixed(2)} ج'),
+            if (meter.tripType == 'afrad') ...[
+              const Divider(color: Color(0xFF1C2B45)),
+              const Text('الركاب:', style: TextStyle(fontSize: 11, color: Color(0xFF8EA4C8))),
+              for (var i = 0; i < meter.passengers.length; i++)
+                if (!meter.passengers[i].exited)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text('${meter.passengers[i].name} — ${meter.passengers[i].fare.toStringAsFixed(2)} ج',
+                      style: const TextStyle(fontSize: 12, color: Color(0xFFEDF2FC))),
+                  ),
+            ],
+            const Divider(color: Color(0xFF1C2B45), height: 20),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color.fromRGBO(0, 229, 184, 0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('الإجمالي:', style: TextStyle(fontSize: 14, color: Color(0xFF8EA4C8))),
+                  const SizedBox(width: 8),
+                  Text('${fare.toStringAsFixed(2)} ج.م',
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF00E5B8), fontFamily: 'monospace')),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('إغلاق', style: TextStyle(color: Color(0xFF526480))),
+        ),
+TextButton.icon(
+  onPressed: () {
+    final text = 'توقع أجرتك — وصل العداد ${meter.id}\n'
+        'النوع: ${meter.tripType == 'makhsoos' ? 'مخصوص' : 'أفراد'}\n'
+        'المسافة: ${meter.totalDistance.toStringAsFixed(1)} كم\n'
+        'الوقت: ${meter.effectiveDurationMinutes.toInt()} د\n'
+        'الإجمالي: ${fare.toStringAsFixed(2)} ج.م';
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('تم نسخ الوصلة')),
+    );
+  },
+          icon: const Icon(Icons.share, size: 16, color: Color(0xFF00E5B8)),
+          label: const Text('مشاركة', style: TextStyle(color: Color(0xFF00E5B8))),
+        ),
+      ],
+    );
+  }
+
+  Widget _receiptRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Text(label, style: const TextStyle(fontSize: 13, color: Color(0xFF8EA4C8))),
+          const Spacer(),
+          Text(value, style: const TextStyle(fontSize: 13, color: Color(0xFFEDF2FC), fontFamily: 'monospace')),
+        ],
       ),
     );
   }
