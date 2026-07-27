@@ -51,7 +51,7 @@
     requestWaypoints.forEach(function(wp, i) {
       var latlng = [wp.lat, wp.lng];
       latlngs.push(latlng);
-      var color = i === 0 ? '#22c55e' : '#3b82f6';
+      var color = i === 0 ? '#00E5B8' : '#0088CC';
       var marker = L.circleMarker(latlng, { radius: 8, color: color, fillColor: color, fillOpacity: 0.8, weight: 2 }).addTo(requestMap);
       marker.bindTooltip(String(i + 1), { permanent: true, direction: 'top', className: 'waypoint-tooltip' });
       marker._wpIdx = i;
@@ -59,7 +59,7 @@
       requestMarkers.push(marker);
     });
     if (latlngs.length > 1) {
-      requestPolyline = L.polyline(latlngs, { color: '#f59e0b', weight: 3, dashArray: '6, 8' }).addTo(requestMap);
+      requestPolyline = L.polyline(latlngs, { color: '#FFB020', weight: 3, dashArray: '6, 8' }).addTo(requestMap);
     }
     try { requestMap.fitBounds(L.polyline(latlngs).getBounds(), { padding: [30, 30] }); } catch(e) { console.error('Request map fitBounds error:', e); }
     document.getElementById('request-waypoints-count').textContent = requestWaypoints.length + ' نقطة';
@@ -228,13 +228,13 @@
         if (waypointsList.length >= 2) {
           var wpLatLngs = waypointsList.map(function(wp) { return [wp.lat, wp.lng]; });
           waypointsList.forEach(function(wp, i) {
-            var color = i === 0 ? '#22c55e' : '#3b82f6';
+            var color = i === 0 ? '#00E5B8' : '#0088CC';
             var marker = L.circleMarker([wp.lat, wp.lng], {
               radius: 7, color: color, fillColor: color, fillOpacity: 0.8, weight: 2
             }).addTo(trackMap);
             marker.bindTooltip(i === 0 ? 'انطلاق' : String(i), { permanent: false, direction: 'top', className: 'waypoint-tooltip' });
           });
-          L.polyline(wpLatLngs, { color: '#f59e0b', weight: 3, dashArray: '6, 8' }).addTo(trackMap);
+          L.polyline(wpLatLngs, { color: '#FFB020', weight: 3, dashArray: '6, 8' }).addTo(trackMap);
           try { trackMap.fitBounds(L.polyline(wpLatLngs).getBounds(), { padding: [30, 30] }); } catch(e) { console.error('Track map waypoints fitBounds error:', e); }
         }
 
@@ -242,7 +242,7 @@
         if (locations.length) {
           var locPoints = locations.map(function(p) { return [p.lat, p.lng]; });
           L.polyline(locPoints, {color: '#22d3ee', weight: 4}).addTo(trackMap);
-          L.circleMarker(locPoints[locPoints.length - 1], {radius: 6, color: '#22c55e', fillColor: '#22c55e', fillOpacity: 1}).addTo(trackMap);
+          L.circleMarker(locPoints[locPoints.length - 1], {radius: 6, color: '#00E5B8', fillColor: '#00E5B8', fillOpacity: 1}).addTo(trackMap);
           try { trackMap.fitBounds(L.polyline(locPoints).getBounds(), {padding: [20, 20]}); } catch(e) { console.error('Track map locPoints fitBounds error:', e); }
         } else if (trip.last_lat && trip.last_lng) {
           trackMap.setView([trip.last_lat, trip.last_lng], 15);
@@ -786,7 +786,7 @@
       if (subtitle) subtitle.textContent = 'السائق في انتظارك';
     } else if (status === 'ongoing' || status === 'started') {
       statusEl.textContent = '🔵 الرحلة جارية';
-      statusEl.style.color = '#3b82f6';
+      statusEl.style.color = '#0088CC';
       if (title) title.textContent = 'الرحلة جارية';
       if (subtitle) subtitle.textContent = 'أنت في رحلة آمنة';
     } else if (status === 'completed') {
@@ -955,7 +955,7 @@
     if (scheduleWaypoints.length === 0) return;
     var markers = [];
     scheduleWaypoints.forEach(function(wp, i) {
-      var color = i === 0 ? '#22c55e' : i === scheduleWaypoints.length - 1 ? '#ef4444' : '#3b82f6';
+      var color = i === 0 ? '#00E5B8' : i === scheduleWaypoints.length - 1 ? '#FF3B5C' : '#0088CC';
       var m = L.circleMarker([wp.lat, wp.lng], { radius: 7, color: color, fillColor: color, fillOpacity: 0.7 });
       m._isScheduleWp = true;
       m.bindTooltip(i === 0 ? '🔵 انطلاق' : i === scheduleWaypoints.length - 1 ? '🔴 وجهة' : 'محطة ' + (i + 1), { direction: 'top' });
@@ -964,7 +964,7 @@
     });
     if (scheduleWaypoints.length >= 2) {
       var latlngs = scheduleWaypoints.map(function(wp) { return [wp.lat, wp.lng]; });
-      var line = L.polyline(latlngs, { color: '#f59e0b', weight: 3, dashArray: '8,6' });
+      var line = L.polyline(latlngs, { color: '#FFB020', weight: 3, dashArray: '8,6' });
       line._isScheduleLine = true;
       line.addTo(scheduleMap);
       scheduleMap.fitBounds(line.getBounds().pad(0.1));

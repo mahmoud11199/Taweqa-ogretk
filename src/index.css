@@ -54,8 +54,8 @@ html, body, #root {
   100% { transform: scale(2.2); opacity: 0; }
 }
 @keyframes meter-glow {
-  0%, 100% { text-shadow: 0 0 24px rgba(255,176,32,0.55), 0 0 48px rgba(255,176,32,0.25); }
-  50%       { text-shadow: 0 0 36px rgba(255,176,32,0.85), 0 0 72px rgba(255,176,32,0.40); }
+  0%, 100% { text-shadow: 0 0 24px rgba(0,229,184,0.55), 0 0 48px rgba(0,229,184,0.25); }
+  50%       { text-shadow: 0 0 36px rgba(0,229,184,0.85), 0 0 72px rgba(0,229,184,0.40); }
 }
 @keyframes spin {
   to { transform: rotate(360deg); }
@@ -85,7 +85,7 @@ html, body, #root {
   font-weight: 800;
   font-size: 52px;
   line-height: 1;
-  color: var(--amber);
+  color: var(--teal);
   letter-spacing: -1px;
   position: relative;
 }
@@ -93,6 +93,6 @@ html, body, #root {
   content: attr(data-ghost);
   position: absolute;
   inset: 0;
-  color: rgba(255,176,32,0.10);
+  color: rgba(0,229,184,0.10);
   pointer-events: none;
 }

@@ -836,7 +836,7 @@
               var points = item.savedPath.map(function(p) { return [p.lat, p.lng]; });
               L.polyline(points, {color: '#e11d48', weight: 3, dashArray: '4, 4'}).addTo(hMap);
               L.circleMarker(points[0], {radius: 5, color: '#10b981', fillColor: '#10b981', fillOpacity: 1}).addTo(hMap);
-              L.circleMarker(points[points.length-1], {radius: 5, color: '#ef4444', fillColor: '#ef4444', fillOpacity: 1}).addTo(hMap);
+              L.circleMarker(points[points.length-1], {radius: 5, color: '#FF3B5C', fillColor: '#FF3B5C', fillOpacity: 1}).addTo(hMap);
               try { hMap.fitBounds(L.polyline(points).getBounds(), {padding: [10, 10]}); } catch(e) { console.error('History map fitBounds error:', e); }
             }
           } catch(e) { console.error(e); }
@@ -990,9 +990,9 @@
         var timeText = timeAgo < 60 ? 'منذ ' + timeAgo + ' ثانية' : timeAgo < 3600 ? 'منذ ' + Math.floor(timeAgo / 60) + ' دقيقة' : 'منذ ' + Math.floor(timeAgo / 3600) + ' ساعة';
         var wpHtml = '';
         if (r.waypoints && Array.isArray(r.waypoints) && r.waypoints.length > 1) {
-          var waypointIcons = ['<i class="fas fa-play" style="color:#22c55e;"></i>'];
-          for (var wi = 1; wi < r.waypoints.length - 1; wi++) waypointIcons.push('<i class="fas fa-circle" style="color:#3b82f6;font-size:8px;"></i>');
-          waypointIcons.push('<i class="fas fa-flag-checkered" style="color:#ef4444;"></i>');
+          var waypointIcons = ['<i class="fas fa-play" style="color:#00E5B8;"></i>'];
+          for (var wi = 1; wi < r.waypoints.length - 1; wi++) waypointIcons.push('<i class="fas fa-circle" style="color:#0088CC;font-size:8px;"></i>');
+          waypointIcons.push('<i class="fas fa-flag-checkered" style="color:#FF3B5C;"></i>');
           wpHtml = '<div class="info" style="font-size:11px;"><i class="fas fa-route"></i> ' + r.waypoints.length + ' محطة: ' + waypointIcons.join(' ') + '</div>';
         }
         var noteHtml = r.note ? '<div class="info" style="font-size:11px;color:var(--accent);"><i class="fas fa-comment"></i> ' + escapeHTML(r.note) + '</div>' : '';
@@ -1022,7 +1022,7 @@
     if (driverMap) {
       driverMap.setView([lat, lng], 16);
       if (window._pickupMarker) driverMap.removeLayer(window._pickupMarker);
-      window._pickupMarker = L.circleMarker([lat, lng], { radius: 8, color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 0.7 }).addTo(driverMap);
+      window._pickupMarker = L.circleMarker([lat, lng], { radius: 8, color: '#FFB020', fillColor: '#FFB020', fillOpacity: 0.7 }).addTo(driverMap);
       showToast('📍 موقع pickup على الخريطة');
       switchDriverTab('meter', document.querySelector('#driver-app .tab-btn'));
     } else {
@@ -1043,13 +1043,13 @@
       req.waypoints.forEach(function(wp, i) {
         var ll = [wp.lat, wp.lng];
         latlngs.push(ll);
-        var color = i === 0 ? '#22c55e' : (i === req.waypoints.length - 1 ? '#ef4444' : '#3b82f6');
+        var color = i === 0 ? '#00E5B8' : (i === req.waypoints.length - 1 ? '#FF3B5C' : '#0088CC');
         var m = L.circleMarker(ll, { radius: 7, color: color, fillColor: color, fillOpacity: 0.8, weight: 2 }).addTo(driverMap);
         m.bindTooltip(i === 0 ? 'انطلاق' : (i === req.waypoints.length - 1 ? 'وجهة' : String(i + 1)), { permanent: true, direction: 'top' });
         window._wpMarkers.push(m);
       });
       if (latlngs.length > 1) {
-        window._wpPolyline = L.polyline(latlngs, { color: '#f59e0b', weight: 3, dashArray: '6, 8' }).addTo(driverMap);
+        window._wpPolyline = L.polyline(latlngs, { color: '#FFB020', weight: 3, dashArray: '6, 8' }).addTo(driverMap);
       }
       try { driverMap.fitBounds(L.polyline(latlngs).getBounds(), { padding: [30, 30] }); } catch(e) { console.error('Driver map fitBounds error:', e); }
       showToast('📍 تم عرض مسار الرحلة');
@@ -1164,7 +1164,7 @@
     var badge = document.getElementById('driver-status-badge');
     if (!badge) return;
     if (val) { badge.textContent = '🟢 متاح للطلب'; badge.style.background = 'var(--success)'; }
-    else { badge.textContent = '🔴 غير متاح'; badge.style.background = '#ef4444'; }
+    else { badge.textContent = '🔴 غير متاح'; badge.style.background = '#FF3B5C'; }
   }
 
   window.rejectRequest = async function(requestId) {

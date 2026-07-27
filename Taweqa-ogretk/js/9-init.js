@@ -8,9 +8,9 @@
         var len = this.value.length;
         if (len === 0) { sb.style.width = '0'; sb.style.background = ''; return; }
         sb.style.width = '100%';
-        if (len < 6) sb.style.background = '#ef4444';
-        else if (len < 10) sb.style.background = '#f59e0b';
-        else sb.style.background = '#22c55e';
+        if (len < 6) sb.style.background = '#FF3B5C';
+        else if (len < 10) sb.style.background = '#FFB020';
+        else sb.style.background = '#00E5B8';
       });
       np.addEventListener('keydown', function(e) { if (e.key === 'Enter' && cp) cp.focus(); });
     }
@@ -32,9 +32,9 @@
         var len = this.value.length;
         if (len === 0) { rs.style.width = '0'; rs.style.background = ''; return; }
         rs.style.width = '100%';
-        if (len < 6) rs.style.background = '#ef4444';
-        else if (len < 10) rs.style.background = '#f59e0b';
-        else rs.style.background = '#22c55e';
+        if (len < 6) rs.style.background = '#FF3B5C';
+        else if (len < 10) rs.style.background = '#FFB020';
+        else rs.style.background = '#00E5B8';
       });
     }
     if (rc) {

@@ -141,8 +141,8 @@ function showAlert(id, msg, type) {
 window.setFieldError = function(fieldId, hasError) {
   var el = typeof fieldId === 'string' ? document.getElementById(fieldId) : fieldId;
   if (el) {
-    el.style.borderColor = hasError ? 'var(--error,#ef4444)' : '';
-    el.style.boxShadow = hasError ? '0 0 0 2px rgba(239,68,68,0.2)' : '';
+    el.style.borderColor = hasError ? 'var(--error,#FF3B5C)' : '';
+    el.style.boxShadow = hasError ? '0 0 0 2px rgba(255,59,92,0.2)' : '';
   }
 };
 
@@ -196,7 +196,7 @@ window.showPromptModal = function(options) {
     btnRow.style.cssText = 'display:flex;gap:10px;margin-top:18px';
     var confirmBtn = document.createElement('button');
     confirmBtn.textContent = options.confirmText || 'تأكيد';
-    confirmBtn.style.cssText = 'flex:1;padding:10px;border-radius:10px;border:none;background:var(--success,#22c55e);color:#fff;font-size:14px;font-weight:700;cursor:pointer';
+    confirmBtn.style.cssText = 'flex:1;padding:10px;border-radius:10px;border:none;background:var(--success,#00E5B8);color:#080D18;font-size:14px;font-weight:700;cursor:pointer';
     var cancelBtn = document.createElement('button');
     cancelBtn.textContent = options.cancelText || 'إلغاء';
     cancelBtn.style.cssText = 'flex:1;padding:10px;border-radius:10px;border:1px solid var(--meter-border,#333);background:transparent;color:var(--text-muted,#888);font-size:14px;cursor:pointer';
@@ -240,7 +240,7 @@ window.showLoading = function(msg) {
     el.id = 'app-loading';
     el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9998;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;direction:rtl';
     var spinner = document.createElement('div');
-    spinner.style.cssText = 'width:40px;height:40px;border:4px solid rgba(255,255,255,0.1);border-top-color:var(--meter-primary,#f59e0b);border-radius:50%;animation:spin 0.8s linear infinite';
+    spinner.style.cssText = 'width:40px;height:40px;border:4px solid rgba(255,255,255,0.1);border-top-color:var(--meter-primary,#00E5B8);border-radius:50%;animation:spin 0.8s linear infinite';
     el.appendChild(spinner);
     var txt = document.createElement('div');
     txt.id = 'app-loading-text';

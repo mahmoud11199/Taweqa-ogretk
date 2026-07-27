@@ -92,7 +92,7 @@
       var { data: trips } = await supabase.from('trips').select('id, join_code, status, classification, total_fare, distance_km, driver_id, passenger_id, created_at, payment_method, payment_status').order('created_at', { ascending: false }).limit(50);
       if (!trips || !trips.length) { list.innerHTML = '<div class="empty-state">لا توجد رحلات</div>'; return; }
       list.innerHTML = trips.map(function(t) {
-        var sc = t.status === 'completed' ? 'var(--success)' : t.status === 'cancelled' ? 'var(--error)' : t.status === 'started' || t.status === 'ongoing' ? '#3b82f6' : 'var(--accent)';
+        var sc = t.status === 'completed' ? 'var(--success)' : t.status === 'cancelled' ? 'var(--error)' : t.status === 'started' || t.status === 'ongoing' ? 'var(--blue,#0088CC)' : 'var(--accent)';
         return '<div class="history-item"><div class="history-header"><span style="color:' + sc + ';">' + escapeHTML(t.status || '-') + '</span><span style="color:var(--meter-primary)">' + escapeHTML(t.join_code || '-') + '</span></div><div class="history-details"><div>' + (t.classification === 'private' ? 'مخصوص' : 'أفراد') + '</div><div>' + clampNumber(t.distance_km, 0, 1000, 0).toFixed(1) + ' كم</div><div>' + new Date(t.created_at).toLocaleString('ar-EG') + '</div></div><div class="history-fare">' + clampNumber(t.total_fare, 0, 100000, 0).toFixed(2) + ' ج</div><div style="font-size:10px;color:var(--meter-muted);margin-top:2px;">' + (t.payment_method === 'wallet' ? 'محفظة' : 'نقدي') + ' | ' + (t.payment_status || '-') + '</div></div>';
       }).join('');
     } catch(e) { list.innerHTML = '<div class="empty-state">خطأ</div>'; console.error(e); }
