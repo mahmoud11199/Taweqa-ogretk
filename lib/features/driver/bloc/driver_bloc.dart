@@ -4,6 +4,7 @@ import '../../../core/models/trip_passenger.dart';
 import '../../../core/services/background_location_service.dart';
 import '../../../core/services/in_app_notification_service.dart';
 import '../../auth/models/user_model.dart';
+import '../../auth/repositories/auth_repository.dart';
 import '../repositories/driver_repository.dart';
 import 'driver_event.dart';
 import 'driver_state.dart';
@@ -51,6 +52,24 @@ class DriverBloc extends Bloc<DriverEvent, DriverState> {
         currentLng: driverInfo.currentLng ?? 0,
       ));
     } catch (e) {
+      // Auto-repair: if profile not found, try to create driver row
+      try {
+        final user = SupabaseConfig.client.auth.currentUser;
+        if (user != null) {
+          final repo = AuthRepository();
+          await repo.ensureDriverRow(user.id, 'tuktuk');
+          final data = await _repository.fetchDriverProfile(user.id);
+          final driverInfo = DriverInfo.fromMap(data);
+          emit(state.copyWith(
+            isLoading: false,
+            driverInfo: driverInfo,
+            isAvailable: driverInfo.isAvailable,
+            currentLat: driverInfo.currentLat ?? 0,
+            currentLng: driverInfo.currentLng ?? 0,
+          ));
+          return;
+        }
+      } catch (_) {}
       emit(state.copyWith(isLoading: false, error: e.toString()));
     }
   }
