@@ -1,5 +1,6 @@
 import '../../../core/models/trip_passenger.dart';
 import '../../auth/models/user_model.dart';
+import '../../passenger/models/ride_request.dart';
 import '../models/trip_model.dart';
 
 class DriverState {
@@ -20,6 +21,7 @@ class DriverState {
   final bool isWaiting;
   final List<TripPassenger> tripPassengers;
   final String? shareCode;
+  final List<RideRequest> rideRequests;
 
   const DriverState({
     this.isLoading = false,
@@ -39,6 +41,7 @@ class DriverState {
     this.isWaiting = false,
     this.tripPassengers = const [],
     this.shareCode,
+    this.rideRequests = const [],
   });
 
   DriverState copyWith({
@@ -59,6 +62,7 @@ class DriverState {
     bool? isWaiting,
     List<TripPassenger>? tripPassengers,
     String? shareCode,
+    List<RideRequest>? rideRequests,
     bool clearError = false,
   }) {
     return DriverState(
@@ -79,6 +83,7 @@ class DriverState {
       isWaiting: isWaiting ?? this.isWaiting,
       tripPassengers: tripPassengers ?? this.tripPassengers,
       shareCode: shareCode ?? this.shareCode,
+      rideRequests: rideRequests ?? this.rideRequests,
     );
   }
 }

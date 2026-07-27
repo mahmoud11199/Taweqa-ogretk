@@ -98,3 +98,15 @@ class UpdateDriverProfile extends DriverEvent {
   });
 }
 
+class FetchRideRequests extends DriverEvent {}
+
+class AcceptRideRequest extends DriverEvent {
+  final String requestId;
+  AcceptRideRequest(this.requestId);
+}
+
+class RejectRideRequest extends DriverEvent {
+  final String requestId;
+  RejectRideRequest(this.requestId);
+}
+

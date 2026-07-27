@@ -8,6 +8,7 @@ import '../../../core/models/trip_passenger.dart';
 import '../../../core/models/vehicle_category.dart';
 import '../../../core/services/local_database.dart';
 import '../../../core/utils/cache_helper.dart';
+import '../../passenger/models/ride_request.dart';
 import '../models/trip_model.dart';
 
 class DriverRepository {
@@ -284,5 +285,27 @@ class DriverRepository {
   double calculateDriverCut(double fare, {bool premiumDriver = false}) {
     final commission = premiumDriver ? 0.10 : AppConstants.appCommissionRate;
     return fare * (1 - commission);
+  }
+
+  Future<List<RideRequest>> fetchPendingRequests(String driverId) async {
+    final response = await _client.rpc('get_pending_requests_for_driver', params: {
+      'p_driver_id': driverId,
+    });
+    final list = response as List<dynamic>;
+    return list.map((e) => RideRequest.fromMap(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<void> acceptRideRequest(String requestId, String driverId) async {
+    await _client.rpc('accept_ride_request', params: {
+      'p_request_id': requestId,
+      'p_driver_id': driverId,
+    });
+  }
+
+  Future<void> rejectRideRequest(String requestId, String driverId) async {
+    await _client.rpc('reject_ride_request', params: {
+      'p_request_id': requestId,
+      'p_driver_id': driverId,
+    });
   }
 }

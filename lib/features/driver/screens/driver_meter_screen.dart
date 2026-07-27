@@ -7,6 +7,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as sb;
+import '../../../core/config/supabase_config.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/widgets/toast_widget.dart';
 import '../../auth/bloc/auth_bloc.dart';
@@ -39,6 +41,7 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
   Timer? _gpsTimer;
   Timer? _simulationTimer;
   Timer? _meterTickTimer;
+  sb.RealtimeChannel? _requestChannel;
   final List<MeterData> _meters = [MeterData(id: 1), MeterData(id: 2)];
   int _activeMeterIndex = 0;
 
@@ -50,6 +53,40 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
     context.read<DriverBloc>().add(LoadDriverProfile());
     _startLocationUpdates();
     _startMeterTick();
+    _subscribeToRideRequests();
+  }
+
+  void _subscribeToRideRequests() {
+    final user = SupabaseConfig.client.auth.currentUser;
+    if (user == null) return;
+    _requestChannel = SupabaseConfig.client.channel('driver-req-${user.id}')
+      .onPostgresChanges(
+        event: sb.PostgresChangeEvent.insert,
+        schema: 'public',
+        table: 'ride_requests',
+        filter: sb.PostgresChangeFilter(
+          type: sb.PostgresChangeFilterType.eq,
+          column: 'offered_to',
+          value: user.id,
+        ),
+        callback: (_) {
+          if (mounted) context.read<DriverBloc>().add(FetchRideRequests());
+        },
+      )
+      .onPostgresChanges(
+        event: sb.PostgresChangeEvent.update,
+        schema: 'public',
+        table: 'ride_requests',
+        filter: sb.PostgresChangeFilter(
+          type: sb.PostgresChangeFilterType.eq,
+          column: 'offered_to',
+          value: user.id,
+        ),
+        callback: (_) {
+          if (mounted) context.read<DriverBloc>().add(FetchRideRequests());
+        },
+      )
+      .subscribe();
   }
 
   void _startMeterTick() {
@@ -92,6 +129,12 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
         lat: position.latitude,
         lng: position.longitude,
       ));
+      for (final m in _meters) {
+        m.lastLat = position.latitude;
+        m.lastLng = position.longitude;
+        m.lastSpeedKmh = position.speed; // real speed from GPS
+        m.lastAccuracy = position.accuracy;
+      }
       _mapController.move(
         LatLng(position.latitude, position.longitude),
         _mapController.camera.zoom,
@@ -236,6 +279,7 @@ class _DriverMeterScreenState extends State<DriverMeterScreen> {
     _positionSubscription?.cancel();
     _gpsTimer?.cancel();
     _meterTickTimer?.cancel();
+    _requestChannel?.unsubscribe();
     super.dispose();
   }
 

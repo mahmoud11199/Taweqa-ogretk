@@ -30,6 +30,9 @@ class DriverBloc extends Bloc<DriverEvent, DriverState> {
     on<UpdatePassengerStatus>(_onUpdatePassengerStatus);
     on<FetchScheduledTrips>(_onFetchScheduledTrips);
     on<AcceptScheduledTrip>(_onAcceptScheduledTrip);
+    on<FetchRideRequests>(_onFetchRideRequests);
+    on<AcceptRideRequest>(_onAcceptRideRequest);
+    on<RejectRideRequest>(_onRejectRideRequest);
   }
 
   Future<void> _onLoadDriverProfile(
@@ -311,6 +314,38 @@ class DriverBloc extends Bloc<DriverEvent, DriverState> {
         return tp;
       }).toList();
       emit(state.copyWith(tripPassengers: updated));
+    } catch (_) {}
+  }
+
+  Future<void> _onFetchRideRequests(
+      FetchRideRequests event, Emitter<DriverState> emit) async {
+    try {
+      final user = SupabaseConfig.client.auth.currentUser;
+      if (user == null) return;
+      final requests = await _repository.fetchPendingRequests(user.id);
+      emit(state.copyWith(rideRequests: requests));
+    } catch (_) {}
+  }
+
+  Future<void> _onAcceptRideRequest(
+      AcceptRideRequest event, Emitter<DriverState> emit) async {
+    try {
+      final user = SupabaseConfig.client.auth.currentUser;
+      if (user == null) return;
+      await _repository.acceptRideRequest(event.requestId, user.id);
+      emit(state.copyWith(rideRequests: state.rideRequests.where((r) => r.id != event.requestId).toList()));
+    } catch (e) {
+      emit(state.copyWith(error: e.toString()));
+    }
+  }
+
+  Future<void> _onRejectRideRequest(
+      RejectRideRequest event, Emitter<DriverState> emit) async {
+    try {
+      final user = SupabaseConfig.client.auth.currentUser;
+      if (user == null) return;
+      await _repository.rejectRideRequest(event.requestId, user.id);
+      emit(state.copyWith(rideRequests: state.rideRequests.where((r) => r.id != event.requestId).toList()));
     } catch (_) {}
   }
 }
