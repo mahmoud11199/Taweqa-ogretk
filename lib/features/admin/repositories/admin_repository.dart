@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/config/supabase_config.dart';
+import '../../../core/constants/app_constants.dart';
 import '../models/admin_models.dart';
 
 class AdminRepository {
@@ -70,13 +71,13 @@ class AdminRepository {
     if (response != null) {
       final map = response;
       return {
-        'pricing_per_km': (map['pricing_per_km'] as num?)?.toDouble() ?? 3.5,
-        'pricing_per_min': (map['pricing_per_min'] as num?)?.toDouble() ?? 0.5,
-        'base_fare': (map['base_fare'] as num?)?.toDouble() ?? 5.0,
-        'commission_rate': (map['commission_rate'] as num?)?.toDouble() ?? 0.15,
-        'wait_price': (map['wait_price'] as num?)?.toDouble() ?? 1.0,
-        'night_multiplier': (map['night_multiplier'] as num?)?.toDouble() ?? 1.5,
-        'min_fare': (map['min_fare'] as num?)?.toDouble() ?? 5.0,
+        'pricing_per_km': (map['pricing_per_km'] as num?)?.toDouble() ?? AppConstants.pricingPerKm,
+        'pricing_per_min': (map['pricing_per_min'] as num?)?.toDouble() ?? AppConstants.pricingPerMin,
+        'base_fare': (map['base_fare'] as num?)?.toDouble() ?? AppConstants.pricingBaseFare,
+        'commission_rate': (map['commission_rate'] as num?)?.toDouble() ?? AppConstants.appCommissionRate,
+        'wait_price': (map['wait_price'] as num?)?.toDouble() ?? AppConstants.waitingFarePerMin,
+        'night_multiplier': (map['night_multiplier'] as num?)?.toDouble() ?? AppConstants.nightFareMultiplier,
+        'min_fare': (map['min_fare'] as num?)?.toDouble() ?? AppConstants.minFare,
       };
     }
     return {};

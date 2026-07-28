@@ -8,9 +8,9 @@ class TripPassenger {
   final double pickupLat;
   final double pickupLng;
   final String pickupAddress;
-  final double? dropoffLat;
-  final double? dropoffLng;
-  final String? dropoffAddress;
+  final double? destLat;
+  final double? destLng;
+  final String? destAddress;
   final String status;
   final double? fare;
   final DateTime createdAt;
@@ -25,9 +25,9 @@ class TripPassenger {
     required this.pickupLat,
     required this.pickupLng,
     required this.pickupAddress,
-    this.dropoffLat,
-    this.dropoffLng,
-    this.dropoffAddress,
+    this.destLat,
+    this.destLng,
+    this.destAddress,
     this.status = 'pending',
     this.fare,
     required this.createdAt,
@@ -49,9 +49,9 @@ class TripPassenger {
       pickupLat: (map['pickup_lat'] as num).toDouble(),
       pickupLng: (map['pickup_lng'] as num).toDouble(),
       pickupAddress: map['pickup_address'] as String? ?? '',
-      dropoffLat: (map['dest_lat'] as num?)?.toDouble(),
-      dropoffLng: (map['dest_lng'] as num?)?.toDouble(),
-      dropoffAddress: map['dest_address'] as String?,
+      destLat: (map['dest_lat'] as num?)?.toDouble(),
+      destLng: (map['dest_lng'] as num?)?.toDouble(),
+      destAddress: map['dest_address'] as String?,
       status: map['status'] as String? ?? 'pending',
       fare: (map['fare'] as num?)?.toDouble(),
       createdAt: DateTime.parse(map['created_at'] as String),

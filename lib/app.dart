@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'core/config/routes.dart';
 import 'core/screens/splash_screen.dart';
+import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/landing/screens/landing_screen.dart';
 import 'features/auth/screens/login_screen.dart';
@@ -29,14 +30,18 @@ import 'features/auth/screens/role_screen.dart';
 import 'features/wallet/screens/paymob_mock_screen.dart' as paymob;
 import 'features/admin/screens/app_settings_screen.dart';
 
+final _navigatorKey = GlobalKey<NavigatorState>();
+
 class TaweqeApp extends StatelessWidget {
   const TaweqeApp({super.key});
 
   @override
   Widget build(BuildContext context) {
+    NotificationService.navigatorKey ??= _navigatorKey;
     return MaterialApp(
       title: 'توقع أجرتك',
       debugShowCheckedModeBanner: false,
+      navigatorKey: _navigatorKey,
       theme: AppTheme.darkTheme,
       initialRoute: Routes.splash,
       onGenerateRoute: (settings) {

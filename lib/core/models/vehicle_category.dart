@@ -25,4 +25,13 @@ class VehicleCategory {
       perWaitMinute: (map['per_wait_minute'] as num?)?.toDouble() ?? 0.25,
     );
   }
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'category_name': categoryName,
+    'base_fare': baseFare,
+    'per_km_price': perKmPrice,
+    'per_minute_price': perMinutePrice,
+    'per_wait_minute': perWaitMinute,
+  };
 }

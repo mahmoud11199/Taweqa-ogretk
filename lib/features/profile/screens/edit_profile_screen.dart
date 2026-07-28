@@ -22,9 +22,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _loadUser();
   }
 
-  void _loadUser() {
+  Future<void> _loadUser() async {
     final user = SupabaseConfig.client.auth.currentUser;
     if (user == null) return;
+    try {
+      final profile = await SupabaseConfig.client
+          .from('profiles')
+          .select('full_name, phone, email')
+          .eq('id', user.id)
+          .maybeSingle();
+      if (profile != null) {
+        _nameController.text = profile['full_name'] as String? ?? '';
+        _phoneController.text = profile['phone'] as String? ?? '';
+        _email = profile['email'] as String? ?? user.email ?? '';
+        return;
+      }
+    } catch (_) {}
     final metadata = user.userMetadata;
     _nameController.text = metadata?['name'] as String? ?? '';
     _phoneController.text = metadata?['phone'] as String? ?? '';

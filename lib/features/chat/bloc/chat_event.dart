@@ -35,3 +35,5 @@ class MarkAsRead extends ChatEvent {
   final String conversationId;
   MarkAsRead(this.conversationId);
 }
+
+class UnsubscribeFromMessages extends ChatEvent {}

@@ -18,6 +18,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<SendMessage>(_onSendMessage);
     on<LoadMessages>(_onLoadMessages);
     on<SubscribeToMessages>(_onSubscribeToMessages);
+    on<UnsubscribeFromMessages>(_onUnsubscribeFromMessages);
     on<MessageReceived>(_onMessageReceived);
     on<MarkAsRead>(_onMarkAsRead);
   }
@@ -40,6 +41,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     try {
       final user = SupabaseConfig.client.auth.currentUser;
       if (user == null) return;
+      if (state.activeConversationId != null) {
+        add(UnsubscribeFromMessages());
+      }
       final convId = await _repository.getOrCreateConversation(
         user.id, event.otherUserId,
       );
@@ -90,6 +94,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     } catch (e) {
       emit(state.copyWith(isLoading: false, error: e.toString()));
     }
+  }
+
+  void _onUnsubscribeFromMessages(
+      UnsubscribeFromMessages event, Emitter<ChatState> emit) {
+    _messageSub?.cancel();
+    _messageSub = null;
   }
 
   Future<void> _onSubscribeToMessages(

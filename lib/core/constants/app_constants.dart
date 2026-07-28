@@ -52,6 +52,7 @@ class AppConstants {
   static const int nightStartHour = 22;
   static const int nightEndHour = 6;
   static const double waitingFarePerMin = 0.25;
+  static const double minFare = 5;
 
   // ── Subscriptions ──
   static const int passengerSubPrice = 89;

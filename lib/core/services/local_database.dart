@@ -119,7 +119,7 @@ class LocalDatabase {
     ''');
 
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS wallet_transactions (
+      CREATE TABLE IF NOT EXISTS transactions (
         id TEXT PRIMARY KEY,
         user_id TEXT,
         type TEXT,

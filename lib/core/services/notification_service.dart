@@ -1,4 +1,5 @@
 import 'dart:io' show Platform;
+import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../config/supabase_config.dart';
@@ -9,6 +10,7 @@ class NotificationService {
   static String? _fcmToken;
   static bool _initialized = false;
   static int _notificationId = 0;
+  static GlobalKey<NavigatorState>? navigatorKey;
 
   static Future<void> initialize({bool firebaseAvailable = true}) async {
     if (_initialized) return;
@@ -112,9 +114,20 @@ class NotificationService {
   }
 
   static void _handleNavigation(String? type) {
-    if (type == null) return;
-    // Navigation handled via global navigator key or direct push
-    // Types: 'new_ride', 'chat_message', 'subscription', 'promotion'
+    if (type == null || navigatorKey?.currentState == null) return;
+    final nav = navigatorKey!.currentState!;
+    switch (type) {
+      case 'new_ride':
+      case 'trip':
+        nav.pushNamed('/trip-details');
+      case 'chat_message':
+        nav.pushNamed('/chat');
+      case 'subscription':
+        nav.pushNamed('/subscriptions');
+      case 'wallet':
+      case 'deposit':
+        nav.pushNamed('/wallet');
+    }
   }
 
   static Future<void> subscribeToTopic(String topic) async {
