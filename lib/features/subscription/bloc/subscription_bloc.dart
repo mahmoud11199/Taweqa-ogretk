@@ -36,8 +36,7 @@ class SubscriptionBloc extends Bloc<SubscriptionEvent, SubscriptionState> {
       if (user == null) { emit(state.copyWith(isLoading: false)); return; }
       final sub = await _repository.createSubscription(
         userId: user.id,
-        tierType: event.tierType,
-        price: event.price,
+        planType: event.planType,
       );
       emit(state.copyWith(
         isLoading: false,

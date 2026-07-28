@@ -10,12 +10,12 @@ class SubscriptionRepository {
         .from('subscriptions')
         .select()
         .eq('user_id', userId)
-        .eq('is_active', true)
+        .eq('status', 'active')
         .maybeSingle();
     if (response == null) return null;
     final sub = Subscription.fromMap(response);
     if (sub.isExpired) {
-      await _client.from('subscriptions').update({'is_active': false}).eq('id', sub.id);
+      await _client.from('subscriptions').update({'status': 'expired'}).eq('id', sub.id);
       return null;
     }
     return sub;
@@ -23,16 +23,15 @@ class SubscriptionRepository {
 
   Future<Subscription> createSubscription({
     required String userId,
-    required String tierType,
-    required double price,
+    required String planType,
   }) async {
-    final expiresAt = DateTime.now().add(const Duration(days: 30));
+    final endDate = DateTime.now().add(const Duration(days: 30));
     final response = await _client.from('subscriptions').insert({
       'user_id': userId,
-      'tier_type': tierType,
-      'price': price,
-      'expires_at': expiresAt.toIso8601String(),
-      'is_active': true,
+      'plan_type': planType,
+      'status': 'active',
+      'start_date': DateTime.now().toIso8601String(),
+      'end_date': endDate.toIso8601String(),
     }).select().single();
     return Subscription.fromMap(response);
   }
@@ -40,7 +39,7 @@ class SubscriptionRepository {
   Future<void> cancelSubscription(String subscriptionId) async {
     await _client
         .from('subscriptions')
-        .update({'is_active': false})
+        .update({'status': 'cancelled'})
         .eq('id', subscriptionId);
   }
 

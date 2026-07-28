@@ -161,15 +161,15 @@ class MockSubscriptionRepository extends SubscriptionRepository {
   @override
   Future<Subscription> createSubscription({
     required String userId,
-    required String tierType,
-    required double price,
+    required String planType,
   }) async {
     return Subscription(
       id: 'sub-1',
       userId: userId,
-      tierType: tierType,
-      price: price,
-      expiresAt: DateTime.now().add(const Duration(days: 30)),
+      planType: planType,
+      status: 'active',
+      startDate: DateTime.now(),
+      endDate: DateTime.now().add(const Duration(days: 30)),
       createdAt: DateTime.now(),
     );
   }
@@ -459,7 +459,7 @@ void main() {
 
     test('Subscribe sets isLoading false (no user)', () async {
       final bloc = SubscriptionBloc(repository: repo);
-      bloc.add(Subscribe(tierType: 'driver_premium', price: 299));
+      bloc.add(Subscribe(planType: 'driver_premium'));
       await Future(() {});
       await Future(() {});
       expect(bloc.state.isLoading, false);

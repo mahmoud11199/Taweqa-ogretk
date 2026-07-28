@@ -49,6 +49,16 @@ serve(async (req) => {
       );
     }
 
+    // Clean up user data before deleting auth account
+    const tables = [
+      'device_tokens', 'sos_alerts', 'saved_cards', 'subscriptions',
+      'referral_codes', 'wallets', 'driver_applications', 'drivers',
+    ];
+    for (const table of tables) {
+      await supabase.from(table).delete().eq('user_id', user_id);
+    }
+    await supabase.from('profiles').delete().eq('id', user_id);
+
     const { error } = await supabase.auth.admin.deleteUser(user_id);
     if (error) throw error;
 

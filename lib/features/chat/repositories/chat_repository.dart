@@ -11,11 +11,26 @@ class ChatRepository {
   Future<List<Conversation>> fetchConversations(String userId) async {
     final response = await _client
         .from('conversations')
-        .select()
+        .select('''
+          *,
+          user1:user1_id!inner(full_name, avatar_url),
+          user2:user2_id!inner(full_name, avatar_url)
+        ''')
         .or('user1_id.eq.$userId,user2_id.eq.$userId')
         .order('last_message_at', ascending: false);
     final list = response as List<dynamic>;
-    return list.map((e) => Conversation.fromMap(e)).toList();
+    return list.map((e) {
+      final map = e as Map<String, dynamic>;
+      final u1 = map['user1'] as Map<String, dynamic>?;
+      final u2 = map['user2'] as Map<String, dynamic>?;
+      final isUser2 = map['user1_id'] == userId;
+      final otherProfile = isUser2 ? u2 : u1;
+      map['other_user_name'] = otherProfile?['full_name'];
+      map['other_user_avatar'] = otherProfile?['avatar_url'];
+      map.remove('user1');
+      map.remove('user2');
+      return Conversation.fromMap(map);
+    }).toList();
   }
 
   Future<String> getOrCreateConversation(String userId1, String userId2) async {

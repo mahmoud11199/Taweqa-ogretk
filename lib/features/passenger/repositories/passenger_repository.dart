@@ -211,7 +211,7 @@ class PassengerRepository {
     final trip = await _client
         .from('trips')
         .select('id, driver_id')
-        .eq('share_code', shareCode)
+        .eq('join_code', shareCode)
         .eq('status', 'active')
         .maybeSingle();
     if (trip == null) throw Exception('لم يتم العثور على رحلة بهذا الكود');

@@ -38,7 +38,7 @@ class SubscriptionPlansScreen extends StatelessWidget {
                 features: const ['خصم 15% على الأجرة', 'أولوية في العثور على سائق', 'دعم فني متميز'],
                 icon: Icons.discount, color: const Color(0xFF0088CC),
                 onSubscribe: () => context.read<SubscriptionBloc>().add(
-                  Subscribe(tierType: 'passenger_discount', price: AppConstants.passengerSubPrice.toDouble()),
+                  Subscribe(planType: 'passenger_discount'),
                 ),
                 isLoading: state.isLoading,
                 isActive: state.activeSubscription?.isPassengerDiscount ?? false,
@@ -50,7 +50,7 @@ class SubscriptionPlansScreen extends StatelessWidget {
                 features: const ['عمولة مخفضة 10% بدلاً من 15%', 'أولوية في استقبال الرحلات', 'إحصائيات متقدمة', 'دعم فني متميز'],
                 icon: Icons.star, color: const Color(0xFFFFB020),
                 onSubscribe: () => context.read<SubscriptionBloc>().add(
-                  Subscribe(tierType: 'driver_premium', price: AppConstants.driverSubPrice.toDouble()),
+                  Subscribe(planType: 'driver_premium'),
                 ),
                 isLoading: state.isLoading,
                 isActive: state.activeSubscription?.isDriverPremium ?? false,
@@ -193,7 +193,7 @@ class _CurrentSubCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'تنتهي في ${sub.expiresAt.day}/${sub.expiresAt.month}/${sub.expiresAt.year}',
+            'تنتهي في ${sub.endDate.day}/${sub.endDate.month}/${sub.endDate.year}',
             style: const TextStyle(fontSize: 13, color: Color(0xFF526480)),
           ),
           const SizedBox(height: 16),

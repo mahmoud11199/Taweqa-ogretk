@@ -3,9 +3,8 @@ abstract class SubscriptionEvent {}
 class LoadSubscription extends SubscriptionEvent {}
 
 class Subscribe extends SubscriptionEvent {
-  final String tierType;
-  final double price;
-  Subscribe({required this.tierType, required this.price});
+  final String planType;
+  Subscribe({required this.planType});
 }
 
 class CancelSubscription extends SubscriptionEvent {}

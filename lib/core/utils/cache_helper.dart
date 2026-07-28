@@ -3,7 +3,7 @@ import '../services/sync_service.dart';
 
 class CacheHelper {
   static bool get isOnline => SyncService.isOnline;
-  static const Duration _cacheTtl = Duration(hours: 24);
+  static const Duration _cacheTtl = Duration(hours: 1);
   static const String _cacheMetaKey = 'cache_meta';
 
   static Future<void> _markCached(String key) async {

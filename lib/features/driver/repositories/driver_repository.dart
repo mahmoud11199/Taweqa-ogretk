@@ -126,11 +126,20 @@ class DriverRepository {
       onlineFetch: () async {
         final response = await _client
             .from('trips')
-            .select()
+            .select('*, profiles!inner(full_name, phone, rating)')
             .eq('driver_id', driverId)
             .order('created_at', ascending: false)
             .limit(50);
-        return (response as List<dynamic>).cast<Map<String, dynamic>>();
+        return (response as List<dynamic>).map((e) {
+          final map = e as Map<String, dynamic>;
+          final profile = map['profiles'] as Map<String, dynamic>?;
+          if (profile != null) {
+            map['passenger_name'] = profile['full_name'];
+            map['passenger_phone'] = profile['phone'];
+            map['passenger_rating'] = profile['rating'];
+          }
+          return map;
+        }).toList();
       },
     );
     return rows.map((e) => Trip.fromMap(e)).toList();
@@ -184,10 +193,10 @@ class DriverRepository {
     final code = List.generate(6, (_) => rng.nextInt(10).toString()).join();
     if (CacheHelper.isOnline) {
       try {
-        await _client.from('trips').update({'share_code': code}).eq('id', tripId);
+        await _client.from('trips').update({'join_code': code}).eq('id', tripId);
       } catch (_) {}
     }
-    await LocalDatabase.insert('trips', {'id': tripId, 'share_code': code});
+    await LocalDatabase.insert('trips', {'id': tripId, 'join_code': code});
     return code;
   }
 
@@ -209,12 +218,21 @@ class DriverRepository {
       onlineFetch: () async {
         final response = await _client
             .from('trips')
-            .select()
+            .select('*, profiles!inner(full_name, phone, rating)')
             .eq('driver_id', driverId)
             .eq('trip_type', 'scheduled')
             .eq('status', 'scheduled')
             .order('scheduled_at', ascending: true);
-        return (response as List<dynamic>).cast<Map<String, dynamic>>();
+        return (response as List<dynamic>).map((e) {
+          final map = e as Map<String, dynamic>;
+          final profile = map['profiles'] as Map<String, dynamic>?;
+          if (profile != null) {
+            map['passenger_name'] = profile['full_name'];
+            map['passenger_phone'] = profile['phone'];
+            map['passenger_rating'] = profile['rating'];
+          }
+          return map;
+        }).toList();
       },
     );
     return rows.map((e) => Trip.fromMap(e)).toList();
@@ -236,8 +254,19 @@ class DriverRepository {
       table: 'trips',
       id: tripId,
       onlineFetch: () async {
-        final response = await _client.from('trips').select().eq('id', tripId).single();
-        return response as Map<String, dynamic>?;
+        final response = await _client
+            .from('trips')
+            .select('*, profiles!inner(full_name, phone, rating)')
+            .eq('id', tripId)
+            .single();
+        final map = response as Map<String, dynamic>;
+        final profile = map['profiles'] as Map<String, dynamic>?;
+        if (profile != null) {
+          map['passenger_name'] = profile['full_name'];
+          map['passenger_phone'] = profile['phone'];
+          map['passenger_rating'] = profile['rating'];
+        }
+        return map;
       },
     );
     if (data != null) return Trip.fromMap(data);
