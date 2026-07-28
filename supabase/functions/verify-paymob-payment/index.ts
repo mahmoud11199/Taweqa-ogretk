@@ -1,7 +1,8 @@
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const PAYMOB_QUERY_URL = 'https://accept.paymob.com/v1/intention';
-const PAYMOB_AUTH_URL = 'https://accept.paymob.com/api/auth/tokens';
+const PAYMOB_QUERY_URL = 'https://accept.paymobsolutions.com/api/ecommerce/orders';
+const PAYMOB_AUTH_URL = 'https://accept.paymobsolutions.com/api/auth/tokens';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,7 +10,7 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-Deno.serve(async (req) => {
+serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
@@ -69,20 +70,16 @@ Deno.serve(async (req) => {
 
     if (isPaid) {
       const { data: existingTx, error: txError } = await supabase
-        .from('wallet_transactions')
+        .from('transactions')
         .select('id, status')
-        .eq('reference_id', transactionRef)
+        .eq('paymob_ref', transactionRef)
         .maybeSingle();
 
       if (existingTx && existingTx.status !== 'completed') {
-        await supabase.from('wallet_transactions').update({ status: 'completed' }).eq('id', existingTx.id);
-        await supabase.rpc('apply_wallet_charge', { p_user_id: authData.user.id, p_amount: data.amount });
+        await supabase.from('transactions').update({ status: 'completed' }).eq('id', existingTx.id);
+        await supabase.rpc('record_wallet_deposit', { p_user_id: authData.user.id, p_amount: data.amount_cents / 100, p_paymob_ref: transactionRef });
       } else if (!existingTx && !txError) {
-        await supabase.from('wallet_transactions').insert({
-          user_id: authData.user.id, amount: data.amount, type: 'charge', status: 'completed',
-          reference_id: transactionRef, description: `شحن المحفظة عبر Paymob - ${data.amount} ج`,
-        });
-        await supabase.rpc('apply_wallet_charge', { p_user_id: authData.user.id, p_amount: data.amount });
+        await supabase.rpc('record_wallet_deposit', { p_user_id: authData.user.id, p_amount: data.amount_cents / 100, p_paymob_ref: transactionRef });
       }
 
       return new Response(JSON.stringify({ success: true }), {

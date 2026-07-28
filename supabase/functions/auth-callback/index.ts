@@ -16,7 +16,7 @@ serve(async (req) => {
   const accessToken = url.searchParams.get('access_token');
 
   if (type === 'recovery' && accessToken) {
-    const appUrl = `taweqa-ogretk://reset-password?access_token=${accessToken}`;
+    const appUrl = `taweqe-ogretk://reset-password?access_token=${accessToken}`;
     return Response.redirect(appUrl, 302);
   }
 
