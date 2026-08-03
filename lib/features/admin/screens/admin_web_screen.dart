@@ -856,7 +856,7 @@ class _SosContentState extends State<_SosContent> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(user?['name'] ?? 'مستخدم', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFEDF2FC))),
+                              Text(user?['user_name'] ?? user?['name'] ?? 'مستخدم', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFEDF2FC))),
                               const SizedBox(height: 4),
                               Text(user?['phone'] ?? '', style: const TextStyle(color: Color(0xFF8BA4C0), fontSize: 13)),
                               Text('الإحداثيات: ${(a['lat'] as num).toStringAsFixed(4)}, ${(a['lng'] as num).toStringAsFixed(4)}',

@@ -65,7 +65,7 @@ class NotificationService {
         'token': token,
         'platform': platform,
         'updated_at': DateTime.now().toIso8601String(),
-      });
+      }, onConflict: 'user_id, token');
     } catch (_) {}
   }
 

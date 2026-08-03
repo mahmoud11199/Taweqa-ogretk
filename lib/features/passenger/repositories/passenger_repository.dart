@@ -221,9 +221,9 @@ class PassengerRepository {
       'pickup_lat': pickupLat,
       'pickup_lng': pickupLng,
       'pickup_address': pickupAddress,
-      'dest_lat': destLat,
-      'dest_lng': destLng,
-      'dest_address': destAddress,
+      'dropoff_lat': destLat,
+      'dropoff_lng': destLng,
+      'dropoff_address': destAddress,
       'status': 'pending',
     }).select().single();
     return TripPassenger.fromMap(response);

@@ -82,16 +82,18 @@ serve(async (req) => {
       const paymentKey = payment['token'] as string;
 
       return new Response(
-        JSON.stringify({ payment_key: paymentKey, iframe_id: PAYMOB_IFRAME_ID }),
+        JSON.stringify({ payment_key: paymentKey, iframe_id: PAYMOB_IFRAME_ID, order_id: orderId }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
 
     const mockPaymentKey = `mock_pk_${Date.now()}`;
+    const mockOrderId = Math.floor(Math.random() * 1000000) + 1;
     return new Response(
       JSON.stringify({
         payment_key: mockPaymentKey,
         iframe_id: PAYMOB_IFRAME_ID || 'mock_iframe',
+        order_id: mockOrderId,
         mock: true,
         message: '⚠️ Paymob غير مهيأ — هذه استجابة تجريبية. اضبط PAYMOB_API_KEY في Supabase Secrets.',
       }),

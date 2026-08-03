@@ -6,8 +6,13 @@ OverlayEntry? _currentToast;
 Timer? _toastTimer;
 
 void showToast(BuildContext context, String message, {bool isError = false}) {
-  _currentToast?.remove();
   _toastTimer?.cancel();
+  _toastTimer = null;
+  final old = _currentToast;
+  _currentToast = null;
+  if (old?.mounted == true) {
+    old!.remove();
+  }
 
   final overlay = Overlay.of(context);
   final entry = OverlayEntry(
@@ -52,7 +57,7 @@ void showToast(BuildContext context, String message, {bool isError = false}) {
   _currentToast = entry;
 
   _toastTimer = Timer(const Duration(seconds: 3), () {
-    entry.remove();
-    _currentToast = null;
+    if (entry.mounted) entry.remove();
+    if (_currentToast == entry) _currentToast = null;
   });
 }

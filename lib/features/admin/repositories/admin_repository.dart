@@ -12,13 +12,7 @@ class AdminRepository {
   }
 
   Future<List<AdminDriver>> fetchDrivers() async {
-    final response = await _client
-        .from('drivers')
-        .select('''
-          id, is_available, driver_type, car_model, car_plate,
-          profiles!inner(full_name, phone, banned)
-        ''')
-        .order('created_at', ascending: false);
+    final response = await _client.rpc('get_admin_drivers');
     final list = response as List<dynamic>;
     return list.map((e) => AdminDriver.fromMap(e as Map<String, dynamic>)).toList();
   }
@@ -42,12 +36,9 @@ class AdminRepository {
   }
 
   Future<List<DriverApplication>> fetchDriverApplications() async {
-    final response = await _client
-        .from('driver_applications')
-        .select()
-        .order('created_at', ascending: false);
+    final response = await _client.rpc('get_admin_driver_applications');
     final list = response as List<dynamic>;
-    return list.map((e) => DriverApplication.fromMap(e)).toList();
+    return list.map((e) => DriverApplication.fromMap(e as Map<String, dynamic>)).toList();
   }
 
   Future<void> approveDriver(String userId) async {

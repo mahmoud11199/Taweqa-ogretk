@@ -69,12 +69,15 @@ class AdminDriver {
 
   factory AdminDriver.fromMap(Map<String, dynamic> map) {
     final profile = map['profiles'] as Map<String, dynamic>? ?? {};
+    final fullName = (map['full_name'] as String?) ?? (profile['full_name'] as String?);
+    final phone = (map['phone'] as String?) ?? (profile['phone'] as String?);
+    final banned = (map['banned'] as bool?) ?? (boolFromDynamic(profile['banned']));
     return AdminDriver(
       id: map['id'] as String,
-      fullName: profile['full_name'] as String? ?? '',
-      phone: profile['phone'] as String?,
+      fullName: fullName ?? '',
+      phone: phone,
       isAvailable: boolFromDynamic(map['is_available']),
-      banned: boolFromDynamic(profile['banned']),
+      banned: banned,
       driverType: map['driver_type'] as String?,
       carModel: map['car_model'] as String?,
       carPlate: map['car_plate'] as String?,

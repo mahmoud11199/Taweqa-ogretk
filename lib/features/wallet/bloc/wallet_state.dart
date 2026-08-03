@@ -6,6 +6,7 @@ class WalletState {
   final Wallet? wallet;
   final List<Transaction> transactions;
   final String? paymobPaymentKey;
+  final String? paymobOrderId;
   final bool depositSuccess;
   final double lastDepositAmount;
   final List<BankCard>? cards;
@@ -16,6 +17,7 @@ class WalletState {
     this.wallet,
     this.transactions = const [],
     this.paymobPaymentKey,
+    this.paymobOrderId,
     this.depositSuccess = false,
     this.lastDepositAmount = 0,
     this.cards,
@@ -27,6 +29,7 @@ class WalletState {
     Wallet? wallet,
     List<Transaction>? transactions,
     String? paymobPaymentKey,
+    String? paymobOrderId,
     bool? depositSuccess,
     double? lastDepositAmount,
     List<BankCard>? cards,
@@ -38,6 +41,7 @@ class WalletState {
       wallet: wallet ?? this.wallet,
       transactions: transactions ?? this.transactions,
       paymobPaymentKey: paymobPaymentKey ?? this.paymobPaymentKey,
+      paymobOrderId: paymobOrderId ?? this.paymobOrderId,
       depositSuccess: depositSuccess ?? this.depositSuccess,
       lastDepositAmount: lastDepositAmount ?? this.lastDepositAmount,
       cards: cards ?? this.cards,

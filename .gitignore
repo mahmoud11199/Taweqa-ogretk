@@ -27,3 +27,6 @@ android/app/keystore.jks
 
 # Supabase local dev
 supabase/.temp/
+
+# Gradle build caches
+android/.kotlin/

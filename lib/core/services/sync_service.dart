@@ -21,7 +21,8 @@ class SyncService {
   }
 
   static void _notify(bool online) {
-    for (final fn in _listeners) {
+    final listeners = [..._listeners];
+    for (final fn in listeners) {
       fn(online);
     }
   }

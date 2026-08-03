@@ -12,6 +12,7 @@ class PaymobCheckoutScreen extends StatefulWidget {
 class _PaymobCheckoutScreenState extends State<PaymobCheckoutScreen> {
   late final WebViewController _controller;
   bool _isLoading = true;
+  bool _popped = false;
 
   @override
   void initState() {
@@ -33,11 +34,12 @@ class _PaymobCheckoutScreenState extends State<PaymobCheckoutScreen> {
   }
 
   void _checkUrl(String? url) {
-    if (url == null) return;
+    if (url == null || _popped) return;
     final uri = Uri.tryParse(url);
     if (uri == null) return;
     final success = uri.queryParameters['success'];
     if (success == 'true') {
+      _popped = true;
       Navigator.of(context).pop(true);
     }
   }

@@ -94,8 +94,12 @@ class TaweqeApp extends StatelessWidget {
             final paymentKey = settings.arguments as String? ?? '';
             screen = paymob.PaymobCheckoutScreen(paymentKey: paymentKey);
           case Routes.tripDetails:
-            final trip = settings.arguments as Trip;
-            screen = TripDetailsScreen(trip: trip);
+            final trip = settings.arguments as Trip?;
+            if (trip != null) {
+              screen = TripDetailsScreen(trip: trip);
+            } else {
+              screen = const DriverHomeScreen();
+            }
           case Routes.adminWeb:
             screen = const AdminWebScreen();
           case Routes.adminSettings:

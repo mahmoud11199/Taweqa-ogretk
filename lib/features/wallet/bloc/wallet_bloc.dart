@@ -53,14 +53,19 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     try {
       final user = SupabaseConfig.client.auth.currentUser;
       if (user == null) { emit(state.copyWith(isLoading: false)); return; }
-      final paymentKey = await _repository.initPaymobPayment(
+      final result = await _repository.initPaymobPayment(
         userId: user.id,
         amount: event.amount,
         email: event.email,
         phone: event.phone,
         method: event.method,
       );
-      emit(state.copyWith(isLoading: false, paymobPaymentKey: paymentKey, lastDepositAmount: event.amount));
+      emit(state.copyWith(
+        isLoading: false,
+        paymobPaymentKey: result.paymentKey,
+        paymobOrderId: result.orderId,
+        lastDepositAmount: event.amount,
+      ));
     } catch (e) {
       emit(state.copyWith(isLoading: false, error: e.toString()));
     }
@@ -70,14 +75,15 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       VerifyDeposit event, Emitter<WalletState> emit) async {
     emit(state.copyWith(isLoading: true));
     try {
-      final success = await _repository.verifyPaymobPayment(event.transactionRef);
+      final ref = state.paymobOrderId ?? event.transactionRef;
+      final success = await _repository.verifyPaymobPayment(ref);
       if (success) {
         final user = SupabaseConfig.client.auth.currentUser;
         if (user != null) {
           await _repository.recordDeposit(
             userId: user.id,
             amount: state.lastDepositAmount,
-            paymobRef: event.transactionRef,
+            paymobRef: ref,
           );
           final wallet = await _repository.fetchWallet(user.id);
           emit(state.copyWith(
@@ -85,6 +91,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
             wallet: wallet,
             depositSuccess: true,
             paymobPaymentKey: null,
+            paymobOrderId: null,
           ));
         } else {
           emit(state.copyWith(isLoading: false, error: 'المستخدم غير موجود'));

@@ -28,7 +28,7 @@ class WalletRepository {
     return list.map((e) => Transaction.fromMap(e as Map<String, dynamic>)).toList();
   }
 
-  Future<String> initPaymobPayment({
+  Future<({String paymentKey, String? orderId})> initPaymobPayment({
     required String userId,
     required double amount,
     required String email,
@@ -43,8 +43,16 @@ class WalletRepository {
       'phone': phone,
       'method': method,
     });
-    final data = functionResponse.data as Map<String, dynamic>;
-    return data['payment_key'] as String;
+    final data = functionResponse.data as Map<String, dynamic>?;
+    if (data == null) throw Exception('فشل الاتصال ببوابة الدفع');
+    final paymentKey = data['payment_key'] as String?;
+    if (paymentKey == null || paymentKey.isEmpty) {
+      throw Exception(data['message'] as String? ?? 'فشل تهيئة الدفع');
+    }
+    return (
+      paymentKey: paymentKey,
+      orderId: data['order_id']?.toString(),
+    );
   }
 
   Future<bool> verifyPaymobPayment(String transactionRef) async {

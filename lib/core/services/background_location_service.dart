@@ -1,6 +1,7 @@
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:geolocator/geolocator.dart';
-import '../config/supabase_config.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../constants/app_constants.dart';
 
 class BackgroundLocationService {
   static bool _initialized = false;
@@ -42,15 +43,22 @@ class BackgroundLocationService {
       }
     });
 
+    // The background isolate never runs SupabaseConfig.init(), so build a
+    // dedicated client from the same URL/anon key.
+    final bgClient = SupabaseClient(
+      AppConstants.supabaseUrl,
+      AppConstants.supabaseAnonKey,
+    );
+
     while (running) {
       try {
         final position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high,
         );
         try {
-          final user = SupabaseConfig.client.auth.currentUser;
+          final user = bgClient.auth.currentUser;
           if (user != null) {
-            await SupabaseConfig.client.rpc('update_driver_location', params: {
+            await bgClient.rpc('update_driver_location', params: {
               'p_driver_id': user.id,
               'p_lat': position.latitude,
               'p_lng': position.longitude,

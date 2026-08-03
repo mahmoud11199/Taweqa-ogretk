@@ -22,11 +22,7 @@ class SosService {
   }
 
   static Future<List<Map<String, dynamic>>> fetchActiveAlerts() async {
-    final data = await SupabaseConfig.client
-        .from('sos_alerts')
-        .select('*, user:user_id(name, phone)')
-        .eq('status', 'active')
-        .order('created_at', ascending: false);
+    final data = await SupabaseConfig.client.rpc('get_sos_alerts');
     return (data as List).cast<Map<String, dynamic>>();
   }
 

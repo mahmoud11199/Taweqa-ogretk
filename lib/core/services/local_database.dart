@@ -70,7 +70,7 @@ class LocalDatabase {
         status TEXT,
         trip_type TEXT DEFAULT 'instant',
         scheduled_at TEXT,
-        share_code TEXT,
+        join_code TEXT,
         created_at TEXT,
         completed_at TEXT
       )
@@ -154,6 +154,23 @@ class LocalDatabase {
         per_minute_price REAL,
         per_wait_minute REAL,
         created_at TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS earnings (
+        id TEXT PRIMARY KEY,
+        driver_id TEXT,
+        fare REAL,
+        driver_cut REAL,
+        created_at TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS cache_meta (
+        id TEXT PRIMARY KEY,
+        cached_at TEXT
       )
     ''');
   }
