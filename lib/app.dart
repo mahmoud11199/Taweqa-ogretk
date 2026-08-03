@@ -27,7 +27,6 @@ import 'features/profile/screens/edit_profile_screen.dart';
 import 'features/auth/screens/phone_login_screen.dart';
 import 'features/auth/screens/phone_otp_screen.dart';
 import 'features/auth/screens/role_screen.dart';
-import 'features/wallet/screens/paymob_mock_screen.dart' as paymob;
 import 'features/admin/screens/app_settings_screen.dart';
 
 final _navigatorKey = GlobalKey<NavigatorState>();
@@ -90,9 +89,6 @@ class TaweqeApp extends StatelessWidget {
           case Routes.phoneOtp:
             final phone = settings.arguments as String? ?? '';
             screen = PhoneOtpScreen(phone: phone);
-          case Routes.paymob:
-            final paymentKey = settings.arguments as String? ?? '';
-            screen = paymob.PaymobCheckoutScreen(paymentKey: paymentKey);
           case Routes.tripDetails:
             final trip = settings.arguments as Trip?;
             if (trip != null) {

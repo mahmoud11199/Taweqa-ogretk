@@ -5,7 +5,7 @@ import 'package:sqflite/sqflite.dart';
 class LocalDatabase {
   static Database? _db;
   static const String _dbName = 'taweqa_offline.db';
-  static const int _dbVersion = 1;
+  static const int _dbVersion = 2;
 
   static Future<Database> get database async {
     if (_db != null) return _db!;
@@ -20,7 +20,28 @@ class LocalDatabase {
       path,
       version: _dbVersion,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
+  }
+
+  static Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('DROP TABLE IF EXISTS transactions');
+      await db.execute('''
+        CREATE TABLE transactions (
+          id TEXT PRIMARY KEY,
+          user_id TEXT,
+          type TEXT,
+          amount REAL,
+          balance_before REAL,
+          balance_after REAL,
+          description TEXT,
+          status TEXT,
+          reference TEXT,
+          created_at TEXT
+        )
+      ''');
+    }
   }
 
   static Future<void> _onCreate(Database db, int version) async {
@@ -128,7 +149,7 @@ class LocalDatabase {
         balance_after REAL,
         description TEXT,
         status TEXT,
-        paymob_ref TEXT,
+        reference TEXT,
         created_at TEXT
       )
     ''');

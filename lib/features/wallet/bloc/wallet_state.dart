@@ -5,22 +5,22 @@ class WalletState {
   final String? error;
   final Wallet? wallet;
   final List<Transaction> transactions;
-  final String? paymobPaymentKey;
-  final String? paymobOrderId;
+  final bool depositSubmitted;
+  final String? pendingDepositId;
   final bool depositSuccess;
   final double lastDepositAmount;
-  final List<BankCard>? cards;
+  final String? lastSenderPhone;
 
   const WalletState({
     this.isLoading = false,
     this.error,
     this.wallet,
     this.transactions = const [],
-    this.paymobPaymentKey,
-    this.paymobOrderId,
+    this.depositSubmitted = false,
+    this.pendingDepositId,
     this.depositSuccess = false,
     this.lastDepositAmount = 0,
-    this.cards,
+    this.lastSenderPhone,
   });
 
   WalletState copyWith({
@@ -28,11 +28,11 @@ class WalletState {
     String? error,
     Wallet? wallet,
     List<Transaction>? transactions,
-    String? paymobPaymentKey,
-    String? paymobOrderId,
+    bool? depositSubmitted,
+    String? pendingDepositId,
     bool? depositSuccess,
     double? lastDepositAmount,
-    List<BankCard>? cards,
+    String? lastSenderPhone,
     bool clearError = false,
   }) {
     return WalletState(
@@ -40,11 +40,11 @@ class WalletState {
       error: clearError ? null : (error ?? this.error),
       wallet: wallet ?? this.wallet,
       transactions: transactions ?? this.transactions,
-      paymobPaymentKey: paymobPaymentKey ?? this.paymobPaymentKey,
-      paymobOrderId: paymobOrderId ?? this.paymobOrderId,
+      depositSubmitted: depositSubmitted ?? this.depositSubmitted,
+      pendingDepositId: pendingDepositId ?? this.pendingDepositId,
       depositSuccess: depositSuccess ?? this.depositSuccess,
       lastDepositAmount: lastDepositAmount ?? this.lastDepositAmount,
-      cards: cards ?? this.cards,
+      lastSenderPhone: lastSenderPhone ?? this.lastSenderPhone,
     );
   }
 }

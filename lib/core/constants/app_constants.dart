@@ -1,5 +1,4 @@
 import 'dart:math';
-import '../config/secrets.dart';
 
 class AppConstants {
   // ── Supabase (public keys — safe to commit) ──
@@ -7,33 +6,6 @@ class AppConstants {
       'https://hhuiseftzbqssswnuwrv.supabase.co';
   static const String supabaseAnonKey =
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhodWlzZWZ0emJxc3Nzd251d3J2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMDE5NjEsImV4cCI6MjA5NjY3Nzk2MX0.HSfq7SDEnuoK6ERAV_mINDN49ZJntiBRkVc8L7RsAYY';
-
-  // ── Paymob (secret keys — NEVER commit real values) ──
-  // Priority: 1) --dart-define (CI/CD), 2) lib/core/config/secrets.dart (local)
-
-  /// Paymob API Key
-  static String get paymobApiKey {
-    const env = String.fromEnvironment('PAYMOB_API_KEY');
-    if (env.isNotEmpty) return env;
-    if (Secrets.paymobApiKey.isNotEmpty) return Secrets.paymobApiKey;
-    return '';
-  }
-
-  /// Paymob Integration ID
-  static String get paymobIntegrationId {
-    const env = String.fromEnvironment('PAYMOB_INTEGRATION_ID');
-    if (env.isNotEmpty) return env;
-    if (Secrets.paymobIntegrationId.isNotEmpty) return Secrets.paymobIntegrationId;
-    return '';
-  }
-
-  /// Paymob Iframe ID
-  static String get paymobIframeId {
-    const env = String.fromEnvironment('PAYMOB_IFRAME_ID');
-    if (env.isNotEmpty) return env;
-    if (Secrets.paymobIframeId.isNotEmpty) return Secrets.paymobIframeId;
-    return '';
-  }
 
   // ── GPS & Limits ──
   static const double maxDistanceKm = 1000;
@@ -58,6 +30,11 @@ class AppConstants {
   static const int passengerSubPrice = 89;
   static const int driverSubPrice = 299;
   static const int referralTarget = 10;
+
+  // ── SMS wallet deposits ──
+  // رقم المحفظة الذي يُرسل إليه المستخدم أمواله لنظام الدفع عبر الرسائل
+  static const String adminWalletPhone = '01000000000';
+  static const int depositMatchWindowMinutes = 30;
 
   // ── GitHub ──
   static const String githubRepo = 'mahmoud11199/Taweqa-ogretk';

@@ -19,7 +19,6 @@ class _WalletScreenState extends State<WalletScreen> {
   void initState() {
     super.initState();
     context.read<WalletBloc>().add(LoadWallet());
-    context.read<WalletBloc>().add(LoadCards());
   }
 
   @override
@@ -79,20 +78,6 @@ class _WalletScreenState extends State<WalletScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                // Saved cards section
-                const Align(
-                  alignment: Alignment.centerRight,
-                  child: Text('البطاقات البنكية', style: TextStyle(color: Color(0xFFEDF2FC), fontSize: 16, fontWeight: FontWeight.w700)),
-                ),
-                const SizedBox(height: 12),
-                if (state.cards == null || state.cards!.isEmpty)
-                  _buildAddCardButton()
-                else ...[
-                  ...state.cards!.map((c) => _CardTile(card: c)),
-                  const SizedBox(height: 8),
-                  _buildAddCardButton(),
-                ],
-                const SizedBox(height: 24),
                 const Align(
                   alignment: Alignment.centerRight,
                   child: Text('آخر المعاملات', style: TextStyle(color: Color(0xFFEDF2FC), fontSize: 16, fontWeight: FontWeight.w700)),
@@ -106,127 +91,6 @@ class _WalletScreenState extends State<WalletScreen> {
             ),
           );
         },
-      ),
-    );
-  }
-
-  Widget _buildAddCardButton() {
-    return SizedBox(
-    width: double.infinity,
-    child: OutlinedButton.icon(
-      onPressed: () => _showAddCardDialog(context),
-      icon: const Icon(Icons.add, size: 16),
-      label: const Text('إضافة بطاقة', style: TextStyle(fontWeight: FontWeight.w700)),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: const Color(0xFF00E5B8),
-        side: const BorderSide(color: Color.fromRGBO(0, 229, 184, 0.25)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        padding: const EdgeInsets.symmetric(vertical: 12),
-      ),
-    ),
-  );
-  }
-
-  void _showAddCardDialog(BuildContext context) {
-    final holderCtrl = TextEditingController();
-    final numberCtrl = TextEditingController();
-    final expCtrl = TextEditingController();
-    final csvCtrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF0F1628),
-        title: const Text('إضافة بطاقة', style: TextStyle(color: Color(0xFFEDF2FC))),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: holderCtrl, style: const TextStyle(color: Color(0xFFEDF2FC)),
-              decoration: const InputDecoration(labelText: 'اسم حامل البطاقة', labelStyle: TextStyle(color: Color(0xFF526480)),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF1C2B45))),
-                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF00E5B8))))),
-            const SizedBox(height: 12),
-            TextField(controller: numberCtrl, style: const TextStyle(color: Color(0xFFEDF2FC)), keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'رقم البطاقة', labelStyle: TextStyle(color: Color(0xFF526480)),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF1C2B45))),
-                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF00E5B8))))),
-            const SizedBox(height: 12),
-            Row(children: [
-              Expanded(child: TextField(controller: expCtrl, style: const TextStyle(color: Color(0xFFEDF2FC)),
-                decoration: const InputDecoration(labelText: 'MM/YY', labelStyle: TextStyle(color: Color(0xFF526480)),
-                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF1C2B45))),
-                  focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF00E5B8)))))),
-
-              const SizedBox(width: 12),
-              Expanded(child: TextField(controller: csvCtrl, style: const TextStyle(color: Color(0xFFEDF2FC)),
-                decoration: const InputDecoration(labelText: 'CVV', labelStyle: TextStyle(color: Color(0xFF526480)),
-                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF1C2B45))),
-                  focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF00E5B8)))))),
-
-            ]),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء', style: TextStyle(color: Color(0xFF526480)))),
-          TextButton(onPressed: () {
-            final num = numberCtrl.text.trim();
-            if (num.length < 4) return;
-            final last4 = num.substring(num.length - 4);
-            final expParts = expCtrl.text.trim().split('/');
-            final expMonth = int.tryParse(expParts[0]) ?? 12;
-            final expYear = int.tryParse(expParts.length > 1 ? expParts[1] : '30') ?? 30;
-            context.read<WalletBloc>().add(SaveCard(
-              cardHolder: holderCtrl.text.trim().isEmpty ? 'حامل البطاقة' : holderCtrl.text.trim(),
-              last4: last4, brand: num.startsWith('4') ? 'Visa' : num.startsWith('5') ? 'MasterCard' : 'Card',
-              expMonth: expMonth, expYear: expYear,
-            ));
-            Navigator.pop(ctx);
-          }, child: const Text('حفظ', style: TextStyle(color: Color(0xFF00E5B8)))),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Card Tile ─────────────────────────────────────────────────────────────────
-class _CardTile extends StatelessWidget {
-  final BankCard card;
-  const _CardTile({required this.card});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0F1628),
-        border: Border.all(color: const Color(0xFF1C2B45)),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.credit_card, color: Color(0xFF00E5B8), size: 28),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('${card.brand} **** ${card.last4}', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFEDF2FC))),
-                const SizedBox(height: 2),
-                Text('${card.cardHolder} · ${card.expMonth}/${card.expYear}', style: const TextStyle(color: Color(0xFF526480), fontSize: 12)),
-              ],
-            ),
-          ),
-          if (card.isDefault)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(color: const Color(0xFF00E5B8).withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6)),
-              child: const Text('أساسي', style: TextStyle(color: Color(0xFF00E5B8), fontSize: 10, fontWeight: FontWeight.w700)),
-            ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline, color: Color(0xFFFF3B5C), size: 20),
-            onPressed: () => context.read<WalletBloc>().add(DeleteCard(card.id)),
-          ),
-        ],
       ),
     );
   }

@@ -19,8 +19,8 @@ class _DriverPaymentScreenState extends State<DriverPaymentScreen> {
 
   static const _methods = [
     {'icon': '💵', 'label': 'Cash', 'sub': 'Collect directly from passenger'},
-    {'icon': '💳', 'label': 'Paymob', 'sub': 'Card, wallet, or Paymob balance'},
     {'icon': '📱', 'label': 'Vodafone Cash', 'sub': 'Direct mobile wallet transfer'},
+    {'icon': '📱', 'label': 'Wallet Balance', 'sub': 'Charge from in-app wallet'},
   ];
 
   double get _total => _breakdown.fold(0.0, (s, b) => s + (b['amount'] as double));

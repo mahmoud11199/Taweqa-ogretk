@@ -1,10 +1,12 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/config/supabase_config.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/widgets/toast_widget.dart';
 import '../bloc/wallet_bloc.dart';
 import '../bloc/wallet_event.dart';
 import '../bloc/wallet_state.dart';
-import 'paymob_mock_screen.dart' as paymob;
 
 class AddFundsScreen extends StatefulWidget {
   const AddFundsScreen({super.key});
@@ -15,15 +17,13 @@ class AddFundsScreen extends StatefulWidget {
 
 class _AddFundsScreenState extends State<AddFundsScreen> {
   final _amountController = TextEditingController();
-  final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
-  String _selectedMethod = 'card';
-  bool _paymentInProgress = false;
+  RealtimeChannel? _channel;
 
   @override
   void dispose() {
+    _channel?.unsubscribe();
     _amountController.dispose();
-    _emailController.dispose();
     _phoneController.dispose();
     super.dispose();
   }
@@ -33,10 +33,40 @@ class _AddFundsScreenState extends State<AddFundsScreen> {
     final amount = double.tryParse(amountText);
     if (amount == null || amount <= 0) { showToast(context, 'يرجى إدخال مبلغ صحيح', isError: true); return; }
     if (amount < 10) { showToast(context, 'الحد الأدنى للإيداع 10 جنيه', isError: true); return; }
-    final email = _emailController.text.trim();
-    final phone = _phoneController.text.trim();
-    if (email.isEmpty || phone.isEmpty) { showToast(context, 'يرجى إدخال البريد الإلكتروني ورقم الهاتف', isError: true); return; }
-    context.read<WalletBloc>().add(InitDeposit(amount: amount, email: email, phone: phone, method: _selectedMethod));
+    final senderPhone = _phoneController.text.trim();
+    if (senderPhone.isEmpty || !RegExp(r'^01[0-9]{9}$').hasMatch(senderPhone)) {
+      showToast(context, 'يرجى إدخال رقم محفظتك بشكل صحيح (01xxxxxxxxx)', isError: true);
+      return;
+    }
+    context.read<WalletBloc>().add(InitDeposit(amount: amount, senderPhone: senderPhone));
+  }
+
+  void _subscribeToDeposit(String depositId) {
+    _channel?.unsubscribe();
+    _channel = SupabaseConfig.client
+        .channel('deposit-$depositId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'wallet_transactions',
+          filter: PostgresChangeFilter(type: PostgresChangeFilterType.eq, column: 'id', value: depositId),
+          callback: (payload) {
+            if (!mounted) return;
+            final newRow = payload.newRecord;
+            final status = newRow['status'] as String?;
+            if (status == 'success') {
+              context.read<WalletBloc>().add(ResetDeposit());
+              showToast(context, '✅ تم إضافة الرصيد بنجاح');
+              context.read<WalletBloc>().add(LoadWallet());
+              Navigator.pop(context);
+            } else if (status == 'failed' || status == 'unmatched') {
+              context.read<WalletBloc>().add(ResetDeposit());
+              showToast(context, 'لم يتم تأكيد الدفع، راجع الرقم والمبلغ', isError: true);
+              setState(() {});
+            }
+          },
+        )
+        .subscribe();
   }
 
   @override
@@ -44,16 +74,9 @@ class _AddFundsScreenState extends State<AddFundsScreen> {
     return BlocListener<WalletBloc, WalletState>(
       listener: (context, state) {
         if (state.error != null) showToast(context, state.error!, isError: true);
-        if (state.paymobPaymentKey != null && !_paymentInProgress) {
-          _paymentInProgress = true;
-          final walletBloc = context.read<WalletBloc>();
-          final pk = state.paymobPaymentKey!;
-          Navigator.push(context, MaterialPageRoute(builder: (_) => paymob.PaymobCheckoutScreen(paymentKey: pk))).then((success) {
-            _paymentInProgress = false;
-            if (success == true && mounted) walletBloc.add(VerifyDeposit(pk));
-          });
+        if (state.depositSubmitted && state.pendingDepositId != null) {
+          _subscribeToDeposit(state.pendingDepositId!);
         }
-        if (state.depositSuccess) { showToast(context, '✅ تم إضافة الرصيد بنجاح'); Navigator.pop(context); }
       },
       child: Scaffold(
         backgroundColor: const Color(0xFF080D18),
@@ -63,51 +86,98 @@ class _AddFundsScreenState extends State<AddFundsScreen> {
           centerTitle: true,
           leading: IconButton(icon: const Icon(Icons.arrow_back, color: Color(0xFF00E5B8)), onPressed: () => Navigator.pop(context)),
         ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildField(label: 'المبلغ (جنيه)', icon: Icons.monetization_on_outlined, controller: _amountController, keyboardType: TextInputType.number),
-              const SizedBox(height: 16),
-              _buildField(label: 'البريد الإلكتروني', icon: Icons.email_outlined, controller: _emailController, keyboardType: TextInputType.emailAddress),
-              const SizedBox(height: 16),
-              _buildField(label: 'رقم الهاتف', icon: Icons.phone_outlined, controller: _phoneController, keyboardType: TextInputType.phone),
-              const SizedBox(height: 24),
-              const Text('طريقة الدفع', style: TextStyle(fontSize: 14, color: Color(0xFF526480))),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(child: _MethodCard(icon: Icons.credit_card, label: 'بطاقة', isSelected: _selectedMethod == 'card', onTap: () => setState(() => _selectedMethod = 'card'))),
-                  const SizedBox(width: 8),
-                  Expanded(child: _MethodCard(icon: Icons.account_balance_wallet, label: 'محفظة', isSelected: _selectedMethod == 'wallet', onTap: () => setState(() => _selectedMethod = 'wallet'))),
-                  const SizedBox(width: 8),
-                  Expanded(child: _MethodCard(icon: Icons.account_balance, label: 'تحويل بنكي', isSelected: _selectedMethod == 'bank', onTap: () => setState(() => _selectedMethod = 'bank'))),
-                ],
-              ),
-              const SizedBox(height: 32),
-              BlocBuilder<WalletBloc, WalletState>(
-                builder: (context, state) {
-                  return SizedBox(
-                    width: double.infinity, height: 52,
-                    child: ElevatedButton(
-                      onPressed: state.isLoading ? null : _initiateDeposit,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF00E5B8),
-                        foregroundColor: const Color(0xFF080D18),
-                        disabledBackgroundColor: const Color.fromRGBO(0, 229, 184, 0.3),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        elevation: 0,
-                      ),
-                      child: state.isLoading
-                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF080D18)))
-                          : const Text('إيداع', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-                    ),
-                  );
-                },
-              ),
-            ],
+        body: BlocBuilder<WalletBloc, WalletState>(
+          builder: (context, state) {
+            if (state.depositSubmitted) return _buildPending(state);
+            return _buildForm(state);
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildForm(WalletState state) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildField(label: 'المبلغ (جنيه)', icon: Icons.monetization_on_outlined, controller: _amountController, keyboardType: TextInputType.number),
+          const SizedBox(height: 16),
+          _buildField(label: 'رقم محفظتك (فودافون/أورانج/اتصالات/وي)', icon: Icons.phone_android_outlined, controller: _phoneController, keyboardType: TextInputType.phone),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F1628),
+              border: Border.all(color: const Color(0xFF1C2B45)),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, color: Color(0xFF00E5B8), size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'حوّل المبلغ إلى رقم المحفظة ${AppConstants.adminWalletPhone} ثم انتظر تأكيد الدفع تلقائيًا',
+                    style: const TextStyle(fontSize: 12.5, color: Color(0xFF8EA4C8), height: 1.5),
+                  ),
+                ),
+              ],
+            ),
           ),
+          const SizedBox(height: 28),
+          SizedBox(
+            width: double.infinity, height: 52,
+            child: ElevatedButton(
+              onPressed: state.isLoading ? null : _initiateDeposit,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00E5B8),
+                foregroundColor: const Color(0xFF080D18),
+                disabledBackgroundColor: const Color.fromRGBO(0, 229, 184, 0.3),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 0,
+              ),
+              child: state.isLoading
+                  ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF080D18)))
+                  : const Text('إيداع', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPending(WalletState state) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(
+              width: 56, height: 56,
+              child: CircularProgressIndicator(strokeWidth: 3, color: Color(0xFF00E5B8)),
+            ),
+            const SizedBox(height: 24),
+            const Text('بانتظار تأكيد الدفع...', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFFEDF2FC))),
+            const SizedBox(height: 8),
+            Text(
+              'المبلغ: ${state.lastDepositAmount.toStringAsFixed(2)} ج',
+              style: const TextStyle(fontSize: 15, color: Color(0xFF00E5B8), fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'من رقم: ${state.lastSenderPhone ?? ''}',
+              style: const TextStyle(fontSize: 13, color: Color(0xFF526480)),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'سيُحدَّث رصيدك تلقائيًا فور استلام إشعار التحويل',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12.5, color: Color(0xFF8EA4C8)),
+            ),
+          ],
         ),
       ),
     );
@@ -125,33 +195,6 @@ class _AddFundsScreenState extends State<AddFundsScreen> {
         focusedBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(14)), borderSide: BorderSide(color: Color(0xFF00E5B8))),
       ),
       keyboardType: keyboardType,
-    );
-  }
-}
-
-class _MethodCard extends StatelessWidget {
-  final IconData icon; final String label; final bool isSelected; final VoidCallback onTap;
-  const _MethodCard({required this.icon, required this.label, required this.isSelected, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color.fromRGBO(0, 229, 184, 0.1) : const Color(0xFF0F1628),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: isSelected ? const Color(0xFF00E5B8) : const Color(0xFF1C2B45), width: isSelected ? 1.5 : 1),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: isSelected ? const Color(0xFF00E5B8) : const Color(0xFF526480), size: 28),
-            const SizedBox(height: 4),
-            Text(label, style: TextStyle(color: isSelected ? const Color(0xFF00E5B8) : const Color(0xFF526480), fontSize: 12, fontWeight: FontWeight.w600)),
-          ],
-        ),
-      ),
     );
   }
 }

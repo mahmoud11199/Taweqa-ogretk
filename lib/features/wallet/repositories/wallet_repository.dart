@@ -28,54 +28,25 @@ class WalletRepository {
     return list.map((e) => Transaction.fromMap(e as Map<String, dynamic>)).toList();
   }
 
-  Future<({String paymentKey, String? orderId})> initPaymobPayment({
+  /// Creates a pending deposit record that the SMS webhook will confirm.
+  /// Returns the id of the created wallet_transactions row.
+  Future<String> createPendingDeposit({
     required String userId,
     required double amount,
-    required String email,
-    required String phone,
-    String method = 'card',
+    required String senderPhone,
   }) async {
-    // Call Supabase Edge Function to get Paymob payment key
-    final functionResponse = await _client.functions.invoke('init-paymob-payment', body: {
-      'user_id': userId,
-      'amount': amount,
-      'email': email,
-      'phone': phone,
-      'method': method,
-    });
-    final data = functionResponse.data as Map<String, dynamic>?;
-    if (data == null) throw Exception('فشل الاتصال ببوابة الدفع');
-    final paymentKey = data['payment_key'] as String?;
-    if (paymentKey == null || paymentKey.isEmpty) {
-      throw Exception(data['message'] as String? ?? 'فشل تهيئة الدفع');
-    }
-    return (
-      paymentKey: paymentKey,
-      orderId: data['order_id']?.toString(),
-    );
-  }
-
-  Future<bool> verifyPaymobPayment(String transactionRef) async {
-    try {
-      final functionResponse = await _client.functions.invoke('verify-paymob-payment', body: {
-        'transaction_ref': transactionRef,
-      });
-      final data = functionResponse.data as Map<String, dynamic>?;
-      return data?['success'] == true;
-    } catch (_) {}
-    return false;
-  }
-
-  Future<void> recordDeposit({
-    required String userId,
-    required double amount,
-    required String paymobRef,
-  }) async {
-    await _client.rpc('record_wallet_deposit', params: {
-      'p_user_id': userId,
-      'p_amount': amount,
-      'p_paymob_ref': paymobRef,
-    });
+    final response = await _client
+        .from('wallet_transactions')
+        .insert({
+          'user_id': userId,
+          'type': 'deposit',
+          'amount': amount,
+          'status': 'pending',
+          'sender_phone': senderPhone,
+        })
+        .select('id')
+        .single();
+    return response['id'] as String;
   }
 
   Future<void> deductFare(String userId, double amount, String tripId) async {
@@ -84,25 +55,5 @@ class WalletRepository {
       'p_amount': amount,
       'p_trip_id': tripId,
     });
-  }
-
-  Future<List<BankCard>> fetchCards(String userId) async {
-    final response = await _client
-        .from('saved_cards')
-        .select()
-        .eq('user_id', userId)
-        .order('created_at', ascending: false);
-    final list = response as List<dynamic>;
-    return list.map((e) => BankCard.fromMap(e as Map<String, dynamic>)).toList();
-  }
-
-  Future<void> saveCard(String userId, BankCard card) async {
-    final data = card.toMap();
-    data['user_id'] = userId;
-    await _client.from('saved_cards').insert(data);
-  }
-
-  Future<void> deleteCard(String cardId) async {
-    await _client.from('saved_cards').delete().eq('id', cardId);
   }
 }

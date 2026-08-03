@@ -14,9 +14,6 @@ enabled = true
 enabled = true
 policy = "per_worker"
 
-[functions.init-paymob-payment]
-verify_jwt = false
-
 [functions.delete-user]
 verify_jwt = false
 
@@ -24,4 +21,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.get-admin-stats]
+verify_jwt = false
+
+[functions.sms-webhook]
 verify_jwt = false

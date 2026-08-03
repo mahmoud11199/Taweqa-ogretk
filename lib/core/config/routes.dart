@@ -24,5 +24,4 @@ class Routes {
   static const String adminWeb = '/admin/web';
   static const String phoneLogin = '/phone-login';
   static const String phoneOtp = '/phone-otp';
-  static const String paymob = '/paymob';
 }

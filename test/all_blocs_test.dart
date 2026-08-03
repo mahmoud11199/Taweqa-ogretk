@@ -378,7 +378,7 @@ void main() {
       expect(bloc.state.isLoading, false);
       expect(bloc.state.wallet, null);
       expect(bloc.state.transactions, isEmpty);
-      expect(bloc.state.paymobPaymentKey, null);
+      expect(bloc.state.depositSubmitted, false);
       expect(bloc.state.depositSuccess, false);
       bloc.close();
     });
